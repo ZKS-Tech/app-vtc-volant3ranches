@@ -1,4 +1,5 @@
 import { ArchivoNarrow_600SemiBold, ArchivoNarrow_700Bold, useFonts } from '@expo-google-fonts/archivo-narrow';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -6,8 +7,11 @@ import { StoreProvider } from '../src/store';
 import { useTheme } from '../src/useTheme';
 
 export default function Racine() {
-  const [pret] = useFonts({ ArchivoNarrow_600SemiBold, ArchivoNarrow_700Bold });
-  if (!pret) return null;
+  // Ionicons préchargée ici : sinon chaque icône lance son propre chargement et un délai réseau
+  // (WSL, Expo Go en Wi-Fi) remonte en « Uncaught Error ». En cas d'échec, on affiche quand même l'app.
+  const [pret, erreur] = useFonts({ ArchivoNarrow_600SemiBold, ArchivoNarrow_700Bold, ...Ionicons.font });
+  if (erreur) console.warn('Polices non chargées :', erreur.message);
+  if (!pret && !erreur) return null;
   return (
     <SafeAreaProvider>
       <StoreProvider>
