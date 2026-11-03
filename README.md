@@ -90,8 +90,12 @@ redéfinies pour sortir du style « crème et or » jugé trop générique.
 3. Lancer le serveur de développement :
 
    ```bash
-   npx expo start
+   npm run telephone
    ```
+
+   Cette commande (`npx expo start --tunnel ngrok`) passe par un tunnel : elle marche quel que soit
+   le réseau, y compris sous WSL, sans compte Expo. Sur un même Wi-Fi sans WSL, `npx expo start`
+   suffit et se recharge plus vite.
 
 4. Un QR code s'affiche dans le terminal :
    - **iPhone** : le scanner avec l'appareil photo, puis ouvrir dans Expo Go ;
