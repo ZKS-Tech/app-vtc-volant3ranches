@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { contact, dateCourte, euros, lieu, offre } from './data';
 import type { Course, Statut } from './store';
-import { Couleurs, f, radius, space } from './theme';
+import { Couleurs, f, radius, sansContourWeb, space } from './theme';
 import { useTheme } from './useTheme';
 
 export type IconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -258,7 +258,7 @@ const creerStyles = (c: Couleurs) => StyleSheet.create({
   },
   champ: {
     minHeight: 50, borderRadius: radius.m, borderWidth: 1, borderColor: c.trait, backgroundColor: c.surface,
-    paddingHorizontal: space.l, fontSize: 17, color: c.encre, outlineStyle: 'none',
+    paddingHorizontal: space.l, fontSize: 17, color: c.encre, ...sansContourWeb,
   } as object,
   champFocus: { borderColor: c.accent, borderWidth: 2, paddingHorizontal: space.l - 1 },
   compteur: { flexDirection: 'row', alignItems: 'center', gap: space.m, paddingVertical: space.s },

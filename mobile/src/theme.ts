@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 // Direction « Bleu pastel du Lauragais » : le bleu de la guède, du bain le plus pâle à la cuve.
 // Deux palettes de même structure : clair (jour) et sombre (nuit, cuve d'indigo).
 
@@ -81,3 +83,7 @@ export const typo = (c: Couleurs) => ({
 });
 
 export const typos = { clair: typo(clair), sombre: typo(sombre) };
+
+// Retire le contour bleu du navigateur sur les champs (le focus est dessiné par la bordure).
+// Web uniquement : la valeur 'none' n'existe pas sur iOS et Android.
+export const sansContourWeb = (Platform.OS === 'web' ? { outlineStyle: 'none' } : {}) as object;

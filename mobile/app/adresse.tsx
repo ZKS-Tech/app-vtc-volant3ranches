@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, SectionList, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Lieu, lieux } from '../src/data';
 import { useStore } from '../src/store';
-import { Couleurs, radius, space } from '../src/theme';
+import { Couleurs, radius, sansContourWeb, space } from '../src/theme';
 import { useTheme } from '../src/useTheme';
 import { Note } from '../src/ui';
 
@@ -94,7 +94,7 @@ const creerStyles = (c: Couleurs) => StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: space.s, backgroundColor: c.surface, borderRadius: radius.m,
     borderWidth: 2, borderColor: c.accent, paddingHorizontal: space.m, minHeight: 50,
   },
-  input: { flex: 1, fontSize: 17, color: c.encre, minHeight: 48, outlineStyle: 'none' } as object,
+  input: { flex: 1, fontSize: 17, color: c.encre, minHeight: 48, ...sansContourWeb },
   entete: { paddingTop: space.l, paddingBottom: space.s, backgroundColor: c.sol },
   ligne: { flexDirection: 'row', alignItems: 'center', gap: space.m, paddingVertical: space.m, borderRadius: radius.s, minHeight: 56 },
   icone: { width: 36, height: 36, borderRadius: 18, backgroundColor: c.bain1, alignItems: 'center', justifyContent: 'center' },
