@@ -6,12 +6,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dateCourte, duree, euros, lieu, offre as getOffre, offres, prix, trajet } from '../src/data';
 import { useStore } from '../src/store';
 import { Couleurs, f, radius, space } from '../src/theme';
-import { TrajetRelief, couleursRelief } from '../src/TrajetRelief';
+import { CartePlan } from '../src/CartePlan';
 import { useTheme } from '../src/useTheme';
 import { Bouton } from '../src/ui';
 
 export default function Offre() {
-  const { c, type, s, estSombre } = useTheme(creerStyles);
+  const { c, type, s } = useTheme(creerStyles);
   const { brouillon: b, maj } = useStore();
   const insets = useSafeAreaInsets();
   if (!b.departId || !b.arriveeId) return null;
@@ -23,7 +23,7 @@ export default function Offre() {
     <View style={{ flex: 1, backgroundColor: c.sol }}>
       <ScrollView contentContainerStyle={{ padding: space.l, paddingBottom: 130 }}>
         <View style={s.bandeau}>
-          <TrajetRelief departId={b.departId} arriveeId={b.arriveeId} couleurs={couleursRelief(c, estSombre)} hauteur={230} />
+          <CartePlan departId={b.departId} arriveeId={b.arriveeId} c={c} hauteur={210} />
           <View style={{ padding: space.l, paddingTop: space.s }}>
           <Text style={s.bandeauRoute} numberOfLines={2}>
             {lieu(b.departId).nom} → {lieu(b.arriveeId).nom}

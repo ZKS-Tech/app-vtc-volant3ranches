@@ -5,6 +5,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { dateCourte, duree, estTransfert, euros, fraisAnnulation, lieu, offre, photos } from '../../src/data';
 import { useStore } from '../../src/store';
 import { Couleurs, f, radius, space } from '../../src/theme';
+import { DelaiConfirmation } from '../../src/DelaiConfirmation';
 import { useTheme } from '../../src/useTheme';
 import { Bouton, Itineraire, Ligne, Note, Teinture, Titre, appelerFabrice, teintesDe } from '../../src/ui';
 
@@ -37,9 +38,7 @@ export default function DetailCourse() {
 
       {course.statut === 'envoyee' ? (
         <View style={{ marginTop: space.l }}>
-          <Note ton="bain" icone="hourglass-outline">
-            Fabrice confirme habituellement sous 30 minutes. Sans nouvelles, appelez-le : il répond 24h/24.
-          </Note>
+          <DelaiConfirmation course={course} />
         </View>
       ) : null}
 

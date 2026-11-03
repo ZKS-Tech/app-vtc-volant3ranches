@@ -19,6 +19,7 @@ export type Course = {
   minutes: number;
   nom: string;
   statut: Statut;
+  envoyeeLe?: Date; // heure d'envoi de la demande : sert au délai de confirmation
   demo?: boolean;
 };
 
@@ -137,7 +138,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
               passagers: b.passagers, bagages: b.bagages, numero: b.numero || undefined,
               offreId: b.offreId, km: t.km, minutes: t.minutes,
               montant: prix(offre(b.offreId), t.km, b.jour, b.heure, b.allerRetour).montant,
-              nom: b.nom, statut: 'envoyee',
+              nom: b.nom, statut: 'envoyee', envoyeeLe: new Date(),
             };
             setCourses((cs) => [c, ...cs]);
             resolve(c);
