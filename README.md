@@ -106,6 +106,21 @@ npx expo start --tunnel
 
 Chaque modification du code s'affiche immédiatement sur le téléphone.
 
+### Dépannage : « Something went wrong » dans Expo Go
+
+- **Sous Windows avec WSL**, le QR code pointe vers une adresse interne à WSL (souvent `172.x.x.x`)
+  que le téléphone ne peut pas joindre. Utiliser le tunnel :
+
+  ```bash
+  npx expo start --tunnel
+  ```
+
+  (Expo propose d'installer `@expo/ngrok` la première fois : accepter.)
+- Vérifier que le téléphone et l'ordinateur sont sur le même Wi-Fi et que le pare-feu Windows
+  autorise Node.js sur les réseaux privés.
+- Mettre à jour Expo Go : le projet utilise Expo SDK 58.
+- Dans Expo Go, « View error log » donne le message exact ; le terminal d'`npx expo start` aussi.
+
 ### Autres façons de l'essayer
 
 - **Dans le navigateur** : `npx expo start --web` (pratique pour un aperçu rapide, mais le rendu
