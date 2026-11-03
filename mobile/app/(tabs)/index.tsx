@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Lieu, fabrice, lieu, lieux, photos } from '../../src/data';
 import { useStore } from '../../src/store';
 import { Couleurs, f, radius, space } from '../../src/theme';
+import { CuveIndigo } from '../../src/CuveIndigo';
 import { useTheme } from '../../src/useTheme';
 import { Bouton, CarteCourse, Titre, appelerFabrice } from '../../src/ui';
 
@@ -29,6 +30,7 @@ export default function Accueil() {
   return (
     <ScrollView style={{ flex: 1, backgroundColor: c.sol }} contentContainerStyle={{ paddingBottom: space.xxl }}>
       <View style={[s.cuve, { paddingTop: insets.top + space.m }]}>
+        <CuveIndigo niveau={1} couleurs={{ eau: c.cuve, voile: c.bain4, indigo: c.indigo, cuve: c.cuve }} />
         <View style={s.marque}>
           <Image source={photos.logoBlanc} style={{ width: 34, height: 34 }} contentFit="contain" accessibilityLabel="Logo Volant3ranches" />
           <Text style={s.marqueTexte}>Volant3ranches</Text>

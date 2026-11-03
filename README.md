@@ -36,6 +36,10 @@ redéfinies pour sortir du style « crème et or » jugé trop générique.
 
 - Le statut d'une course **se teinte** comme un tissu à chaque bain : bleu pâle quand la demande est
   envoyée, indigo profond quand Fabrice confirme, bleu délavé quand elle est terminée.
+- **Cuve d'indigo vivante** : en fond de l'accueil, un bain de teinture rendu en 3D temps réel
+  (shader WebGL, `mobile/src/CuveIndigo.tsx`) dérive lentement et suit l'inclinaison du téléphone.
+  Quand Fabrice confirme, l'encre monte du bas et envahit l'écran. L'effet s'arrête hors écran et
+  devient une image fixe si « Réduire les animations » est activé.
 - **Mode clair et mode sombre.** L'application suit le réglage du téléphone ; on peut aussi forcer
   l'un ou l'autre dans Profil › Apparence.
 - Photos réelles de Fabrice et des véhicules, reprises du site.

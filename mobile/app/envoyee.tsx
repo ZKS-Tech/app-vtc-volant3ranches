@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef } from 'react';
-import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { CuveIndigo } from '../src/CuveIndigo';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dateCourte, euros, offre } from '../src/data';
 import { useStore } from '../src/store';
@@ -15,16 +16,16 @@ export default function Envoyee() {
   const insets = useSafeAreaInsets();
   const course = courses.find((x) => x.id === id);
   const confirmee = course?.statut === 'confirmee';
-  const bain = useRef(new Animated.Value(confirmee ? 1 : 0)).current;
-
+  // Le texte change de couleur quand l'encre a recouvert la moitié de l'écran.
+  const [fonce, setFonce] = useState(confirmee);
   useEffect(() => {
-    Animated.timing(bain, { toValue: confirmee ? 1 : 0, duration: 900, useNativeDriver: false }).start();
+    const t = setTimeout(() => setFonce(confirmee), 450);
+    return () => clearTimeout(t);
   }, [confirmee]);
 
   if (!course) return null;
-  const fond = bain.interpolate({ inputRange: [0, 1], outputRange: [c.bain1, c.action] });
-  const texte = confirmee ? c.blanc : c.fort;
-  const texte2 = confirmee ? c.surCuve2 : c.pierre;
+  const texte = fonce ? c.blanc : c.fort;
+  const texte2 = fonce ? c.surCuve2 : c.pierre;
 
   const terminer = (route: '/' | '/courses') => {
     reinitialiser();
@@ -33,19 +34,20 @@ export default function Envoyee() {
   };
 
   return (
-    <Animated.View style={{ flex: 1, backgroundColor: fond }}>
+    <View style={{ flex: 1, backgroundColor: c.bain1 }}>
+      <CuveIndigo niveau={confirmee ? 1 : 0} couleurs={{ eau: c.bain1, voile: c.bain3, indigo: c.action, cuve: c.cuve }} />
       <ScrollView contentContainerStyle={{ padding: space.l, paddingTop: insets.top + space.xxl, paddingBottom: insets.bottom + space.xl }}>
-        <Teinture statut={course.statut} surFonce={confirmee} />
+        <Teinture statut={course.statut} surFonce={fonce} />
         <Text accessibilityRole="header" accessibilityLiveRegion="polite" style={[s.titre, { color: texte }]}>
-          {confirmee ? 'Course confirmée' : 'Demande envoyée'}
+          {fonce ? 'Course confirmée' : 'Demande envoyée'}
         </Text>
         <Text style={[type.body, { color: texte, fontSize: 18, lineHeight: 25 }]}>
-          {confirmee
+          {fonce
             ? `Fabrice sera là ${dateCourte(course.date)} à ${course.heure.replace(':', 'h')}. Vous avez reçu la confirmation par notification, SMS et email.`
             : 'Fabrice vous confirme votre course sous 30 minutes, par notification, SMS et email.'}
         </Text>
 
-        <View style={[s.recap, { borderColor: confirmee ? 'rgba(255,255,255,0.22)' : c.bain2 }]}>
+        <View style={[s.recap, { borderColor: fonce ? 'rgba(255,255,255,0.22)' : c.bain2 }]}>
           <Text style={[s.date, { color: texte }]}>
             {dateCourte(course.date)} · {course.heure.replace(':', 'h')}
           </Text>
@@ -58,12 +60,12 @@ export default function Envoyee() {
         </View>
 
         <View style={{ gap: space.m, marginTop: space.xl }}>
-          <Bouton titre="Voir mes courses" variante={confirmee ? 'clair' : 'plein'} onPress={() => terminer('/courses')} />
-          <Bouton titre="Appeler Fabrice" variante={confirmee ? 'clair' : 'contour'} icone="call-outline" onPress={appelerFabrice} />
-          <Bouton titre="Retour à l'accueil" variante="texte" surFonce={confirmee} onPress={() => terminer('/')} />
+          <Bouton titre="Voir mes courses" variante={fonce ? 'clair' : 'plein'} onPress={() => terminer('/courses')} />
+          <Bouton titre="Appeler Fabrice" variante={fonce ? 'clair' : 'contour'} icone="call-outline" onPress={appelerFabrice} />
+          <Bouton titre="Retour à l'accueil" variante="texte" surFonce={fonce} onPress={() => terminer('/')} />
         </View>
 
-        {!confirmee ? (
+        {!fonce ? (
           <View style={s.compte}>
             <Text style={type.h3}>Retrouver vos courses sur tous vos appareils</Text>
             <Text style={[type.small, { marginTop: 4, marginBottom: space.m }]}>
@@ -76,14 +78,14 @@ export default function Envoyee() {
         <View style={s.demo}>
           <Text style={[type.label, { color: texte2, marginBottom: space.s }]}>Prototype</Text>
           <Bouton
-            titre={confirmee ? 'Revenir à « demande envoyée »' : 'Simuler la confirmation de Fabrice'}
+            titre={fonce ? 'Revenir à « demande envoyée »' : 'Simuler la confirmation de Fabrice'}
             variante="texte"
-            surFonce={confirmee}
+            surFonce={fonce}
             onPress={() => changerStatut(course.id, confirmee ? 'envoyee' : 'confirmee')}
           />
         </View>
       </ScrollView>
-    </Animated.View>
+    </View>
   );
 }
 
