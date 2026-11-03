@@ -5,11 +5,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dateCourte, euros, offre } from '../src/data';
 import { useStore } from '../src/store';
 import { Couleurs, f, radius, space } from '../src/theme';
+import { TrajetRelief, couleursRelief } from '../src/TrajetRelief';
 import { useTheme } from '../src/useTheme';
 import { Bouton, Itineraire, Teinture, appelerFabrice } from '../src/ui';
 
 export default function Envoyee() {
-  const { c, type, s } = useTheme(creerStyles);
+  const { c, type, s, estSombre } = useTheme(creerStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { courses, changerStatut, reinitialiser } = useStore();
   const insets = useSafeAreaInsets();
@@ -45,6 +46,13 @@ export default function Envoyee() {
             : 'Fabrice vous confirme votre course sous 30 minutes, par notification, SMS et email.'}
         </Text>
 
+        <TrajetRelief
+          departId={course.departId}
+          arriveeId={course.arriveeId}
+          couleurs={couleursRelief(c, estSombre)}
+          hauteur={190}
+          style={{ borderRadius: radius.l, marginTop: space.xl }}
+        />
         <View style={[s.recap, { borderColor: confirmee ? 'rgba(255,255,255,0.22)' : c.bain2 }]}>
           <Text style={[s.date, { color: texte }]}>
             {dateCourte(course.date)} · {course.heure.replace(':', 'h')}

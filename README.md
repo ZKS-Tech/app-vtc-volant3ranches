@@ -36,6 +36,11 @@ redéfinies pour sortir du style « crème et or » jugé trop générique.
 
 - Le statut d'une course **se teinte** comme un tissu à chaque bain : bleu pâle quand la demande est
   envoyée, indigo profond quand Fabrice confirme, bleu délavé quand elle est terminée.
+- **Le trajet en relief** : sur le choix du véhicule et la confirmation, une carte 3D stylisée du Tarn,
+  du Lauragais et de la Montagne Noire (rendu WebGL temps réel, `mobile/src/TrajetRelief.tsx`). La caméra
+  survole la région pendant que l'itinéraire se dessine en arc entre le départ et l'arrivée, puis une
+  lumière parcourt le trajet. Relief stylisé, positions des villes réelles. L'animation s'arrête hors
+  écran et devient une image fixe si « Réduire les animations » est activé.
 - **Mode clair et mode sombre.** L'application suit le réglage du téléphone ; on peut aussi forcer
   l'un ou l'autre dans Profil › Apparence.
 - Photos réelles de Fabrice et des véhicules, reprises du site.
