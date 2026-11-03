@@ -1,0 +1,270 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { ReactNode, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator, Animated, Linking, Pressable, StyleSheet, Text, TextInput, TextInputProps, View,
+  ViewStyle,
+} from 'react-native';
+import { contact, dateCourte, euros, lieu, offre } from './data';
+import type { Course, Statut } from './store';
+import { c, f, radius, space, type } from './theme';
+
+export type IconName = React.ComponentProps<typeof Ionicons>['name'];
+
+export function Bouton({
+  titre, onPress, variante = 'plein', icone, desactive, chargement, style, surFonce,
+}: {
+  titre: string; onPress?: () => void; variante?: 'plein' | 'contour' | 'texte' | 'clair';
+  icone?: IconName; desactive?: boolean; chargement?: boolean; style?: ViewStyle; surFonce?: boolean;
+}) {
+  const plein = variante === 'plein';
+  const clair = variante === 'clair';
+  const couleurTexte = plein || surFonce ? c.surface : clair ? c.cuve : c.indigo;
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityState={{ disabled: !!desactive, busy: !!chargement }}
+      disabled={desactive || chargement}
+      onPress={onPress}
+      style={({ pressed }) => [
+        s.bouton,
+        plein && { backgroundColor: pressed ? c.indigoPress : c.indigo },
+        clair && { backgroundColor: pressed ? c.bain2 : c.surface },
+        variante === 'contour' && { borderWidth: 1.5, borderColor: c.indigo, backgroundColor: pressed ? c.bain1 : 'transparent' },
+        variante === 'texte' && { minHeight: 44, paddingHorizontal: space.s, backgroundColor: pressed ? (surFonce ? 'rgba(255,255,255,0.12)' : c.bain1) : 'transparent' },
+        desactive && { opacity: 0.4 },
+        style,
+      ]}
+    >
+      {chargement ? <ActivityIndicator color={couleurTexte} /> : icone ? <Ionicons name={icone} size={20} color={couleurTexte} /> : null}
+      <Text style={[s.boutonTexte, { color: couleurTexte }]}>{titre}</Text>
+    </Pressable>
+  );
+}
+
+export const appelerFabrice = () => Linking.openURL(contact.telephoneLien).catch(() => {});
+
+export function Note({ children, ton = 'feuille', icone }: { children: ReactNode; ton?: 'feuille' | 'alerte' | 'erreur' | 'bain'; icone?: IconName }) {
+  const t = {
+    feuille: [c.feuilleFond, c.feuilleEncre, 'leaf-outline'],
+    alerte: [c.alerteFond, c.alerte, 'time-outline'],
+    erreur: [c.erreurFond, c.erreur, 'alert-circle-outline'],
+    bain: [c.bain1, c.indigo, 'information-circle-outline'],
+  }[ton] as [string, string, IconName];
+  return (
+    <View style={[s.note, { backgroundColor: t[0] }]}>
+      <Ionicons name={icone ?? t[2]} size={20} color={t[1]} style={{ marginTop: 1 }} />
+      <Text style={[type.small, { color: t[1], flex: 1 }]}>{children}</Text>
+    </View>
+  );
+}
+
+export function Titre({ children, style }: { children: ReactNode; style?: object }) {
+  return <Text accessibilityRole="header" style={[type.h2, { marginTop: space.xxl, marginBottom: space.m }, style]}>{children}</Text>;
+}
+
+export function Ligne({ libelle, valeur, fort }: { libelle: string; valeur: string; fort?: boolean }) {
+  return (
+    <View style={s.ligne}>
+      <Text style={[type.small, { flex: 1 }]}>{libelle}</Text>
+      <Text style={[type.body, { flex: 1.6, textAlign: 'right' }, fort && { fontWeight: '700' }]}>{valeur}</Text>
+    </View>
+  );
+}
+
+export function Champ({ libelle, aide, ...props }: TextInputProps & { libelle: string; aide?: string }) {
+  const [focus, setFocus] = useState(false);
+  return (
+    <View style={{ marginBottom: space.l }}>
+      <Text style={[type.label, { marginBottom: 6 }]}>{libelle}</Text>
+      <TextInput
+        placeholderTextColor="#8A90A0"
+        style={[s.champ, focus && s.champFocus]}
+        onFocus={() => setFocus(true)}
+        onBlur={() => setFocus(false)}
+        {...props}
+      />
+      {aide ? <Text style={[type.small, { marginTop: 6 }]}>{aide}</Text> : null}
+    </View>
+  );
+}
+
+export function Compteur({ libelle, valeur, min, max, onChange, icone }: {
+  libelle: string; valeur: number; min: number; max: number; onChange: (n: number) => void; icone: IconName;
+}) {
+  return (
+    <View style={s.compteur}>
+      <Ionicons name={icone} size={22} color={c.indigo} />
+      <Text style={[type.body, { flex: 1 }]}>{libelle}</Text>
+      <Pressable accessibilityLabel={`Moins de ${libelle.toLowerCase()}`} disabled={valeur <= min} onPress={() => onChange(valeur - 1)} style={[s.rond, valeur <= min && { opacity: 0.35 }]}>
+        <Ionicons name="remove" size={22} color={c.indigo} />
+      </Pressable>
+      <Text style={s.compteurValeur}>{valeur}</Text>
+      <Pressable accessibilityLabel={`Plus de ${libelle.toLowerCase()}`} disabled={valeur >= max} onPress={() => onChange(valeur + 1)} style={[s.rond, valeur >= max && { opacity: 0.35 }]}>
+        <Ionicons name="add" size={22} color={c.indigo} />
+      </Pressable>
+    </View>
+  );
+}
+
+export function Segment<T extends string>({ options, valeur, onChange }: {
+  options: { id: T; titre: string }[]; valeur: T; onChange: (v: T) => void;
+}) {
+  return (
+    <View style={s.segment} accessibilityRole="tablist">
+      {options.map((o) => {
+        const actif = o.id === valeur;
+        return (
+          <Pressable key={o.id} accessibilityRole="tab" accessibilityState={{ selected: actif }} onPress={() => onChange(o.id)} style={[s.segmentItem, actif && s.segmentActif]}>
+            <Text style={[type.body, { fontWeight: actif ? '700' : '500', color: actif ? c.cuve : c.pierre }]}>{o.titre}</Text>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
+
+// ——— Signature : la course se teinte ———
+// Chaque statut est un bain de teinture plus ou moins foncé.
+export const teintes: Record<Statut, { fond: string; texte: string; texte2: string; libelle: string; niveau: number }> = {
+  envoyee: { fond: c.bain1, texte: c.cuve, texte2: c.indigo, libelle: 'Demande envoyée', niveau: 1 },
+  confirmee: { fond: c.indigo, texte: c.surface, texte2: c.surCuve2, libelle: 'Confirmée par Fabrice', niveau: 2 },
+  terminee: { fond: c.delaveFond, texte: c.encre, texte2: c.pierre, libelle: 'Terminée', niveau: 3 },
+  annulee: { fond: c.surface, texte: c.pierre, texte2: c.pierre, libelle: 'Annulée', niveau: 0 },
+};
+
+const bains = [
+  { titre: 'Envoyée', couleur: c.bain3 },
+  { titre: 'Confirmée', couleur: c.indigo },
+  { titre: 'Terminée', couleur: c.delave },
+];
+
+export function Teinture({ statut, surFonce }: { statut: Statut; surFonce?: boolean }) {
+  const niveau = teintes[statut].niveau;
+  const anims = useRef(bains.map((_, i) => new Animated.Value(i < niveau ? 1 : 0))).current;
+  useEffect(() => {
+    Animated.stagger(
+      120,
+      anims.map((a, i) => Animated.timing(a, { toValue: i < niveau ? 1 : 0, duration: 650, useNativeDriver: false })),
+    ).start();
+  }, [niveau]);
+  const vide = surFonce ? 'rgba(255,255,255,0.18)' : c.trait;
+  return (
+    <View accessibilityLabel={`Statut : ${teintes[statut].libelle}`} style={{ flexDirection: 'row', gap: 4 }}>
+      {bains.map((b, i) => (
+        <View key={b.titre} style={{ flex: 1 }}>
+          <Animated.View
+            style={{
+              height: 6, borderRadius: 3,
+              backgroundColor: anims[i].interpolate({ inputRange: [0, 1], outputRange: [vide, surFonce && i === 1 ? c.surface : b.couleur] }),
+            }}
+          />
+          <Text style={[type.label, { fontSize: 12, marginTop: 6, color: surFonce ? c.surCuve2 : c.pierre }, i === niveau - 1 && { color: surFonce ? c.surface : c.encre }]}>
+            {b.titre}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+export function Itineraire({ departId, arriveeId, couleur = c.encre, couleur2 = c.pierre, grand }: {
+  departId: string; arriveeId: string; couleur?: string; couleur2?: string; grand?: boolean;
+}) {
+  const a = lieu(departId);
+  const b = lieu(arriveeId);
+  const t = grand ? { fontSize: 18, fontWeight: '600' as const } : { fontSize: 16, fontWeight: '600' as const };
+  return (
+    <View style={{ flexDirection: 'row', gap: space.m }}>
+      <View style={{ alignItems: 'center', paddingTop: 7 }}>
+        <View style={{ width: 9, height: 9, borderRadius: 5, borderWidth: 2, borderColor: couleur }} />
+        <View style={{ width: 2, flex: 1, backgroundColor: couleur2, opacity: 0.5, marginVertical: 3 }} />
+        <View style={{ width: 9, height: 9, backgroundColor: couleur }} />
+      </View>
+      <View style={{ flex: 1, gap: 10 }}>
+        <View>
+          <Text style={[t, { color: couleur }]}>{a.nom}</Text>
+          <Text style={[type.small, { color: couleur2 }]}>{a.detail}</Text>
+        </View>
+        <View>
+          <Text style={[t, { color: couleur }]}>{b.nom}</Text>
+          <Text style={[type.small, { color: couleur2 }]}>{b.detail}</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+export function CarteCourse({ course, onPress }: { course: Course; onPress?: () => void }) {
+  const t = teintes[course.statut];
+  const fonce = course.statut === 'confirmee';
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={`${t.libelle}, ${dateCourte(course.date)} à ${course.heure}, ${lieu(course.departId).nom} vers ${lieu(course.arriveeId).nom}`}
+      style={({ pressed }) => [
+        s.carteCourse,
+        { backgroundColor: t.fond },
+        course.statut === 'annulee' && { borderWidth: 1, borderColor: c.trait, borderStyle: 'dashed' },
+        pressed && { opacity: 0.9 },
+      ]}
+    >
+      <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
+        <Text style={{ fontFamily: f.display, fontSize: 26, color: t.texte, textDecorationLine: course.statut === 'annulee' ? 'line-through' : 'none' }}>
+          {dateCourte(course.date)} · {course.heure.replace(':', 'h')}
+        </Text>
+        <Text style={{ fontFamily: f.displayMedium, fontSize: 20, color: t.texte }}>{euros(course.montant)}</Text>
+      </View>
+      <View style={{ marginVertical: space.l }}>
+        <Itineraire departId={course.departId} arriveeId={course.arriveeId} couleur={t.texte} couleur2={t.texte2} />
+      </View>
+      <Text style={[type.small, { color: t.texte2, marginBottom: space.m }]}>
+        {offre(course.offreId).nom} · {offre(course.offreId).vehicule}
+        {course.numero ? ` · ${course.numero}` : ''}
+      </Text>
+      {course.statut === 'annulee' ? (
+        <Text style={[type.label, { color: c.pierre }]}>Annulée</Text>
+      ) : (
+        <Teinture statut={course.statut} surFonce={fonce} />
+      )}
+    </Pressable>
+  );
+}
+
+const s = StyleSheet.create({
+  bouton: {
+    minHeight: 52, borderRadius: radius.m, paddingHorizontal: space.xl, flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'center', gap: space.s,
+  },
+  boutonTexte: { fontSize: 17, fontWeight: '700' },
+  note: { flexDirection: 'row', gap: space.m, padding: space.m, borderRadius: radius.m },
+  ligne: {
+    flexDirection: 'row', paddingVertical: 11, borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: c.trait, gap: space.m, alignItems: 'baseline',
+  },
+  champ: {
+    minHeight: 50, borderRadius: radius.m, borderWidth: 1, borderColor: c.trait, backgroundColor: c.surface,
+    paddingHorizontal: space.l, fontSize: 17, color: c.encre, outlineStyle: 'none',
+  } as object,
+  champFocus: { borderColor: c.indigo, borderWidth: 2, paddingHorizontal: space.l - 1 },
+  compteur: { flexDirection: 'row', alignItems: 'center', gap: space.m, paddingVertical: space.s },
+  rond: {
+    width: 44, height: 44, borderRadius: 22, backgroundColor: c.bain1, alignItems: 'center', justifyContent: 'center',
+  },
+  compteurValeur: { fontFamily: f.display, fontSize: 24, color: c.encre, minWidth: 28, textAlign: 'center' },
+  segment: { flexDirection: 'row', backgroundColor: c.bain1, borderRadius: radius.m, padding: 3 },
+  segmentItem: { flex: 1, minHeight: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.s + 2 },
+  segmentActif: {
+    backgroundColor: c.surface, shadowColor: c.cuve, shadowOpacity: 0.12, shadowRadius: 6, shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
+  },
+  carteCourse: { borderRadius: radius.l, padding: space.l + 2 },
+});
+
+// Interrupteur natif aux couleurs de la marque (iOS, Android et web).
+export const couleursSwitch = {
+  trackColor: { true: c.indigo, false: c.trait },
+  thumbColor: c.surface,
+  activeThumbColor: c.surface,
+  ios_backgroundColor: c.trait,
+} as object;

@@ -1,0 +1,153 @@
+import { createContext, ReactNode, useContext, useMemo, useState } from 'react';
+import { OffreId, lieu, offre, prix, trajet } from './data';
+
+export type Statut = 'envoyee' | 'confirmee' | 'terminee' | 'annulee';
+
+export type Course = {
+  id: string;
+  departId: string;
+  arriveeId: string;
+  date: Date; // jour + heure
+  heure: string;
+  allerRetour: boolean;
+  passagers: number;
+  bagages: number;
+  numero?: string;
+  offreId: OffreId;
+  montant: number;
+  km: number;
+  minutes: number;
+  nom: string;
+  statut: Statut;
+  demo?: boolean;
+};
+
+export type Brouillon = {
+  departId?: string;
+  arriveeId?: string;
+  jour: Date;
+  heure: string;
+  allerRetour: boolean;
+  passagers: number;
+  bagages: number;
+  numero: string;
+  offreId: OffreId;
+  nom: string;
+  telephone: string;
+  email: string;
+  commentaire: string;
+  cgv: boolean;
+};
+
+const aujourdhui = () => {
+  const d = new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+};
+const dansJours = (n: number) => {
+  const d = aujourdhui();
+  d.setDate(d.getDate() + n);
+  return d;
+};
+const avecHeure = (jour: Date, heure: string) => {
+  const d = new Date(jour);
+  const [h, m] = heure.split(':').map(Number);
+  d.setHours(h, m, 0, 0);
+  return d;
+};
+
+function coursesDemo(): Course[] {
+  const make = (
+    id: string, departId: string, arriveeId: string, jours: number, heure: string,
+    offreId: OffreId, statut: Statut, numero?: string, passagers = 1, bagages = 1,
+  ): Course => {
+    const t = trajet(lieu(departId), lieu(arriveeId));
+    const jour = dansJours(jours);
+    return {
+      id, departId, arriveeId, heure, offreId, statut, numero, passagers, bagages,
+      date: avecHeure(jour, heure), allerRetour: false, km: t.km, minutes: t.minutes,
+      montant: prix(offre(offreId), t.km, jour, heure, false).montant,
+      nom: 'Claire Martin', demo: true,
+    };
+  };
+  return [
+    make('d1', 'tls', 'castres', 3, '18:40', 'tesla', 'confirmee', 'AF 6127', 2, 2),
+    make('d2', 'albi', 'matabiau', -12, '07:15', 'tesla', 'terminee'),
+    make('d3', 'lavaur', 'tls', -40, '05:30', 'van', 'terminee', 'U2 4421', 6, 6),
+  ];
+}
+
+const brouillonVide = (): Brouillon => ({
+  jour: dansJours(1),
+  heure: '09:00',
+  allerRetour: false,
+  passagers: 1,
+  bagages: 1,
+  numero: '',
+  offreId: 'tesla',
+  nom: '',
+  telephone: '',
+  email: '',
+  commentaire: '',
+  cgv: false,
+});
+
+type Store = {
+  brouillon: Brouillon;
+  maj: (p: Partial<Brouillon>) => void;
+  reinitialiser: () => void;
+  courses: Course[];
+  envoyer: () => Promise<Course>;
+  changerStatut: (id: string, s: Statut) => void;
+  simulerEchec: boolean;
+  setSimulerEchec: (v: boolean) => void;
+  prefs: { push: boolean; sms: boolean; email: boolean; stats: boolean };
+  setPrefs: (p: Partial<Store['prefs']>) => void;
+};
+
+const Ctx = createContext<Store | null>(null);
+
+export function StoreProvider({ children }: { children: ReactNode }) {
+  const [brouillon, setBrouillon] = useState<Brouillon>(brouillonVide);
+  const [courses, setCourses] = useState<Course[]>(coursesDemo);
+  const [simulerEchec, setSimulerEchec] = useState(false);
+  const [prefs, setP] = useState({ push: true, sms: true, email: true, stats: false });
+
+  const value = useMemo<Store>(
+    () => ({
+      brouillon,
+      maj: (p) => setBrouillon((b) => ({ ...b, ...p })),
+      reinitialiser: () => setBrouillon((b) => ({ ...brouillonVide(), nom: b.nom, telephone: b.telephone, email: b.email })),
+      courses,
+      envoyer: () =>
+        new Promise<Course>((resolve, reject) => {
+          setTimeout(() => {
+            if (simulerEchec) return reject(new Error('reseau'));
+            const b = brouillon;
+            const t = trajet(lieu(b.departId!), lieu(b.arriveeId!));
+            const c: Course = {
+              id: String(Date.now()),
+              departId: b.departId!, arriveeId: b.arriveeId!,
+              date: avecHeure(b.jour, b.heure), heure: b.heure, allerRetour: b.allerRetour,
+              passagers: b.passagers, bagages: b.bagages, numero: b.numero || undefined,
+              offreId: b.offreId, km: t.km, minutes: t.minutes,
+              montant: prix(offre(b.offreId), t.km, b.jour, b.heure, b.allerRetour).montant,
+              nom: b.nom, statut: 'envoyee',
+            };
+            setCourses((cs) => [c, ...cs]);
+            resolve(c);
+          }, 1400);
+        }),
+      changerStatut: (id, s) => setCourses((cs) => cs.map((c) => (c.id === id ? { ...c, statut: s } : c))),
+      simulerEchec,
+      setSimulerEchec,
+      prefs,
+      setPrefs: (p) => setP((x) => ({ ...x, ...p })),
+    }),
+    [brouillon, courses, simulerEchec, prefs],
+  );
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+export const useStore = () => useContext(Ctx)!;
+export { dansJours, aujourdhui };

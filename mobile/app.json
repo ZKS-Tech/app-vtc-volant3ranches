@@ -1,0 +1,40 @@
+{
+  "expo": {
+    "name": "Volant3ranches",
+    "slug": "volant3ranches",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "fr.volant3ranches.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#101B45",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "fr.volant3ranches.app"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single",
+      "name": "Volant3ranches"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-image"
+    ],
+    "scheme": "volant3ranches",
+    "primaryColor": "#1E3277",
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}
