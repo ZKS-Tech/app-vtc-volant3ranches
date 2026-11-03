@@ -112,10 +112,17 @@ Chaque modification du code s'affiche immédiatement sur le téléphone.
   que le téléphone ne peut pas joindre. Utiliser le tunnel :
 
   ```bash
+  npx expo login
+  ```
+
+  ```bash
   npx expo start --tunnel
   ```
 
-  (Expo propose d'installer `@expo/ngrok` la première fois : accepter.)
+  Le tunnel demande d'être connecté à un compte Expo (gratuit). Sans compte, utiliser
+  `npx expo start --tunnel ngrok` et accepter l'installation de `@expo/ngrok`.
+  En se connectant aussi dans Expo Go avec le même compte, le projet apparaît directement dans
+  l'application, sans QR code.
 - Vérifier que le téléphone et l'ordinateur sont sur le même Wi-Fi et que le pare-feu Windows
   autorise Node.js sur les réseaux privés.
 - Mettre à jour Expo Go : le projet utilise Expo SDK 58.
