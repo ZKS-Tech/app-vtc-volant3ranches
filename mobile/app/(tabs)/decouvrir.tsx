@@ -4,10 +4,12 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { avis, contact, euros, fabrice, faq, offres, photos, prestations, valeurs } from '../../src/data';
-import { c, f, radius, space, type } from '../../src/theme';
+import { Couleurs, f, radius, space } from '../../src/theme';
+import { useTheme } from '../../src/useTheme';
 import { Bouton, IconName, Titre, appelerFabrice } from '../../src/ui';
 
 export default function Decouvrir() {
+  const { c, type, s } = useTheme(creerStyles);
   const [ouverte, setOuverte] = useState<number | null>(0);
   return (
     <ScrollView style={{ backgroundColor: c.sol }} contentContainerStyle={{ paddingBottom: space.xxl }}>
@@ -65,7 +67,7 @@ export default function Decouvrir() {
         <View style={s.bloc}>
           {prestations.map((p, i) => (
             <View key={p.titre} style={[s.prestation, i > 0 && s.trait]}>
-              <Ionicons name={p.icone as IconName} size={24} color={c.indigo} style={{ marginTop: 2 }} />
+              <Ionicons name={p.icone as IconName} size={24} color={c.accent} style={{ marginTop: 2 }} />
               <View style={{ flex: 1 }}>
                 <Text style={type.h3}>{p.titre}</Text>
                 <Text style={[type.small, { marginTop: 2 }]}>{p.texte}</Text>
@@ -86,7 +88,7 @@ export default function Decouvrir() {
         {avis.map((a) => (
           <View key={a.nom} style={s.avis}>
             <View style={{ flexDirection: 'row', gap: 2 }} accessibilityLabel="5 étoiles sur 5">
-              {[0, 1, 2, 3, 4].map((i) => <Ionicons key={i} name="star" size={14} color={c.indigo} />)}
+              {[0, 1, 2, 3, 4].map((i) => <Ionicons key={i} name="star" size={14} color={c.accent} />)}
             </View>
             <Text style={[type.body, { marginVertical: space.m }]}>« {a.texte} »</Text>
             <Text style={[type.body, { fontWeight: '700' }]}>{a.nom}</Text>
@@ -125,9 +127,10 @@ export default function Decouvrir() {
 }
 
 function LigneContact({ icone, titre, sous, onPress }: { icone: IconName; titre: string; sous: string; onPress?: () => void }) {
+  const { c, type, s } = useTheme(creerStyles);
   return (
     <Pressable onPress={onPress} disabled={!onPress} style={({ pressed }) => [s.contact, pressed && { opacity: 0.6 }]}>
-      <Ionicons name={icone} size={22} color={c.indigo} />
+      <Ionicons name={icone} size={22} color={c.accent} />
       <View style={{ flex: 1 }}>
         <Text style={[type.body, { fontWeight: '600' }]}>{titre}</Text>
         <Text style={type.small}>{sous}</Text>
@@ -137,16 +140,16 @@ function LigneContact({ icone, titre, sous, onPress }: { icone: IconName; titre:
   );
 }
 
-const s = StyleSheet.create({
+const creerStyles = (c: Couleurs) => StyleSheet.create({
   hero: { height: 260, justifyContent: 'flex-end', padding: space.l },
   voile: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(16,27,69,0.42)' },
-  heroTitre: { fontFamily: f.display, fontSize: 36, lineHeight: 39, color: c.surface, marginBottom: 4 },
+  heroTitre: { fontFamily: f.display, fontSize: 36, lineHeight: 39, color: c.blanc, marginBottom: 4 },
   portrait: { width: 96, height: 120, borderRadius: radius.m, backgroundColor: c.bain2 },
   valeurs: { marginTop: space.l, gap: space.m },
   valeur: { paddingLeft: space.m, borderLeftWidth: 1, borderLeftColor: c.bain3 },
-  valeurTitre: { fontFamily: f.displayMedium, fontSize: 20, color: c.cuve },
+  valeurTitre: { fontFamily: f.displayMedium, fontSize: 20, color: c.fort },
   galerie: { width: 200, height: 200, borderRadius: radius.m, backgroundColor: c.bain2 },
-  tarif: { fontFamily: f.displayMedium, fontSize: 18, color: c.indigo },
+  tarif: { fontFamily: f.displayMedium, fontSize: 18, color: c.accent },
   bloc: { backgroundColor: c.surface, borderRadius: radius.l, paddingHorizontal: space.l },
   trait: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.trait },
   prestation: { flexDirection: 'row', gap: space.m, paddingVertical: space.l },

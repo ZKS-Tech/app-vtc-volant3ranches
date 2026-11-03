@@ -4,10 +4,12 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Swit
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dateCourte, euros, lieu, offre, prix, trajet } from '../src/data';
 import { useStore } from '../src/store';
-import { c, radius, space, type } from '../src/theme';
+import { Couleurs, radius, space } from '../src/theme';
+import { useTheme } from '../src/useTheme';
 import { Bouton, couleursSwitch, Champ, Ligne, Note, Titre, appelerFabrice } from '../src/ui';
 
 export default function Coordonnees() {
+  const { c, type, s } = useTheme(creerStyles);
   const { brouillon: b, maj, envoyer } = useStore();
   const insets = useSafeAreaInsets();
   const [etat, setEtat] = useState<'saisie' | 'envoi' | 'echec'>('saisie');
@@ -86,7 +88,7 @@ export default function Coordonnees() {
 
         <Pressable style={s.cgv} onPress={() => maj({ cgv: !b.cgv })} accessibilityRole="switch" accessibilityState={{ checked: b.cgv }}>
           <Text style={[type.body, { flex: 1 }]}>J'accepte les conditions générales de vente</Text>
-          <Switch value={b.cgv} onValueChange={(v) => maj({ cgv: v })} {...couleursSwitch} />
+          <Switch value={b.cgv} onValueChange={(v) => maj({ cgv: v })} {...couleursSwitch(c)} />
         </Pressable>
         {tente && !b.cgv ? <Text style={[type.small, { color: c.erreur }]}>Acceptez les CGV pour envoyer la demande.</Text> : null}
 
@@ -111,7 +113,7 @@ export default function Coordonnees() {
   );
 }
 
-const s = StyleSheet.create({
+const creerStyles = (c: Couleurs) => StyleSheet.create({
   bloc: { backgroundColor: c.surface, borderRadius: radius.l, paddingHorizontal: space.l },
   cgv: { flexDirection: 'row', alignItems: 'center', gap: space.m, marginTop: space.xl, minHeight: 48 },
   pied: {

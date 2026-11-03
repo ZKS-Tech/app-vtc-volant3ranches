@@ -4,10 +4,12 @@ import { Animated, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dateCourte, euros, offre } from '../src/data';
 import { useStore } from '../src/store';
-import { c, f, radius, space, type } from '../src/theme';
+import { Couleurs, f, radius, space } from '../src/theme';
+import { useTheme } from '../src/useTheme';
 import { Bouton, Itineraire, Teinture, appelerFabrice } from '../src/ui';
 
 export default function Envoyee() {
+  const { c, type, s } = useTheme(creerStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { courses, changerStatut, reinitialiser } = useStore();
   const insets = useSafeAreaInsets();
@@ -20,8 +22,8 @@ export default function Envoyee() {
   }, [confirmee]);
 
   if (!course) return null;
-  const fond = bain.interpolate({ inputRange: [0, 1], outputRange: [c.bain1, c.indigo] });
-  const texte = confirmee ? c.surface : c.cuve;
+  const fond = bain.interpolate({ inputRange: [0, 1], outputRange: [c.bain1, c.action] });
+  const texte = confirmee ? c.blanc : c.fort;
   const texte2 = confirmee ? c.surCuve2 : c.pierre;
 
   const terminer = (route: '/' | '/courses') => {
@@ -85,7 +87,7 @@ export default function Envoyee() {
   );
 }
 
-const s = StyleSheet.create({
+const creerStyles = (c: Couleurs) => StyleSheet.create({
   titre: { fontFamily: f.display, fontSize: 46, lineHeight: 50, marginTop: space.xxl, marginBottom: space.m },
   recap: { borderWidth: 1, borderRadius: radius.l, padding: space.l, marginTop: space.xl },
   date: { fontFamily: f.display, fontSize: 24 },

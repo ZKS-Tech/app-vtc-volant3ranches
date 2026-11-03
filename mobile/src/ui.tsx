@@ -6,7 +6,8 @@ import {
 } from 'react-native';
 import { contact, dateCourte, euros, lieu, offre } from './data';
 import type { Course, Statut } from './store';
-import { c, f, radius, space, type } from './theme';
+import { Couleurs, f, radius, space } from './theme';
+import { useTheme } from './useTheme';
 
 export type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -16,9 +17,10 @@ export function Bouton({
   titre: string; onPress?: () => void; variante?: 'plein' | 'contour' | 'texte' | 'clair';
   icone?: IconName; desactive?: boolean; chargement?: boolean; style?: ViewStyle; surFonce?: boolean;
 }) {
+  const { c, type, s } = useTheme(creerStyles);
   const plein = variante === 'plein';
   const clair = variante === 'clair';
-  const couleurTexte = plein || surFonce ? c.surface : clair ? c.cuve : c.indigo;
+  const couleurTexte = plein || surFonce ? c.blanc : clair ? c.fort : c.accent;
   return (
     <Pressable
       accessibilityRole="button"
@@ -27,9 +29,9 @@ export function Bouton({
       onPress={onPress}
       style={({ pressed }) => [
         s.bouton,
-        plein && { backgroundColor: pressed ? c.indigoPress : c.indigo },
+        plein && { backgroundColor: pressed ? c.actionPress : c.action },
         clair && { backgroundColor: pressed ? c.bain2 : c.surface },
-        variante === 'contour' && { borderWidth: 1.5, borderColor: c.indigo, backgroundColor: pressed ? c.bain1 : 'transparent' },
+        variante === 'contour' && { borderWidth: 1.5, borderColor: c.accent, backgroundColor: pressed ? c.bain1 : 'transparent' },
         variante === 'texte' && { minHeight: 44, paddingHorizontal: space.s, backgroundColor: pressed ? (surFonce ? 'rgba(255,255,255,0.12)' : c.bain1) : 'transparent' },
         desactive && { opacity: 0.4 },
         style,
@@ -44,11 +46,12 @@ export function Bouton({
 export const appelerFabrice = () => Linking.openURL(contact.telephoneLien).catch(() => {});
 
 export function Note({ children, ton = 'feuille', icone }: { children: ReactNode; ton?: 'feuille' | 'alerte' | 'erreur' | 'bain'; icone?: IconName }) {
+  const { c, type, s } = useTheme(creerStyles);
   const t = {
     feuille: [c.feuilleFond, c.feuilleEncre, 'leaf-outline'],
     alerte: [c.alerteFond, c.alerte, 'time-outline'],
     erreur: [c.erreurFond, c.erreur, 'alert-circle-outline'],
-    bain: [c.bain1, c.indigo, 'information-circle-outline'],
+    bain: [c.bain1, c.accent, 'information-circle-outline'],
   }[ton] as [string, string, IconName];
   return (
     <View style={[s.note, { backgroundColor: t[0] }]}>
@@ -59,10 +62,12 @@ export function Note({ children, ton = 'feuille', icone }: { children: ReactNode
 }
 
 export function Titre({ children, style }: { children: ReactNode; style?: object }) {
+  const { c, type, s } = useTheme(creerStyles);
   return <Text accessibilityRole="header" style={[type.h2, { marginTop: space.xxl, marginBottom: space.m }, style]}>{children}</Text>;
 }
 
 export function Ligne({ libelle, valeur, fort }: { libelle: string; valeur: string; fort?: boolean }) {
+  const { c, type, s } = useTheme(creerStyles);
   return (
     <View style={s.ligne}>
       <Text style={[type.small, { flex: 1 }]}>{libelle}</Text>
@@ -72,12 +77,13 @@ export function Ligne({ libelle, valeur, fort }: { libelle: string; valeur: stri
 }
 
 export function Champ({ libelle, aide, ...props }: TextInputProps & { libelle: string; aide?: string }) {
+  const { c, type, s } = useTheme(creerStyles);
   const [focus, setFocus] = useState(false);
   return (
     <View style={{ marginBottom: space.l }}>
       <Text style={[type.label, { marginBottom: 6 }]}>{libelle}</Text>
       <TextInput
-        placeholderTextColor="#8A90A0"
+        placeholderTextColor={c.placeholder}
         style={[s.champ, focus && s.champFocus]}
         onFocus={() => setFocus(true)}
         onBlur={() => setFocus(false)}
@@ -91,16 +97,17 @@ export function Champ({ libelle, aide, ...props }: TextInputProps & { libelle: s
 export function Compteur({ libelle, valeur, min, max, onChange, icone }: {
   libelle: string; valeur: number; min: number; max: number; onChange: (n: number) => void; icone: IconName;
 }) {
+  const { c, type, s } = useTheme(creerStyles);
   return (
     <View style={s.compteur}>
-      <Ionicons name={icone} size={22} color={c.indigo} />
+      <Ionicons name={icone} size={22} color={c.accent} />
       <Text style={[type.body, { flex: 1 }]}>{libelle}</Text>
       <Pressable accessibilityLabel={`Moins de ${libelle.toLowerCase()}`} disabled={valeur <= min} onPress={() => onChange(valeur - 1)} style={[s.rond, valeur <= min && { opacity: 0.35 }]}>
-        <Ionicons name="remove" size={22} color={c.indigo} />
+        <Ionicons name="remove" size={22} color={c.accent} />
       </Pressable>
       <Text style={s.compteurValeur}>{valeur}</Text>
       <Pressable accessibilityLabel={`Plus de ${libelle.toLowerCase()}`} disabled={valeur >= max} onPress={() => onChange(valeur + 1)} style={[s.rond, valeur >= max && { opacity: 0.35 }]}>
-        <Ionicons name="add" size={22} color={c.indigo} />
+        <Ionicons name="add" size={22} color={c.accent} />
       </Pressable>
     </View>
   );
@@ -109,13 +116,14 @@ export function Compteur({ libelle, valeur, min, max, onChange, icone }: {
 export function Segment<T extends string>({ options, valeur, onChange }: {
   options: { id: T; titre: string }[]; valeur: T; onChange: (v: T) => void;
 }) {
+  const { c, type, s } = useTheme(creerStyles);
   return (
     <View style={s.segment} accessibilityRole="tablist">
       {options.map((o) => {
         const actif = o.id === valeur;
         return (
           <Pressable key={o.id} accessibilityRole="tab" accessibilityState={{ selected: actif }} onPress={() => onChange(o.id)} style={[s.segmentItem, actif && s.segmentActif]}>
-            <Text style={[type.body, { fontWeight: actif ? '700' : '500', color: actif ? c.cuve : c.pierre }]}>{o.titre}</Text>
+            <Text style={[type.body, { fontWeight: actif ? '700' : '500', color: actif ? c.fort : c.pierre }]}>{o.titre}</Text>
           </Pressable>
         );
       })}
@@ -125,21 +133,23 @@ export function Segment<T extends string>({ options, valeur, onChange }: {
 
 // ——— Signature : la course se teinte ———
 // Chaque statut est un bain de teinture plus ou moins foncé.
-export const teintes: Record<Statut, { fond: string; texte: string; texte2: string; libelle: string; niveau: number }> = {
-  envoyee: { fond: c.bain1, texte: c.cuve, texte2: c.indigo, libelle: 'Demande envoyée', niveau: 1 },
-  confirmee: { fond: c.indigo, texte: c.surface, texte2: c.surCuve2, libelle: 'Confirmée par Fabrice', niveau: 2 },
+export const teintesDe = (c: Couleurs): Record<Statut, { fond: string; texte: string; texte2: string; libelle: string; niveau: number }> => ({
+  envoyee: { fond: c.bain1, texte: c.fort, texte2: c.accent, libelle: 'Demande envoyée', niveau: 1 },
+  confirmee: { fond: c.action, texte: c.blanc, texte2: c.surCuve2, libelle: 'Confirmée par Fabrice', niveau: 2 },
   terminee: { fond: c.delaveFond, texte: c.encre, texte2: c.pierre, libelle: 'Terminée', niveau: 3 },
   annulee: { fond: c.surface, texte: c.pierre, texte2: c.pierre, libelle: 'Annulée', niveau: 0 },
-};
+});
 
-const bains = [
+const bainsDe = (c: Couleurs) => [
   { titre: 'Envoyée', couleur: c.bain3 },
-  { titre: 'Confirmée', couleur: c.indigo },
+  { titre: 'Confirmée', couleur: c.action },
   { titre: 'Terminée', couleur: c.delave },
 ];
 
 export function Teinture({ statut, surFonce }: { statut: Statut; surFonce?: boolean }) {
-  const niveau = teintes[statut].niveau;
+  const { c, type, s } = useTheme(creerStyles);
+  const niveau = teintesDe(c)[statut].niveau;
+  const bains = bainsDe(c);
   const anims = useRef(bains.map((_, i) => new Animated.Value(i < niveau ? 1 : 0))).current;
   useEffect(() => {
     Animated.stagger(
@@ -149,16 +159,16 @@ export function Teinture({ statut, surFonce }: { statut: Statut; surFonce?: bool
   }, [niveau]);
   const vide = surFonce ? 'rgba(255,255,255,0.18)' : c.trait;
   return (
-    <View accessibilityLabel={`Statut : ${teintes[statut].libelle}`} style={{ flexDirection: 'row', gap: 4 }}>
+    <View accessibilityLabel={`Statut : ${teintesDe(c)[statut].libelle}`} style={{ flexDirection: 'row', gap: 4 }}>
       {bains.map((b, i) => (
         <View key={b.titre} style={{ flex: 1 }}>
           <Animated.View
             style={{
               height: 6, borderRadius: 3,
-              backgroundColor: anims[i].interpolate({ inputRange: [0, 1], outputRange: [vide, surFonce && i === 1 ? c.surface : b.couleur] }),
+              backgroundColor: anims[i].interpolate({ inputRange: [0, 1], outputRange: [vide, surFonce && i === 1 ? c.blanc : b.couleur] }),
             }}
           />
-          <Text style={[type.label, { fontSize: 12, marginTop: 6, color: surFonce ? c.surCuve2 : c.pierre }, i === niveau - 1 && { color: surFonce ? c.surface : c.encre }]}>
+          <Text style={[type.label, { fontSize: 12, marginTop: 6, color: surFonce ? c.surCuve2 : c.pierre }, i === niveau - 1 && { color: surFonce ? c.blanc : c.encre }]}>
             {b.titre}
           </Text>
         </View>
@@ -167,9 +177,12 @@ export function Teinture({ statut, surFonce }: { statut: Statut; surFonce?: bool
   );
 }
 
-export function Itineraire({ departId, arriveeId, couleur = c.encre, couleur2 = c.pierre, grand }: {
+export function Itineraire({ departId, arriveeId, couleur: couleurP, couleur2: couleur2P, grand }: {
   departId: string; arriveeId: string; couleur?: string; couleur2?: string; grand?: boolean;
 }) {
+  const { c, type, s } = useTheme(creerStyles);
+  const couleur = couleurP ?? c.encre;
+  const couleur2 = couleur2P ?? c.pierre;
   const a = lieu(departId);
   const b = lieu(arriveeId);
   const t = grand ? { fontSize: 18, fontWeight: '600' as const } : { fontSize: 16, fontWeight: '600' as const };
@@ -195,7 +208,8 @@ export function Itineraire({ departId, arriveeId, couleur = c.encre, couleur2 = 
 }
 
 export function CarteCourse({ course, onPress }: { course: Course; onPress?: () => void }) {
-  const t = teintes[course.statut];
+  const { c, type, s } = useTheme(creerStyles);
+  const t = teintesDe(c)[course.statut];
   const fonce = course.statut === 'confirmee';
   return (
     <Pressable
@@ -231,7 +245,7 @@ export function CarteCourse({ course, onPress }: { course: Course; onPress?: () 
   );
 }
 
-const s = StyleSheet.create({
+const creerStyles = (c: Couleurs) => StyleSheet.create({
   bouton: {
     minHeight: 52, borderRadius: radius.m, paddingHorizontal: space.xl, flexDirection: 'row',
     alignItems: 'center', justifyContent: 'center', gap: space.s,
@@ -246,7 +260,7 @@ const s = StyleSheet.create({
     minHeight: 50, borderRadius: radius.m, borderWidth: 1, borderColor: c.trait, backgroundColor: c.surface,
     paddingHorizontal: space.l, fontSize: 17, color: c.encre, outlineStyle: 'none',
   } as object,
-  champFocus: { borderColor: c.indigo, borderWidth: 2, paddingHorizontal: space.l - 1 },
+  champFocus: { borderColor: c.accent, borderWidth: 2, paddingHorizontal: space.l - 1 },
   compteur: { flexDirection: 'row', alignItems: 'center', gap: space.m, paddingVertical: space.s },
   rond: {
     width: 44, height: 44, borderRadius: 22, backgroundColor: c.bain1, alignItems: 'center', justifyContent: 'center',
@@ -262,9 +276,9 @@ const s = StyleSheet.create({
 });
 
 // Interrupteur natif aux couleurs de la marque (iOS, Android et web).
-export const couleursSwitch = {
-  trackColor: { true: c.indigo, false: c.trait },
-  thumbColor: c.surface,
-  activeThumbColor: c.surface,
+export const couleursSwitch = (c: Couleurs) => ({
+  trackColor: { true: c.action, false: c.trait },
+  thumbColor: c.blanc,
+  activeThumbColor: c.blanc,
   ios_backgroundColor: c.trait,
-} as object;
+}) as object;

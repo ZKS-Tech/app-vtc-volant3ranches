@@ -1,11 +1,13 @@
 import { Linking, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { contact } from '../../src/data';
 import { useStore } from '../../src/store';
-import { c, radius, space, type } from '../../src/theme';
-import { Bouton, couleursSwitch, Titre } from '../../src/ui';
+import { Couleurs, radius, space } from '../../src/theme';
+import { useTheme } from '../../src/useTheme';
+import { Bouton, couleursSwitch, Segment, Titre } from '../../src/ui';
 
 export default function Profil() {
-  const { prefs, setPrefs, simulerEchec, setSimulerEchec } = useStore();
+  const { c, type, s } = useTheme(creerStyles);
+  const { prefs, setPrefs, simulerEchec, setSimulerEchec, apparence, setApparence } = useStore();
   return (
     <ScrollView style={{ backgroundColor: c.sol }} contentContainerStyle={{ padding: space.l, paddingBottom: space.xxl }}>
       <View style={s.invite}>
@@ -16,6 +18,14 @@ export default function Profil() {
         <Bouton titre="Créer un compte" />
         <Bouton titre="J'ai déjà un compte" variante="texte" style={{ marginTop: space.xs }} />
       </View>
+
+      <Titre>Apparence</Titre>
+      <Segment
+        options={[{ id: 'auto', titre: 'Automatique' }, { id: 'clair', titre: 'Clair' }, { id: 'sombre', titre: 'Sombre' }]}
+        valeur={apparence}
+        onChange={setApparence}
+      />
+      <Text style={[type.small, { marginTop: space.s }]}>Automatique : suit le réglage du téléphone.</Text>
 
       <Titre>Confirmations de course</Titre>
       <View style={s.bloc}>
@@ -56,18 +66,20 @@ export default function Profil() {
 }
 
 function Interrupteur({ titre, sous, valeur, onChange, trait }: { titre: string; sous: string; valeur: boolean; onChange: (v: boolean) => void; trait?: boolean }) {
+  const { c, type, s } = useTheme(creerStyles);
   return (
     <View style={[s.ligne, trait && s.trait]}>
       <View style={{ flex: 1 }}>
         <Text style={type.body}>{titre}</Text>
         <Text style={type.small}>{sous}</Text>
       </View>
-      <Switch value={valeur} onValueChange={onChange} {...couleursSwitch} accessibilityLabel={titre} />
+      <Switch value={valeur} onValueChange={onChange} {...couleursSwitch(c)} accessibilityLabel={titre} />
     </View>
   );
 }
 
 function Lien({ titre, url, trait }: { titre: string; url: string; trait?: boolean }) {
+  const { c, type, s } = useTheme(creerStyles);
   return (
     <Text onPress={() => Linking.openURL(url)} style={[type.body, s.lien, trait && s.trait]} accessibilityRole="link">
       {titre}
@@ -75,10 +87,10 @@ function Lien({ titre, url, trait }: { titre: string; url: string; trait?: boole
   );
 }
 
-const s = StyleSheet.create({
+const creerStyles = (c: Couleurs) => StyleSheet.create({
   invite: { backgroundColor: c.bain1, borderRadius: radius.l, padding: space.l },
   bloc: { backgroundColor: c.surface, borderRadius: radius.l, paddingHorizontal: space.l },
   ligne: { flexDirection: 'row', alignItems: 'center', gap: space.m, paddingVertical: space.m, minHeight: 60 },
   trait: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.trait },
-  lien: { paddingVertical: space.l, color: c.indigo, fontWeight: '600' },
+  lien: { paddingVertical: space.l, color: c.accent, fontWeight: '600' },
 });

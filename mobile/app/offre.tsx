@@ -5,10 +5,12 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dateCourte, duree, euros, lieu, offre as getOffre, offres, prix, trajet } from '../src/data';
 import { useStore } from '../src/store';
-import { c, f, radius, space, type } from '../src/theme';
+import { Couleurs, f, radius, space } from '../src/theme';
+import { useTheme } from '../src/useTheme';
 import { Bouton } from '../src/ui';
 
 export default function Offre() {
+  const { c, type, s } = useTheme(creerStyles);
   const { brouillon: b, maj } = useStore();
   const insets = useSafeAreaInsets();
   if (!b.departId || !b.arriveeId) return null;
@@ -73,7 +75,7 @@ export default function Offre() {
               </View>
               {actif ? (
                 <View style={s.coche}>
-                  <Ionicons name="checkmark" size={18} color={c.surface} />
+                  <Ionicons name="checkmark" size={18} color={c.blanc} />
                 </View>
               ) : null}
             </Pressable>
@@ -96,27 +98,28 @@ export default function Offre() {
 }
 
 function Capacite({ icone, texte }: { icone: React.ComponentProps<typeof Ionicons>['name']; texte: string }) {
+  const { c, type, s } = useTheme(creerStyles);
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-      <Ionicons name={icone} size={16} color={c.indigo} />
+      <Ionicons name={icone} size={16} color={c.accent} />
       <Text style={[type.small, { color: c.encre }]}>{texte}</Text>
     </View>
   );
 }
 
-const s = StyleSheet.create({
+const creerStyles = (c: Couleurs) => StyleSheet.create({
   bandeau: { backgroundColor: c.cuve, borderRadius: radius.l, padding: space.l, marginBottom: space.l },
-  bandeauRoute: { fontFamily: f.displayMedium, fontSize: 22, color: c.surface, marginBottom: 4 },
+  bandeauRoute: { fontFamily: f.displayMedium, fontSize: 22, color: c.blanc, marginBottom: 4 },
   offre: {
     backgroundColor: c.surface, borderRadius: radius.l, marginBottom: space.l, overflow: 'hidden',
     borderWidth: 2, borderColor: 'transparent',
   },
-  offreActive: { borderColor: c.indigo },
+  offreActive: { borderColor: c.accent },
   photo: { width: '100%', height: 150, backgroundColor: c.bain2 },
-  prix: { fontFamily: f.display, fontSize: 30, color: c.cuve },
+  prix: { fontFamily: f.display, fontSize: 30, color: c.fort },
   capacites: { flexDirection: 'row', flexWrap: 'wrap', gap: space.l, marginTop: space.m },
   coche: {
-    position: 'absolute', top: space.m, right: space.m, width: 30, height: 30, borderRadius: 15, backgroundColor: c.indigo,
+    position: 'absolute', top: space.m, right: space.m, width: 30, height: 30, borderRadius: 15, backgroundColor: c.action,
     alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: c.surface,
   },
   pied: {

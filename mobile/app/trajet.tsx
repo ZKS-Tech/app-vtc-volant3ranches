@@ -4,7 +4,8 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dateCourte, estTransfert, lieu, majoration, offres } from '../src/data';
 import { dansJours, useStore } from '../src/store';
-import { c, f, radius, space, type } from '../src/theme';
+import { Couleurs, f, radius, space } from '../src/theme';
+import { useTheme } from '../src/useTheme';
 import { Bouton, Champ, Compteur, Itineraire, Note, Segment, Titre } from '../src/ui';
 
 const jours = Array.from({ length: 14 }, (_, i) => dansJours(i));
@@ -16,6 +17,7 @@ const decaler = (heure: string, minutes: number) => {
 };
 
 export default function Trajet() {
+  const { c, type, s } = useTheme(creerStyles);
   const { brouillon: b, maj } = useStore();
   const insets = useSafeAreaInsets();
   if (!b.departId || !b.arriveeId) return null;
@@ -41,7 +43,7 @@ export default function Trajet() {
             return (
               <Pressable key={i} onPress={() => maj({ jour: j })} style={[s.jour, actif && s.jourActif]} accessibilityState={{ selected: actif }} accessibilityLabel={dateCourte(j)}>
                 <Text style={[type.label, actif && { color: c.surCuve2 }]}>{i === 0 ? 'auj.' : i === 1 ? 'demain' : nomJour}</Text>
-                <Text style={[s.jourNum, actif && { color: c.surface }]}>{num}</Text>
+                <Text style={[s.jourNum, actif && { color: c.blanc }]}>{num}</Text>
                 <Text style={[type.label, actif && { color: c.surCuve2 }]}>{mois}</Text>
               </Pressable>
             );
@@ -51,11 +53,11 @@ export default function Trajet() {
         <Titre>Heure de prise en charge</Titre>
         <View style={s.heure}>
           <Pressable onPress={() => maj({ heure: decaler(b.heure, -15) })} style={s.heureBtn} accessibilityLabel="15 minutes plus tôt">
-            <Ionicons name="remove" size={26} color={c.indigo} />
+            <Ionicons name="remove" size={26} color={c.accent} />
           </Pressable>
           <Text style={s.heureTexte} accessibilityLiveRegion="polite">{b.heure.replace(':', 'h')}</Text>
           <Pressable onPress={() => maj({ heure: decaler(b.heure, 15) })} style={s.heureBtn} accessibilityLabel="15 minutes plus tard">
-            <Ionicons name="add" size={26} color={c.indigo} />
+            <Ionicons name="add" size={26} color={c.accent} />
           </Pressable>
         </View>
         {majo.length ? (
@@ -106,20 +108,20 @@ export default function Trajet() {
   );
 }
 
-const s = StyleSheet.create({
+const creerStyles = (c: Couleurs) => StyleSheet.create({
   resume: { backgroundColor: c.surface, borderRadius: radius.l, padding: space.l },
   jour: {
     width: 64, paddingVertical: space.m, borderRadius: radius.m, backgroundColor: c.surface, alignItems: 'center',
     borderWidth: 1, borderColor: c.trait,
   },
-  jourActif: { backgroundColor: c.indigo, borderColor: c.indigo },
+  jourActif: { backgroundColor: c.action, borderColor: c.action },
   jourNum: { fontFamily: f.display, fontSize: 26, color: c.encre, marginVertical: 2 },
   heure: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: c.surface,
     borderRadius: radius.l, padding: space.m,
   },
   heureBtn: { width: 52, height: 52, borderRadius: 26, backgroundColor: c.bain1, alignItems: 'center', justifyContent: 'center' },
-  heureTexte: { fontFamily: f.display, fontSize: 56, color: c.cuve, letterSpacing: -0.5 },
+  heureTexte: { fontFamily: f.display, fontSize: 56, color: c.fort, letterSpacing: -0.5 },
   bloc: { backgroundColor: c.surface, borderRadius: radius.l, paddingHorizontal: space.l, paddingVertical: space.s },
   trait: { height: StyleSheet.hairlineWidth, backgroundColor: c.trait },
   pied: {

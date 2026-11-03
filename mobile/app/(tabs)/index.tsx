@@ -5,12 +5,14 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Lieu, fabrice, lieu, lieux, photos } from '../../src/data';
 import { useStore } from '../../src/store';
-import { c, f, radius, space, type } from '../../src/theme';
+import { Couleurs, f, radius, space } from '../../src/theme';
+import { useTheme } from '../../src/useTheme';
 import { Bouton, CarteCourse, Titre, appelerFabrice } from '../../src/ui';
 
 const raccourcis = lieux.filter((l) => l.type !== 'ville');
 
 export default function Accueil() {
+  const { c, type, s } = useTheme(creerStyles);
   const { brouillon, maj, courses } = useStore();
   const insets = useSafeAreaInsets();
   const depart = brouillon.departId ? lieu(brouillon.departId) : undefined;
@@ -31,7 +33,7 @@ export default function Accueil() {
           <Image source={photos.logoBlanc} style={{ width: 34, height: 34 }} contentFit="contain" accessibilityLabel="Logo Volant3ranches" />
           <Text style={s.marqueTexte}>Volant3ranches</Text>
           <Pressable onPress={appelerFabrice} accessibilityLabel="Appeler Fabrice" style={s.appel}>
-            <Ionicons name="call" size={20} color={c.surface} />
+            <Ionicons name="call" size={20} color={c.blanc} />
           </Pressable>
         </View>
         <Text style={s.question}>Où allez-vous ?</Text>
@@ -47,7 +49,7 @@ export default function Accueil() {
           onPress={() => maj({ departId: brouillon.arriveeId, arriveeId: brouillon.departId })}
           style={s.inverser}
         >
-          <Ionicons name="swap-vertical" size={20} color={c.indigo} />
+          <Ionicons name="swap-vertical" size={20} color={c.accent} />
         </Pressable>
       </View>
 
@@ -63,8 +65,8 @@ export default function Accueil() {
           const actif = l.id === brouillon.departId || l.id === brouillon.arriveeId;
           return (
             <Pressable key={l.id} onPress={() => choisirRaccourci(l)} style={[s.puce, actif && s.puceActive]} accessibilityState={{ selected: actif }}>
-              <Ionicons name={l.type === 'aeroport' ? 'airplane' : 'train'} size={18} color={actif ? c.surface : c.indigo} />
-              <Text style={[s.puceTexte, actif && { color: c.surface }]}>{l.nom}</Text>
+              <Ionicons name={l.type === 'aeroport' ? 'airplane' : 'train'} size={18} color={actif ? c.blanc : c.accent} />
+              <Text style={[s.puceTexte, actif && { color: c.blanc }]}>{l.nom}</Text>
             </Pressable>
           );
         })}
@@ -103,6 +105,7 @@ export default function Accueil() {
 }
 
 function ChampLieu({ libelle, lieu: l, onPress, marque }: { libelle: string; lieu?: Lieu; onPress: () => void; marque: 'rond' | 'carre' }) {
+  const { c, type, s } = useTheme(creerStyles);
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [s.champLieu, pressed && { backgroundColor: c.bain1 }]} accessibilityRole="button" accessibilityLabel={`${libelle} : ${l ? l.nom : 'à choisir'}`}>
       <View style={marque === 'rond' ? s.marqueRond : s.marqueCarre} />
@@ -116,12 +119,12 @@ function ChampLieu({ libelle, lieu: l, onPress, marque }: { libelle: string; lie
   );
 }
 
-const s = StyleSheet.create({
+const creerStyles = (c: Couleurs) => StyleSheet.create({
   cuve: { backgroundColor: c.cuve, paddingHorizontal: space.l, paddingBottom: 64 },
   marque: { flexDirection: 'row', alignItems: 'center', gap: space.s },
-  marqueTexte: { color: c.surface, fontSize: 17, fontWeight: '700', flex: 1, letterSpacing: 0.2 },
+  marqueTexte: { color: c.blanc, fontSize: 17, fontWeight: '700', flex: 1, letterSpacing: 0.2 },
   appel: { width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center' },
-  question: { fontFamily: f.display, fontSize: 44, color: c.surface, marginTop: space.xxl, lineHeight: 48 },
+  question: { fontFamily: f.display, fontSize: 44, color: c.blanc, marginTop: space.xxl, lineHeight: 48 },
   sousTitre: { color: c.surCuve2, fontSize: 16, marginTop: space.xs },
   fiche: {
     marginHorizontal: space.l, marginTop: -44, backgroundColor: c.surface, borderRadius: radius.l, paddingVertical: space.xs,
@@ -129,8 +132,8 @@ const s = StyleSheet.create({
   },
   champLieu: { flexDirection: 'row', alignItems: 'center', gap: space.m, paddingHorizontal: space.l, paddingVertical: space.m, paddingRight: 64, minHeight: 64 },
   separateur: { height: StyleSheet.hairlineWidth, backgroundColor: c.trait, marginLeft: 44 },
-  marqueRond: { width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: c.indigo },
-  marqueCarre: { width: 10, height: 10, backgroundColor: c.indigo },
+  marqueRond: { width: 10, height: 10, borderRadius: 5, borderWidth: 2, borderColor: c.accent },
+  marqueCarre: { width: 10, height: 10, backgroundColor: c.accent },
   inverser: {
     position: 'absolute', right: space.l, top: '50%', marginTop: -22, width: 44, height: 44, borderRadius: 22,
     backgroundColor: c.bain1, alignItems: 'center', justifyContent: 'center',
@@ -139,8 +142,8 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: space.s, minHeight: 44, paddingHorizontal: space.l,
     borderRadius: 22, backgroundColor: c.surface, borderWidth: 1, borderColor: c.bain2,
   },
-  puceActive: { backgroundColor: c.indigo, borderColor: c.indigo },
-  puceTexte: { fontSize: 15, fontWeight: '600', color: c.cuve },
+  puceActive: { backgroundColor: c.action, borderColor: c.action },
+  puceTexte: { fontSize: 15, fontWeight: '600', color: c.fort },
   fabrice: { flexDirection: 'row', gap: space.l, alignItems: 'center' },
   fabricePhoto: { width: 72, height: 72, borderRadius: 36, backgroundColor: c.bain2 },
   flotte: {
@@ -148,5 +151,5 @@ const s = StyleSheet.create({
     justifyContent: 'flex-end', padding: space.l,
   },
   flotteVoile: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(16,27,69,0.45)' },
-  flotteTitre: { fontFamily: f.display, fontSize: 26, color: c.surface },
+  flotteTitre: { fontFamily: f.display, fontSize: 26, color: c.blanc },
 });

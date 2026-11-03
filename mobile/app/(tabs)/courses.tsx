@@ -2,10 +2,12 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { useStore } from '../../src/store';
-import { c, space, type } from '../../src/theme';
+import { space } from '../../src/theme';
+import { useTheme } from '../../src/useTheme';
 import { Bouton, CarteCourse, Segment } from '../../src/ui';
 
 export default function Courses() {
+  const { c, type } = useTheme();
   const { courses } = useStore();
   const [onglet, setOnglet] = useState<'avenir' | 'passees'>('avenir');
   const maintenant = new Date();

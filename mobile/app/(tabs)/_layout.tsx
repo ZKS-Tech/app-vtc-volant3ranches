@@ -1,15 +1,16 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
-import { c } from '../../src/theme';
+import { useTheme } from '../../src/useTheme';
 
 const icone = (nom: React.ComponentProps<typeof Ionicons>['name']) =>
   ({ color, size }: { color: import("react-native").ColorValue; size: number }) => <Ionicons name={nom} color={color as string} size={size} />;
 
 export default function Onglets() {
+  const { c, type } = useTheme();
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: c.indigo,
+        tabBarActiveTintColor: c.accent,
         tabBarInactiveTintColor: c.pierre,
         tabBarStyle: { backgroundColor: c.surface, borderTopColor: c.trait },
         tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },

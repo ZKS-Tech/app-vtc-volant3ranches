@@ -4,16 +4,18 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { dateCourte, duree, estTransfert, euros, fraisAnnulation, lieu, offre, photos } from '../../src/data';
 import { useStore } from '../../src/store';
-import { c, f, radius, space, type } from '../../src/theme';
-import { Bouton, Itineraire, Ligne, Note, Teinture, Titre, appelerFabrice, teintes } from '../../src/ui';
+import { Couleurs, f, radius, space } from '../../src/theme';
+import { useTheme } from '../../src/useTheme';
+import { Bouton, Itineraire, Ligne, Note, Teinture, Titre, appelerFabrice, teintesDe } from '../../src/ui';
 
 export default function DetailCourse() {
+  const { c, type, s } = useTheme(creerStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { courses, changerStatut } = useStore();
   const [annuler, setAnnuler] = useState(false);
   const course = courses.find((x) => x.id === id);
   if (!course) return null;
-  const t = teintes[course.statut];
+  const t = teintesDe(c)[course.statut];
   const o = offre(course.offreId);
   const depart = lieu(course.departId);
   const active = course.statut === 'envoyee' || course.statut === 'confirmee';
@@ -79,7 +81,7 @@ export default function DetailCourse() {
               ) : null}
               <View style={{ flexDirection: 'row', gap: space.s, marginTop: space.s }}>
                 <Bouton titre="Garder" variante="contour" onPress={() => setAnnuler(false)} style={{ flex: 1 }} />
-                <Bouton titre="Annuler la course" onPress={() => { changerStatut(course.id, 'annulee'); setAnnuler(false); }} style={{ flex: 1.4, backgroundColor: c.erreur }} />
+                <Bouton titre="Annuler la course" onPress={() => { changerStatut(course.id, 'annulee'); setAnnuler(false); }} style={{ flex: 1.4, backgroundColor: '#B3261E' }} />
               </View>
             </View>
           ) : (
@@ -92,7 +94,7 @@ export default function DetailCourse() {
   );
 }
 
-const s = StyleSheet.create({
+const creerStyles = (c: Couleurs) => StyleSheet.create({
   entete: { borderRadius: radius.l, padding: space.l + 2 },
   date: { fontFamily: f.display, fontSize: 34, marginTop: 2 },
   bloc: { backgroundColor: c.surface, borderRadius: radius.l, paddingHorizontal: space.l },

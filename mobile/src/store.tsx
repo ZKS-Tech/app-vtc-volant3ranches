@@ -103,7 +103,11 @@ type Store = {
   setSimulerEchec: (v: boolean) => void;
   prefs: { push: boolean; sms: boolean; email: boolean; stats: boolean };
   setPrefs: (p: Partial<Store['prefs']>) => void;
+  apparence: Apparence;
+  setApparence: (a: Apparence) => void;
 };
+
+export type Apparence = 'auto' | 'clair' | 'sombre';
 
 const Ctx = createContext<Store | null>(null);
 
@@ -112,6 +116,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [courses, setCourses] = useState<Course[]>(coursesDemo);
   const [simulerEchec, setSimulerEchec] = useState(false);
   const [prefs, setP] = useState({ push: true, sms: true, email: true, stats: false });
+  const [apparence, setApparence] = useState<Apparence>('auto');
 
   const value = useMemo<Store>(
     () => ({
@@ -143,8 +148,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setSimulerEchec,
       prefs,
       setPrefs: (p) => setP((x) => ({ ...x, ...p })),
+      apparence,
+      setApparence,
     }),
-    [brouillon, courses, simulerEchec, prefs],
+    [brouillon, courses, simulerEchec, prefs, apparence],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

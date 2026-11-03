@@ -4,12 +4,14 @@ import { useMemo, useState } from 'react';
 import { Pressable, SectionList, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Lieu, lieux } from '../src/data';
 import { useStore } from '../src/store';
-import { c, radius, space, type } from '../src/theme';
+import { Couleurs, radius, space } from '../src/theme';
+import { useTheme } from '../src/useTheme';
 import { Note } from '../src/ui';
 
 const normaliser = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
 export default function Adresse() {
+  const { c, type, s } = useTheme(creerStyles);
   const { champ } = useLocalSearchParams<{ champ: 'depart' | 'arrivee' }>();
   const { brouillon, maj } = useStore();
   const [q, setQ] = useState('');
@@ -41,7 +43,7 @@ export default function Adresse() {
             value={q}
             onChangeText={setQ}
             placeholder="Ville, gare, aéroport, adresse…"
-            placeholderTextColor="#8A90A0"
+            placeholderTextColor={c.placeholder}
             style={s.input}
             accessibilityLabel="Rechercher une adresse"
           />
@@ -61,7 +63,7 @@ export default function Adresse() {
         renderItem={({ item }) => (
           <Pressable onPress={() => choisir(item)} style={({ pressed }) => [s.ligne, pressed && { backgroundColor: c.bain1 }]}>
             <View style={s.icone}>
-              <Ionicons name={item.type === 'aeroport' ? 'airplane' : item.type === 'gare' ? 'train' : 'location'} size={18} color={c.indigo} />
+              <Ionicons name={item.type === 'aeroport' ? 'airplane' : item.type === 'gare' ? 'train' : 'location'} size={18} color={c.accent} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={[type.body, { fontWeight: '600' }]}>{item.nom}</Text>
@@ -87,10 +89,10 @@ export default function Adresse() {
   );
 }
 
-const s = StyleSheet.create({
+const creerStyles = (c: Couleurs) => StyleSheet.create({
   recherche: {
     flexDirection: 'row', alignItems: 'center', gap: space.s, backgroundColor: c.surface, borderRadius: radius.m,
-    borderWidth: 2, borderColor: c.indigo, paddingHorizontal: space.m, minHeight: 50,
+    borderWidth: 2, borderColor: c.accent, paddingHorizontal: space.m, minHeight: 50,
   },
   input: { flex: 1, fontSize: 17, color: c.encre, minHeight: 48, outlineStyle: 'none' } as object,
   entete: { paddingTop: space.l, paddingBottom: space.s, backgroundColor: c.sol },
