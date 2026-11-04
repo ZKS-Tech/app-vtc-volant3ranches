@@ -1,7 +1,8 @@
-import { createContext, ReactNode, useContext, useMemo, useState } from 'react';
-import { OffreId, lieu, offre, prix, trajet } from './data';
+import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { OffreId, appliquerTarifs, lieu, offre, prix, trajet } from './data';
+import { annulerCourse, chargerTarifs, connexionInvite, creerDemande, ecouterMesCourses, mesCourses, supabase } from './serveur';
 
-export type Statut = 'envoyee' | 'confirmee' | 'terminee' | 'annulee';
+export type Statut = 'envoyee' | 'confirmee' | 'refusee' | 'terminee' | 'annulee';
 
 export type Course = {
   id: string;
@@ -100,6 +101,9 @@ type Store = {
   courses: Course[];
   envoyer: () => Promise<Course>;
   changerStatut: (id: string, s: Statut) => void;
+  annuler: (id: string) => Promise<void>;
+  serveur: EtatServeur;
+  tarifsVersion: number;
   simulerEchec: boolean;
   setSimulerEchec: (v: boolean) => void;
   prefs: { push: boolean; sms: boolean; email: boolean; stats: boolean };
@@ -109,6 +113,8 @@ type Store = {
 };
 
 export type Apparence = 'auto' | 'clair' | 'sombre';
+// non-configure : pas de clés Supabase, l'appli tourne en démonstration.
+export type EtatServeur = { etat: 'non-configure' | 'connexion' | 'connecte' | 'erreur'; message?: string };
 
 const Ctx = createContext<Store | null>(null);
 
@@ -118,6 +124,32 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [simulerEchec, setSimulerEchec] = useState(false);
   const [prefs, setP] = useState({ push: true, sms: true, email: true, stats: false });
   const [apparence, setApparence] = useState<Apparence>('auto');
+  const [serveur, setServeur] = useState<EtatServeur>({ etat: supabase ? 'connexion' : 'non-configure' });
+  const [tarifsVersion, setTarifsVersion] = useState(0);
+
+  // Connexion au démarrage : compte invité, tarifs à jour, courses du téléphone, temps réel.
+  useEffect(() => {
+    if (!supabase) return;
+    let canal: ReturnType<typeof ecouterMesCourses> = null;
+    let actif = true;
+    (async () => {
+      try {
+        const uid = await connexionInvite();
+        appliquerTarifs(await chargerTarifs());
+        const liste = await mesCourses();
+        if (!actif) return;
+        setTarifsVersion((v) => v + 1);
+        setCourses(liste);
+        canal = ecouterMesCourses(uid, (c) =>
+          setCourses((cs) => (cs.some((x) => x.id === c.id) ? cs.map((x) => (x.id === c.id ? c : x)) : [c, ...cs])),
+        );
+        setServeur({ etat: 'connecte' });
+      } catch (e) {
+        if (actif) setServeur({ etat: 'erreur', message: e instanceof Error ? e.message : String(e) });
+      }
+    })();
+    return () => { actif = false; canal?.unsubscribe(); };
+  }, []);
 
   const value = useMemo<Store>(
     () => ({
@@ -125,8 +157,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       maj: (p) => setBrouillon((b) => ({ ...b, ...p })),
       reinitialiser: () => setBrouillon((b) => ({ ...brouillonVide(), nom: b.nom, telephone: b.telephone, email: b.email })),
       courses,
-      envoyer: () =>
-        new Promise<Course>((resolve, reject) => {
+      envoyer: async () => {
+        if (supabase && serveur.etat === 'connecte') {
+          const b = brouillon;
+          const t = trajet(lieu(b.departId!), lieu(b.arriveeId!));
+          const c = await creerDemande(b, avecHeure(b.jour, b.heure), t.km, t.minutes);
+          setCourses((cs) => [c, ...cs.filter((x) => x.id !== c.id)]);
+          return c;
+        }
+        return new Promise<Course>((resolve, reject) => {
           setTimeout(() => {
             if (simulerEchec) return reject(new Error('reseau'));
             const b = brouillon;
@@ -143,8 +182,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             setCourses((cs) => [c, ...cs]);
             resolve(c);
           }, 1400);
-        }),
+        });
+      },
       changerStatut: (id, s) => setCourses((cs) => cs.map((c) => (c.id === id ? { ...c, statut: s } : c))),
+      annuler: async (id) => {
+        if (supabase && serveur.etat === 'connecte' && !courses.find((c) => c.id === id)?.demo) {
+          const c = await annulerCourse(id);
+          setCourses((cs) => cs.map((x) => (x.id === id ? c : x)));
+        } else {
+          setCourses((cs) => cs.map((c) => (c.id === id ? { ...c, statut: 'annulee' } : c)));
+        }
+      },
+      serveur,
+      tarifsVersion,
       simulerEchec,
       setSimulerEchec,
       prefs,
@@ -152,7 +202,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       apparence,
       setApparence,
     }),
-    [brouillon, courses, simulerEchec, prefs, apparence],
+    [brouillon, courses, simulerEchec, prefs, apparence, serveur, tarifsVersion],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -138,6 +138,7 @@ export const teintesDe = (c: Couleurs): Record<Statut, { fond: string; texte: st
   confirmee: { fond: c.action, texte: c.blanc, texte2: c.surCuve2, libelle: 'Confirmée par Fabrice', niveau: 2 },
   terminee: { fond: c.delaveFond, texte: c.encre, texte2: c.pierre, libelle: 'Terminée', niveau: 3 },
   annulee: { fond: c.surface, texte: c.pierre, texte2: c.pierre, libelle: 'Annulée', niveau: 0 },
+  refusee: { fond: c.surface, texte: c.pierre, texte2: c.pierre, libelle: 'Refusée par Fabrice', niveau: 0 },
 });
 
 const bainsDe = (c: Couleurs) => [
@@ -219,12 +220,12 @@ export function CarteCourse({ course, onPress }: { course: Course; onPress?: () 
       style={({ pressed }) => [
         s.carteCourse,
         { backgroundColor: t.fond },
-        course.statut === 'annulee' && { borderWidth: 1, borderColor: c.trait, borderStyle: 'dashed' },
+        (course.statut === 'annulee' || course.statut === 'refusee') && { borderWidth: 1, borderColor: c.trait, borderStyle: 'dashed' },
         pressed && { opacity: 0.9 },
       ]}
     >
       <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
-        <Text style={{ fontFamily: f.display, fontSize: 26, color: t.texte, textDecorationLine: course.statut === 'annulee' ? 'line-through' : 'none' }}>
+        <Text style={{ fontFamily: f.display, fontSize: 26, color: t.texte, textDecorationLine: course.statut === 'annulee' || course.statut === 'refusee' ? 'line-through' : 'none' }}>
           {dateCourte(course.date)} · {course.heure.replace(':', 'h')}
         </Text>
         <Text style={{ fontFamily: f.displayMedium, fontSize: 20, color: t.texte }}>{euros(course.montant)}</Text>
@@ -236,8 +237,8 @@ export function CarteCourse({ course, onPress }: { course: Course; onPress?: () 
         {offre(course.offreId).nom} · {offre(course.offreId).vehicule}
         {course.numero ? ` · ${course.numero}` : ''}
       </Text>
-      {course.statut === 'annulee' ? (
-        <Text style={[type.label, { color: c.pierre }]}>Annulée</Text>
+      {course.statut === 'annulee' || course.statut === 'refusee' ? (
+        <Text style={[type.label, { color: c.pierre }]}>{teintesDe(c)[course.statut].libelle}</Text>
       ) : (
         <Teinture statut={course.statut} surFonce={fonce} />
       )}

@@ -14,6 +14,7 @@ export default function Coordonnees() {
   const insets = useSafeAreaInsets();
   const [etat, setEtat] = useState<'saisie' | 'envoi' | 'echec'>('saisie');
   const [tente, setTente] = useState(false);
+  const [raison, setRaison] = useState('');
   if (!b.departId || !b.arriveeId) return null;
 
   const depart = lieu(b.departId);
@@ -33,7 +34,8 @@ export default function Coordonnees() {
     try {
       const course = await envoyer();
       router.replace({ pathname: '/envoyee', params: { id: course.id } });
-    } catch {
+    } catch (e) {
+      setRaison(e instanceof Error ? e.message : '');
       setEtat('echec');
     }
   };
@@ -95,8 +97,9 @@ export default function Coordonnees() {
         {etat === 'echec' ? (
           <View style={{ marginTop: space.l, gap: space.s }}>
             <Note ton="erreur">
-              La demande n'est pas partie : la connexion a échoué. Rien n'a été envoyé à Fabrice. Réessayez, ou appelez-le
-              directement.
+              {raison && raison !== 'reseau' && !/fetch|network|réseau/i.test(raison)
+                ? `La demande n'est pas partie : ${raison}. Rien n'a été envoyé à Fabrice.`
+                : "La demande n'est pas partie : la connexion a échoué. Rien n'a été envoyé à Fabrice. Réessayez, ou appelez-le directement."}
             </Note>
             <Bouton titre="Appeler Fabrice" variante="contour" icone="call-outline" onPress={appelerFabrice} />
           </View>

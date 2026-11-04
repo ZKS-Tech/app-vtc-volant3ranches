@@ -1,6 +1,7 @@
 # Architecture et ordre de développement
 
-Proposition pour passer du prototype validé à l'application réelle. Contexte produit : [PRODUCT.md](../PRODUCT.md).
+Choix validé : **Supabase** (base SQL PostgreSQL) et des services gratuits au démarrage, **sans SMS**
+pour l'instant. Contexte produit : [PRODUCT.md](../PRODUCT.md).
 
 ## Vue d'ensemble
 
@@ -10,24 +11,26 @@ flowchart LR
     C[App client<br/>Expo / React Native]
     F[Même app, mode chauffeur<br/>réservé à Fabrice]
   end
-  subgraph Firebase ["Firebase (Google Cloud, région Paris)"]
-    A[Authentification<br/>invité, téléphone, email]
-    D[(Firestore<br/>courses, clients, tarifs)]
-    FN[Cloud Functions<br/>estimer, créer, confirmer,<br/>annuler, relances]
-    GA[Analytics GA4]
+  subgraph Supabase ["Supabase (région Paris)"]
+    A[Comptes<br/>invité, puis email]
+    D[(PostgreSQL<br/>courses, profils, tarifs)]
+    FN[Fonctions SQL et Edge Functions<br/>prix, demandes, réponses, relances]
+    RT[Temps réel]
   end
   G[Google Maps<br/>adresses et distance]
   P[Expo Push<br/>notifications]
-  B[Brevo<br/>SMS et emails]
+  B[Brevo<br/>emails]
+  GA[Firebase Analytics<br/>GA4]
 
   C --> A
   F --> A
-  C <-->|temps réel| D
-  F <-->|temps réel| D
   C --> FN
   F --> FN
-  FN --> G
   FN --> D
+  D --> RT
+  RT --> C
+  RT --> F
+  FN --> G
   FN --> P
   FN --> B
   C --> GA
@@ -35,26 +38,32 @@ flowchart LR
 
 ## Les briques
 
-| Brique | Choix proposé | Pourquoi |
+| Brique | Choix | Coût au démarrage |
 |---|---|---|
-| Application | **Expo / React Native** (le prototype), une seule appli pour les clients et Fabrice | On garde tout le travail validé. Le mode chauffeur n'apparaît que sur le compte de Fabrice. |
-| Serveur et données | **Firebase** : Authentification, Firestore, Cloud Functions, hébergement des données en **région Paris** | Cohérent avec GA4 (même console Google), temps réel natif pour voir la confirmation arriver, rien à administrer, gratuit à ce volume. |
-| Adresses et distances | **Google Places + Routes**, appelés uniquement par le serveur | Comme le site actuel. La clé n'est jamais dans l'appli, et le prix est recalculé côté serveur : le client ne peut pas le modifier. |
-| Notifications | **Expo Push** (iOS et Android) | Intégré à Expo, gratuit. |
-| SMS et emails | **Brevo** | Entreprise française, données en Europe, SMS et emails transactionnels au même endroit. |
-| Statistiques | **Firebase Analytics = GA4**, avec consentement | Le site et l'appli peuvent être réunis dans la même propriété GA4. |
-| Versions et mises à jour | **EAS Build** (TestFlight, test interne Google Play) et **EAS Update** | Mises à jour des textes, prix affichés et corrections sans repasser par les stores. |
+| Application | **Expo / React Native** (le prototype validé), une seule appli pour les clients et Fabrice | Gratuit |
+| Base de données, comptes, temps réel, fonctions serveur | **Supabase**, offre gratuite, région Paris | Gratuit |
+| Adresses et distances | **Google Places + Routes**, appelés par une fonction serveur (clé jamais dans l'appli) | Quota gratuit mensuel |
+| Notifications | **Expo Push** | Gratuit |
+| Emails de confirmation | **Brevo** | Gratuit (environ 300 emails par jour) |
+| Statistiques | **Firebase Analytics = GA4** (compte Google existant), avec consentement | Gratuit |
+| SMS | Pas pour l'instant | — |
+| Versions de test et publication | EAS Build / Update ; Apple Developer et Google Play à la publication | 99 €/an Apple, 25 $ une fois Google |
 
-Alternative au serveur : **Supabase** (base PostgreSQL, hébergement européen). Bon choix aussi ; Firebase
-est recommandé ici surtout pour GA4 et les notifications.
+**À savoir sur l'offre gratuite Supabase :** un projet sans aucune activité pendant une semaine est mis
+en pause ; on le relance d'un clic dans le tableau de bord. Une fois l'appli publiée, l'activité des
+réservations le maintient éveillé ; l'offre payante (environ 25 $ par mois) reste possible si besoin.
 
-## Les données
+## La base de données
 
-- **`tarifs`** : prix au km jour et majoré par véhicule, minimums, horaires de nuit, jours fériés,
-  remise aller-retour, attentes gratuites. **Modifiables par Fabrice sans nouvelle version de l'appli.**
-- **`courses`** : départ, arrivée, date, passagers, bagages, numéro de vol, véhicule, prix, client,
-  statut, horodatage de chaque changement.
-- **`clients`** : nom, téléphone, email, adresses favorites, préférences de notification, consentement.
+Fichier : [`supabase/migrations/20261104000000_fondations.sql`](../supabase/migrations/20261104000000_fondations.sql).
+
+| Table | Contenu |
+|---|---|
+| `offres` | Les deux offres et leurs prix (jour, majoré, minimum, capacités). **Modifiables par Fabrice.** |
+| `parametres` | Heures de nuit, majoration week-end, coefficient aller-retour, arrondi, attentes gratuites, délai de confirmation. |
+| `jours_feries` | Jours fériés 2026 à 2028. |
+| `courses` | Les demandes : adresses, date, passagers, véhicule, distance, prix, coordonnées, statut et horodatages. |
+| `profils` | Un par compte : rôle (`client` ou `chauffeur`), nom, téléphone, email. |
 
 Cycle de vie d'une course :
 
@@ -63,57 +72,41 @@ stateDiagram-v2
   [*] --> envoyee: le client envoie
   envoyee --> confirmee: Fabrice confirme
   envoyee --> refusee: Fabrice refuse
-  envoyee --> annulee: le client annule
+  envoyee --> annulee: le client annule (gratuit)
   confirmee --> annulee: le client annule (frais selon CGV)
-  confirmee --> terminee: course effectuée
+  confirmee --> terminee: Fabrice termine la course
   terminee --> [*]
 ```
 
-## Les fonctions serveur
+**Toutes les écritures passent par des fonctions** qui vérifient les règles :
 
-| Fonction | Rôle |
-|---|---|
-| `estimer` | Distance réelle par la route (Google) puis prix avec les tarifs en vigueur. En cas d'échec : un message, jamais un prix inventé. |
-| `creerDemande` | Vérifie la demande, **recalcule le prix**, l'enregistre, prévient Fabrice (notification + SMS de secours). Si l'envoi échoue, l'appli le dit et propose de réessayer. |
-| `confirmer` / `refuser` | Réservées au compte de Fabrice. Préviennent le client par notification, SMS et email. |
-| `annuler` | Calcule les frais selon les CGV (gratuit > 24 h, 50 % entre 24 h et 12 h, 100 % < 12 h). |
-| Tâches planifiées | Relance de Fabrice puis message au client si rien après 30 min ; rappel au client la veille. |
+| Fonction | Qui | Rôle |
+|---|---|---|
+| `calculer_prix` | tous | Mêmes règles que le site : nuit, samedi, dimanche, jours fériés, aller-retour, minimum, arrondi à 0,50 €. |
+| `creer_demande` | client | Vérifie capacités, date et coordonnées, **recalcule le prix**, enregistre la demande. |
+| `repondre_demande` | Fabrice | Confirme ou refuse une demande en attente. |
+| `terminer_course` | Fabrice | Passe une course confirmée en terminée. |
+| `annuler_course` | client | Annule ; frais selon les CGV (gratuit si pas encore confirmée ou à plus de 24 h, 50 % entre 24 h et 12 h, 100 % à moins de 12 h). |
 
-Les règles de sécurité Firestore garantissent qu'un client ne lit que ses courses, et que seul Fabrice
-change un statut.
+**Sécurité (Row Level Security)** : un client ne lit que ses courses, ne peut ni insérer une course
+directement (donc ni truquer un prix), ni changer un statut, ni se donner le rôle de chauffeur. Ces
+règles sont vérifiées par un jeu de 21 tests exécutés sur un PostgreSQL local avant chaque livraison.
 
 ## Ordre de développement
 
-Chaque étape se termine par une version testable sur téléphone.
+1. **Fondations** ✅ : base de données, sécurité, tarifs en base, connexion de l'appli (compte invité
+   automatique), demandes enregistrées, confirmation reçue en temps réel.
+2. **Réservation réelle** : vraies adresses et vraie distance par la route via une Edge Function Google ;
+   la distance n'est plus transmise par l'appli mais calculée par le serveur.
+3. **Mode chauffeur** : compte de Fabrice ; onglets Demandes (avec le délai de 30 min), Planning,
+   Historique ; Confirmer / Refuser / Terminer.
+4. **Notifications et emails** : notification à Fabrice à chaque demande, au client à la confirmation,
+   email récapitulatif (Brevo), relance après 30 min sans réponse, rappel la veille.
+5. **Comptes clients** : passer du compte invité à un compte email pour retrouver ses courses sur un
+   autre téléphone ; adresses favorites.
+6. **Statistiques et confidentialité** : GA4 avec consentement ; politique de confidentialité du site
+   mise à jour.
+7. **Publication** : version de développement (EAS), test par Fabrice et quelques clients, stores.
 
-1. **Fondations.** Projet Firebase (région Paris), passage d'Expo Go à une *development build* (nécessaire
-   pour Firebase et les notifications), configuration EAS, vérifications automatiques du code.
-2. **Réservation réelle.** Vraies adresses, vraie distance, prix calculé par le serveur à partir des
-   tarifs en base, demande enregistrée. L'appli remplace les données de démonstration.
-3. **Mode chauffeur et confirmation.** Compte de Fabrice ; onglets Demandes (avec le délai de 30 min),
-   Planning, Historique ; Confirmer / Refuser. Côté client, la confirmation arrive en temps réel et
-   déclenche l'animation de l'encre.
-4. **Notifications.** Push pour Fabrice et le client, SMS et email récapitulatif, relance après 30 min,
-   rappel la veille, annulation avec frais.
-5. **Comptes clients.** Invité par défaut, puis compte par téléphone ou email pour retrouver ses courses,
-   adresses favorites.
-6. **Statistiques et confidentialité.** GA4 avec écran de consentement, événements du parcours
-   (voir `brief-reservation.md`), mise à jour de la politique de confidentialité du site.
-7. **Publication.** Icône, écran de démarrage, fiches App Store et Google Play, test par Fabrice et
-   quelques clients via TestFlight et Google Play, puis publication.
-
-**Ensuite :** suivi de Fabrice en approche le jour J, version anglaise, paiement en ligne, factures
-entreprise, et branchement du formulaire du site sur le même serveur pour tout centraliser.
-
-## Ce qu'il faudra créer (comptes)
-
-| Compte | Coût indicatif |
-|---|---|
-| Firebase / Google Cloud, avec facturation activée (nécessaire aux Cloud Functions) | Gratuit à ce volume ; paiement à l'usage au-delà |
-| Clé Google Maps (Places + Routes) | Quota gratuit mensuel, largement suffisant au démarrage |
-| Expo (déjà créé) | Gratuit pour ce projet |
-| Apple Developer | 99 € par an |
-| Google Play Console | 25 $ une fois |
-| Brevo | Emails gratuits au démarrage ; SMS à quelques centimes l'unité |
-
-Les tarifs exacts sont à vérifier au moment de l'ouverture des comptes.
+**Ensuite :** SMS, suivi de Fabrice en approche, version anglaise, paiement en ligne, factures
+entreprise, formulaire du site branché sur la même base.

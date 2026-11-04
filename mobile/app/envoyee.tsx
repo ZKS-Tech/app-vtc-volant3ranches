@@ -14,7 +14,7 @@ import { Bouton, Itineraire, Teinture, appelerFabrice } from '../src/ui';
 export default function Envoyee() {
   const { c, type, s } = useTheme(creerStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { courses, changerStatut, reinitialiser } = useStore();
+  const { courses, changerStatut, reinitialiser, serveur } = useStore();
   const insets = useSafeAreaInsets();
   const course = courses.find((x) => x.id === id);
   const confirmee = course?.statut === 'confirmee';
@@ -89,6 +89,7 @@ export default function Envoyee() {
           </View>
         ) : null}
 
+        {serveur.etat !== 'connecte' ? (
         <View style={s.demo}>
           <Text style={[type.label, { color: texte2, marginBottom: space.s }]}>Prototype</Text>
           <Bouton
@@ -98,6 +99,7 @@ export default function Envoyee() {
             onPress={() => changerStatut(course.id, confirmee ? 'envoyee' : 'confirmee')}
           />
         </View>
+        ) : null}
       </ScrollView>
     </View>
   );

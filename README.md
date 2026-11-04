@@ -60,6 +60,9 @@ redéfinies pour sortir du style « crème et or » jugé trop générique.
 | `mobile/src/data.ts` | Contenu repris du site : tarifs, véhicules, prestations, FAQ, avis, CGV, contact |
 | `mobile/src/theme.ts` | Les deux palettes (clair et sombre) et la typographie |
 | `mobile/assets/photos/` | Logo et photos du site |
+| `mobile/src/serveur.ts` | Connexion à Supabase : compte invité, tarifs, demandes, temps réel |
+| `supabase/` | Base de données : structure, sécurité et tarifs (voir `supabase/README.md`) |
+| `docs/architecture.md` | Architecture et ordre de développement |
 | `PRODUCT.md` | Contexte produit : clients, règles métier, contraintes, décisions ouvertes |
 | `docs/brief-reservation.md` | Brief de conception du parcours de réservation et plan de statistiques (GA4) |
 | `docs/prototype/` | Captures des écrans |
@@ -168,8 +171,11 @@ Chaque modification du code s'affiche immédiatement sur le téléphone.
 
 - Seule une sélection de lieux (Tarn, Toulouse, Carcassonne) est proposée et la distance est
   estimée ; la version finale utilisera Google pour les adresses et la distance réelle par la route.
-- Les courses de « Claire Martin » sont des exemples ; rien n'est enregistré ni envoyé.
-- Comptes, notifications, SMS et emails ne sont pas encore branchés.
+- **Sans clé Supabase** dans `mobile/.env`, l'appli tourne en démonstration : les courses de
+  « Claire Martin » sont des exemples et rien n'est enregistré. **Avec la clé**, les tarifs viennent de
+  la base, les demandes y sont enregistrées et la confirmation arrive en temps réel
+  (voir `supabase/README.md`).
+- Mode chauffeur, notifications et emails ne sont pas encore branchés.
 
 ## Prochaines étapes
 

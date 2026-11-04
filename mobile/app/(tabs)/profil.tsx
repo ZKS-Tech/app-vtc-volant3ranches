@@ -7,7 +7,7 @@ import { Bouton, couleursSwitch, Segment, Titre } from '../../src/ui';
 
 export default function Profil() {
   const { c, type, s } = useTheme(creerStyles);
-  const { prefs, setPrefs, simulerEchec, setSimulerEchec, apparence, setApparence } = useStore();
+  const { prefs, setPrefs, simulerEchec, setSimulerEchec, apparence, setApparence, serveur } = useStore();
   return (
     <ScrollView style={{ backgroundColor: c.sol }} contentContainerStyle={{ padding: space.l, paddingBottom: space.xxl }}>
       <View style={s.invite}>
@@ -53,6 +53,18 @@ export default function Profil() {
 
       <Titre>Prototype</Titre>
       <View style={s.bloc}>
+        <View style={[s.ligne]}>
+          <View style={{ flex: 1 }}>
+            <Text style={type.body}>Serveur</Text>
+            <Text style={type.small}>
+              {serveur.etat === 'connecte' ? 'Connecté : tarifs et courses enregistrés dans Supabase'
+                : serveur.etat === 'connexion' ? 'Connexion en cours…'
+                : serveur.etat === 'erreur' ? `Erreur : ${serveur.message}`
+                : 'Non configuré : mode démonstration (clé Supabase absente)'}
+            </Text>
+          </View>
+          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: serveur.etat === 'connecte' ? c.feuille : serveur.etat === 'erreur' ? c.erreur : c.trait }} />
+        </View>
         <Interrupteur
           titre="Simuler un échec d'envoi"
           sous="Pour montrer à Fabrice l'écran affiché quand la demande ne part pas."
