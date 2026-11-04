@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dateCourte, duree, euros, lieu, offre as getOffre, offres, prix, trajet } from '../src/data';
 import { useStore } from '../src/store';
 import { Couleurs, f, radius, space } from '../src/theme';
+import { CartePlan } from '../src/CartePlan';
 import { useTheme } from '../src/useTheme';
 import { Bouton } from '../src/ui';
 
@@ -22,13 +23,16 @@ export default function Offre() {
     <View style={{ flex: 1, backgroundColor: c.sol }}>
       <ScrollView contentContainerStyle={{ padding: space.l, paddingBottom: 130 }}>
         <View style={s.bandeau}>
+          <CartePlan departId={b.departId} arriveeId={b.arriveeId} c={c} hauteur={210} />
+          <View style={{ padding: space.l, paddingTop: space.s }}>
           <Text style={s.bandeauRoute} numberOfLines={2}>
             {lieu(b.departId).nom} → {lieu(b.arriveeId).nom}
           </Text>
-          <Text style={[type.small, { color: c.surCuve2 }]}>
+          <Text style={type.small}>
             {dateCourte(b.jour)} à {b.heure.replace(':', 'h')} · {t.km.toLocaleString('fr-FR')} km · {duree(t.minutes)}
             {b.allerRetour ? ' · aller-retour' : ''}
           </Text>
+          </View>
         </View>
 
         {offres.map((o) => {
@@ -108,8 +112,8 @@ function Capacite({ icone, texte }: { icone: React.ComponentProps<typeof Ionicon
 }
 
 const creerStyles = (c: Couleurs) => StyleSheet.create({
-  bandeau: { backgroundColor: c.cuve, borderRadius: radius.l, padding: space.l, marginBottom: space.l },
-  bandeauRoute: { fontFamily: f.displayMedium, fontSize: 22, color: c.blanc, marginBottom: 4 },
+  bandeau: { backgroundColor: c.surface, borderRadius: radius.l, overflow: 'hidden', marginBottom: space.l },
+  bandeauRoute: { fontFamily: f.displayMedium, fontSize: 22, color: c.fort, marginBottom: 4 },
   offre: {
     backgroundColor: c.surface, borderRadius: radius.l, marginBottom: space.l, overflow: 'hidden',
     borderWidth: 2, borderColor: 'transparent',

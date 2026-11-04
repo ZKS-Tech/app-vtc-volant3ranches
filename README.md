@@ -40,6 +40,13 @@ redéfinies pour sortir du style « crème et or » jugé trop générique.
   (shader WebGL, `mobile/src/CuveIndigo.tsx`) dérive lentement et suit l'inclinaison du téléphone.
   Quand Fabrice confirme, l'encre monte du bas et envahit l'écran. L'effet s'arrête hors écran et
   devient une image fixe si « Réduire les animations » est activé.
+- **Le plan du trajet** : sur le choix du véhicule et la confirmation, un plan simplifié de la région
+  (grands axes A61, A68, N126, rivières, villes ; `mobile/src/CartePlan.tsx`). L'itinéraire est calculé
+  sur ce réseau et se dessine le long des routes, puis l'arrivée pulse. Tracés approximatifs.
+- **Le délai de confirmation** : sur « Demande envoyée » et le détail d'une course, un anneau se remplit
+  pendant les 30 minutes que Fabrice s'est données pour confirmer ; au-delà, l'appli invite à l'appeler.
+- **Le panneau qui se retourne** : le panneau à votre nom pivote comme une pancarte qu'on retourne ;
+  le toucher le retourne à nouveau.
 - **Mode clair et mode sombre.** L'application suit le réglage du téléphone ; on peut aussi forcer
   l'un ou l'autre dans Profil › Apparence.
 - Photos réelles de Fabrice et des véhicules, reprises du site.

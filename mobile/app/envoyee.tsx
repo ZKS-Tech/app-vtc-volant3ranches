@@ -6,6 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dateCourte, euros, offre } from '../src/data';
 import { useStore } from '../src/store';
 import { Couleurs, f, radius, space } from '../src/theme';
+import { CartePlan } from '../src/CartePlan';
+import { DelaiConfirmation } from '../src/DelaiConfirmation';
 import { useTheme } from '../src/useTheme';
 import { Bouton, Itineraire, Teinture, appelerFabrice } from '../src/ui';
 
@@ -47,6 +49,18 @@ export default function Envoyee() {
             : 'Fabrice vous confirme votre course sous 30 minutes, par notification, SMS et email.'}
         </Text>
 
+        {!confirmee ? (
+          <View style={{ marginTop: space.xl }}>
+            <DelaiConfirmation course={course} />
+          </View>
+        ) : null}
+        <CartePlan
+          departId={course.departId}
+          arriveeId={course.arriveeId}
+          c={c}
+          hauteur={190}
+          style={{ borderRadius: radius.l, marginTop: space.xl }}
+        />
         <View style={[s.recap, { borderColor: fonce ? 'rgba(255,255,255,0.22)' : c.bain2 }]}>
           <Text style={[s.date, { color: texte }]}>
             {dateCourte(course.date)} · {course.heure.replace(':', 'h')}
