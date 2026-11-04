@@ -33,8 +33,15 @@ Vérification : relancer `npm run telephone`, puis Profil › Prototype › Serv
    on conflict (id) do update set role = 'chauffeur';
    ```
 
-   Message attendu : « Success. 1 row affected ». « 0 row » signifie que l'email ne correspond à aucun
-   compte : vérifier l'orthographe.
+   Message affiché : « Success. No rows returned » (normal : la requête enregistre sans rien afficher).
+   Pour vérifier, exécuter :
+
+   ```sql
+   select p.email, p.role from public.profils p join auth.users u on u.id = p.id;
+   ```
+
+   La ligne de Fabrice doit apparaître avec le rôle `chauffeur`. Si elle n'y est pas, l'email ne
+   correspond à aucun compte : vérifier l'orthographe.
 4. Dans l'appli : **Profil** › tout en bas, **Espace chauffeur** › email et mot de passe.
 
 Pour essayer vous-même avant Fabrice, faites les étapes 2 et 3 avec votre propre email.
