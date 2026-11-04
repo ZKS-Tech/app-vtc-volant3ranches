@@ -87,6 +87,7 @@ export function versCourse(l: LigneCourse): Course | null {
     nom: l.nom,
     statut: l.statut as Statut,
     envoyeeLe: new Date(l.envoyee_le),
+    motifRefus: l.motif_refus ?? undefined,
   };
 }
 

@@ -238,7 +238,10 @@ export function CarteCourse({ course, onPress }: { course: Course; onPress?: () 
         {course.numero ? ` · ${course.numero}` : ''}
       </Text>
       {course.statut === 'annulee' || course.statut === 'refusee' ? (
-        <Text style={[type.label, { color: c.pierre }]}>{teintesDe(c)[course.statut].libelle}</Text>
+        <View>
+          <Text style={[type.label, { color: course.statut === 'refusee' ? c.erreur : c.pierre }]}>{teintesDe(c)[course.statut].libelle}</Text>
+          {course.statut === 'refusee' && course.motifRefus ? <Text style={[type.small, { marginTop: 2 }]}>Motif : {course.motifRefus}</Text> : null}
+        </View>
       ) : (
         <Teinture statut={course.statut} surFonce={fonce} />
       )}

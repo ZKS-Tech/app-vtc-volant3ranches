@@ -3,10 +3,14 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Stack, router } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
+import { LogBox } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ChauffeurProvider } from '../src/chauffeur';
 import { StoreProvider, useStore } from '../src/store';
 import { useTheme } from '../src/useTheme';
+
+// Version navigateur uniquement : react-native-svg transmet « collapsable » au DOM, sans conséquence.
+LogBox.ignoreLogs(['Received `false` for a non-boolean attribute `collapsable`']);
 
 export default function Racine() {
   // Ionicons préchargée ici : sinon chaque icône lance son propre chargement et un délai réseau

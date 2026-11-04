@@ -1,5 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
+import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Annonce } from '../../src/chauffeurUi';
 import { useChauffeur } from '../../src/chauffeur';
 import { useTheme } from '../../src/useTheme';
 
@@ -11,7 +14,9 @@ export default function OngletsChauffeur() {
   const { c } = useTheme();
   const { missions } = useChauffeur();
   const aTraiter = missions.filter((m) => m.statut === 'envoyee').length;
+  const insets = useSafeAreaInsets();
   return (
+    <View style={{ flex: 1 }}>
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: c.accent,
@@ -36,5 +41,7 @@ export default function OngletsChauffeur() {
       <Tabs.Screen name="clients" options={{ title: 'Clients', tabBarIcon: icone('people-outline') }} />
       <Tabs.Screen name="gestion" options={{ title: 'Gestion', tabBarIcon: icone('options-outline') }} />
     </Tabs>
+    <Annonce bas={insets.bottom + 64} />
+    </View>
   );
 }

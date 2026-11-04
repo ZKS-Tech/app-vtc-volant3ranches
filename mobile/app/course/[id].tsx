@@ -41,6 +41,14 @@ export default function DetailCourse() {
           <DelaiConfirmation course={course} />
         </View>
       ) : null}
+      {course.statut === 'refusee' ? (
+        <View style={{ marginTop: space.l, gap: space.s }}>
+          <Note ton="erreur" icone="close-circle-outline">
+            Fabrice ne peut pas assurer cette course{course.motifRefus ? ` : ${course.motifRefus.toLowerCase()}` : ''}. Rien ne vous sera facturé.
+          </Note>
+          <Bouton titre="Appeler Fabrice" variante="contour" icone="call-outline" onPress={appelerFabrice} />
+        </View>
+      ) : null}
 
       {active && transfert ? (
         <Bouton titre="Afficher le panneau à mon nom" icone="id-card-outline" onPress={() => router.push({ pathname: '/panneau', params: { id: course.id } })} style={{ marginTop: space.l }} />

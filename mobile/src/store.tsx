@@ -24,6 +24,7 @@ export type Course = {
   nom: string;
   statut: Statut;
   envoyeeLe?: Date; // heure d'envoi de la demande : sert au délai de confirmation
+  motifRefus?: string; // raison donnée par Fabrice quand il refuse
   demo?: boolean;
 };
 
@@ -103,7 +104,7 @@ type Store = {
   reinitialiser: () => void;
   courses: Course[];
   envoyer: () => Promise<Course>;
-  changerStatut: (id: string, s: Statut) => void;
+  changerStatut: (id: string, s: Statut, motif?: string) => void;
   annuler: (id: string) => Promise<void>;
   serveur: EtatServeur;
   tarifsVersion: number;
@@ -204,7 +205,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }, 1400);
         });
       },
-      changerStatut: (id, s) => setCourses((cs) => cs.map((c) => (c.id === id ? { ...c, statut: s } : c))),
+      changerStatut: (id, s, motif) => setCourses((cs) => cs.map((c) => (c.id === id ? { ...c, statut: s, motifRefus: motif } : c))),
       annuler: async (id) => {
         if (supabase && serveur.etat === 'connecte' && !courses.find((c) => c.id === id)?.demo) {
           const c = await annulerCourse(id);

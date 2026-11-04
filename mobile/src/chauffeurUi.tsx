@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Linking, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { Animated, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Mission, Source, useChauffeur } from './chauffeur';
 import { dateCourte, euros, offre, regles } from './data';
 import { Couleurs, f, radius, space } from './theme';
@@ -182,3 +182,38 @@ const creerStyles = (c: Couleurs) => StyleSheet.create({
   pastille: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
   pastilleTexte: { fontSize: 11, fontWeight: '700' },
 });
+
+// Message bref après une action de Fabrice (style « snackbar »), en bas de l'écran.
+export function Annonce({ bas }: { bas: number }) {
+  const { c } = useTheme();
+  const { annonce } = useChauffeur();
+  const opacite = useRef(new Animated.Value(0)).current;
+  const [texte, setTexte] = useState('');
+  useEffect(() => {
+    if (!annonce) return;
+    setTexte(annonce.texte);
+    opacite.setValue(0);
+    Animated.sequence([
+      Animated.timing(opacite, { toValue: 1, duration: 180, useNativeDriver: true }),
+      Animated.delay(4200),
+      Animated.timing(opacite, { toValue: 0, duration: 250, useNativeDriver: true }),
+    ]).start();
+  }, [annonce?.id]);
+  if (!texte) return null;
+  return (
+    <Animated.View
+      pointerEvents="none"
+      accessibilityLiveRegion="polite"
+      style={{
+        position: 'absolute', left: space.l, right: space.l, bottom: bas, opacity: opacite,
+        transform: [{ translateY: opacite.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }) }],
+        backgroundColor: c.encre, borderRadius: radius.m, paddingVertical: space.m, paddingHorizontal: space.l,
+        flexDirection: 'row', gap: space.s, alignItems: 'center',
+        shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 12, shadowOffset: { width: 0, height: 6 }, elevation: 8,
+      }}
+    >
+      <Ionicons name="checkmark-circle" size={20} color={c.feuille} />
+      <Text style={{ color: c.sol, fontSize: 15, flex: 1 }}>{texte}</Text>
+    </Animated.View>
+  );
+}

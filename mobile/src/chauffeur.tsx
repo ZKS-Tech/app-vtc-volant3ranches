@@ -49,6 +49,8 @@ type Ctx = {
   fiche: (id?: string | null) => Fiche | undefined;
   missionsDe: (ficheId: string) => Mission[];
   recharger: () => Promise<void>;
+  annonce: { id: number; texte: string } | null;
+  annoncer: (texte: string) => void;
   repondre: (id: string, accepter: boolean, motif?: string) => Promise<void>;
   terminer: (id: string) => Promise<void>;
   annuler: (id: string, frais: number) => Promise<void>;
@@ -74,6 +76,8 @@ export function ChauffeurProvider({ children }: { children: ReactNode }) {
   const [chargement, setChargement] = useState(!demo);
   const [erreur, setErreur] = useState<string>();
   const [saisie, setSaisie] = useState<Saisie>(saisieVide);
+  const [annonce, setAnnonce] = useState<{ id: number; texte: string } | null>(null);
+  const annoncer = useCallback((texte: string) => setAnnonce({ id: Date.now(), texte }), []);
 
   const fusionMission = useCallback((m: Mission) => setMissions((ms) => (ms.some((x) => x.id === m.id) ? ms.map((x) => (x.id === m.id ? m : x)) : [m, ...ms])), []);
   const fusionFiche = useCallback((f: Fiche) => setFiches((fs) => (fs.some((x) => x.id === f.id) ? fs.map((x) => (x.id === f.id ? f : x)) : [...fs, f])), []);
@@ -112,9 +116,15 @@ export function ChauffeurProvider({ children }: { children: ReactNode }) {
     fiche: (id) => fiches.find((f) => f.id === id),
     missionsDe: (ficheId) => missions.filter((m) => m.fiche_id === ficheId).sort((a, b) => +b.date - +a.date),
     recharger,
+    annonce,
+    annoncer,
     repondre: async (id, accepter, motif) => {
-      if (demo) return local(id, accepter ? { statut: 'confirmee', confirmee_le: maintenant() } : { statut: 'refusee', refusee_le: maintenant(), motif_refus: motif ?? null });
-      fusionMission(versMission(await rpcChauffeur('repondre_demande', { p_course: id, p_accepter: accepter, p_motif: motif ?? null })));
+      const nom = missions.find((m) => m.id === id)?.nom ?? 'le client';
+      if (demo) local(id, accepter ? { statut: 'confirmee', confirmee_le: maintenant() } : { statut: 'refusee', refusee_le: maintenant(), motif_refus: motif ?? null });
+      else fusionMission(versMission(await rpcChauffeur('repondre_demande', { p_course: id, p_accepter: accepter, p_motif: motif ?? null })));
+      annoncer(accepter
+        ? `Course confirmée : ${nom} voit la confirmation dans l'appli.`
+        : `Demande refusée : ${nom} voit le motif « ${motif ?? 'non précisé'} » dans l'appli.`);
     },
     terminer: async (id) => {
       if (demo) return local(id, { statut: 'terminee', terminee_le: maintenant() });
@@ -208,7 +218,7 @@ export function ChauffeurProvider({ children }: { children: ReactNode }) {
       else if (joursFeries.includes(jour)) joursFeries.splice(joursFeries.indexOf(jour), 1);
       recalculerTarifs();
     },
-  }), [demo, chargement, erreur, missions, fiches, saisie, recharger]);
+  }), [demo, chargement, erreur, missions, fiches, saisie, recharger, annonce]);
 
   return <C.Provider value={value}>{children}</C.Provider>;
 }
