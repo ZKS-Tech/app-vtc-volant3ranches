@@ -1,5 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { StyleSheet, Text, View } from 'react-native';
+import Reanimated, {
+  Easing, useAnimatedProps, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withSequence, withTiming,
+} from 'react-native-reanimated';
 import Svg, { Circle } from 'react-native-svg';
 import type { Course } from './store';
 import { f, space } from './theme';
@@ -11,7 +14,7 @@ import { useTheme } from './useTheme';
 
 const DELAI_MIN = 30;
 const TAILLE = 76, EPAISSEUR = 7, R = (TAILLE - EPAISSEUR) / 2, CIRC = 2 * Math.PI * R;
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+const AnimatedCircle = Reanimated.createAnimatedComponent(Circle);
 
 const heure = (d: Date) => `${d.getHours()}h${String(d.getMinutes()).padStart(2, '0')}`;
 
@@ -19,22 +22,21 @@ export function DelaiConfirmation({ course }: { course: Course }) {
   const { c, type } = useTheme();
   const envoi = course.envoyeeLe ?? course.date;
   const [maintenant, setMaintenant] = useState(() => new Date());
-  const progression = useRef(new Animated.Value(0)).current;
-  const souffle = useRef(new Animated.Value(0)).current;
+  const calme = useReducedMotion();
+  const progression = useSharedValue(0);
+  const souffle = useSharedValue(0);
 
   useEffect(() => {
-    const t = setInterval(() => setMaintenant(new Date()), 1000);
-    let boucle: Animated.CompositeAnimation | undefined;
-    AccessibilityInfo.isReduceMotionEnabled().then((calme) => {
-      if (calme) return;
-      boucle = Animated.loop(Animated.sequence([
-        Animated.timing(souffle, { toValue: 1, duration: 1100, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(souffle, { toValue: 0, duration: 1100, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      ]));
-      boucle.start();
-    }).catch(() => {});
-    return () => { clearInterval(t); boucle?.stop(); };
-  }, []);
+    // Le temps restant se compte en minutes : une mise à jour toutes les 15 s suffit.
+    const t = setInterval(() => setMaintenant(new Date()), 15000);
+    if (!calme) {
+      souffle.value = withRepeat(withSequence(
+        withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.sin) }),
+        withTiming(0, { duration: 1100, easing: Easing.inOut(Easing.sin) }),
+      ), -1, false);
+    }
+    return () => clearInterval(t);
+  }, [calme]);
 
   const ecouleMin = Math.max(0, (maintenant.getTime() - envoi.getTime()) / 60000);
   const part = Math.min(1, ecouleMin / DELAI_MIN);
@@ -43,8 +45,10 @@ export function DelaiConfirmation({ course }: { course: Course }) {
   const limite = new Date(envoi.getTime() + DELAI_MIN * 60000);
 
   useEffect(() => {
-    Animated.timing(progression, { toValue: part, duration: 600, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
-  }, [part]);
+    progression.value = calme ? part : withTiming(part, { duration: 900, easing: Easing.out(Easing.exp) });
+  }, [part, calme]);
+  const propsAnneau = useAnimatedProps(() => ({ strokeDashoffset: CIRC * (1 - progression.value) }));
+  const stylePoint = useAnimatedStyle(() => ({ opacity: 1 - 0.75 * souffle.value }));
 
   const couleur = depasse ? c.alerte : c.action;
   return (
@@ -64,7 +68,7 @@ export function DelaiConfirmation({ course }: { course: Course }) {
               cx={TAILLE / 2} cy={TAILLE / 2} r={R}
               stroke={couleur} strokeWidth={EPAISSEUR} fill="none" strokeLinecap="round"
               strokeDasharray={[CIRC, CIRC]}
-              strokeDashoffset={progression.interpolate({ inputRange: [0, 1], outputRange: [CIRC, 0] })}
+              animatedProps={propsAnneau}
             />
           </Svg>
           <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
@@ -80,7 +84,7 @@ export function DelaiConfirmation({ course }: { course: Course }) {
         </View>
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.s }}>
-            <Animated.View style={[s.point, { backgroundColor: couleur, opacity: souffle.interpolate({ inputRange: [0, 1], outputRange: [1, 0.25] }) }]} />
+            <Reanimated.View style={[s.point, { backgroundColor: couleur }, stylePoint]} />
             <Text style={[type.h3, { flex: 1 }]}>{depasse ? 'Toujours en attente' : 'En attente de Fabrice'}</Text>
           </View>
           <Text style={[type.small, { marginTop: 4 }]}>

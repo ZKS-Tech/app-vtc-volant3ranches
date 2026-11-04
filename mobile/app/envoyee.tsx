@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import Reanimated, { FadeOut, LinearTransition } from 'react-native-reanimated';
 import { CuveIndigo } from '../src/CuveIndigo';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dateCourte, euros, offre } from '../src/data';
@@ -19,10 +20,11 @@ export default function Envoyee() {
   const course = courses.find((x) => x.id === id);
   const confirmee = course?.statut === 'confirmee';
   const refusee = course?.statut === 'refusee';
-  // Le texte change de couleur quand l'encre a recouvert la moitié de l'écran.
+  // Le texte change de couleur quand l'encre a recouvert la moitié de l'écran (signal de la cuve).
+  // Filet de sécurité si le rendu 3D n'est pas disponible : bascule après 1,6 s.
   const [fonce, setFonce] = useState(confirmee);
   useEffect(() => {
-    const t = setTimeout(() => setFonce(confirmee), 450);
+    const t = setTimeout(() => setFonce(confirmee), 1600);
     return () => clearTimeout(t);
   }, [confirmee]);
 
@@ -38,7 +40,7 @@ export default function Envoyee() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.bain1 }}>
-      <CuveIndigo niveau={confirmee ? 1 : 0} couleurs={{ eau: c.bain1, voile: c.bain3, indigo: c.action, cuve: c.cuve }} />
+      <CuveIndigo niveau={confirmee ? 1 : 0} couleurs={{ eau: c.bain1, voile: c.bain3, indigo: c.action, cuve: c.cuve }} onMiHauteur={setFonce} />
       <ScrollView contentContainerStyle={{ padding: space.l, paddingTop: insets.top + space.xxl, paddingBottom: insets.bottom + space.xl }}>
         {refusee ? (
           <View style={[s.pastille, { backgroundColor: c.erreurFond }]}>
@@ -68,10 +70,12 @@ export default function Envoyee() {
         ) : null}
 
         {!confirmee && !refusee ? (
-          <View style={{ marginTop: space.xl }}>
+          <Reanimated.View exiting={FadeOut.duration(250)} style={{ marginTop: space.xl }}>
             <DelaiConfirmation course={course} />
-          </View>
+          </Reanimated.View>
         ) : null}
+        {/* le reste glisse à sa place quand l'anneau disparaît */}
+        <Reanimated.View layout={LinearTransition.duration(450)}>
         <CartePlan
           departId={course.departId}
           arriveeId={course.arriveeId}
@@ -100,6 +104,7 @@ export default function Envoyee() {
           <Bouton titre="Appeler Fabrice" variante={fonce ? 'clair' : 'contour'} icone="call-outline" onPress={appelerFabrice} />
           <Bouton titre="Retour à l'accueil" variante="texte" surFonce={fonce} onPress={() => terminer('/')} />
         </View>
+        </Reanimated.View>
 
         {!fonce && !refusee ? (
           <View style={s.compte}>

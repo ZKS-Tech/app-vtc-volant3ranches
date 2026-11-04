@@ -1,5 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, LayoutChangeEvent, View, ViewStyle } from 'react-native';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useState } from 'react';
+import { LayoutChangeEvent, View, ViewStyle } from 'react-native';
+import Reanimated, {
+  Easing, cancelAnimation, useAnimatedProps, useReducedMotion, useSharedValue, withDelay, withRepeat, withTiming,
+} from 'react-native-reanimated';
 import Svg, { Circle, G, Path, Rect, Text as SvgText } from 'react-native-svg';
 import { lieu } from './data';
 import { Couleurs, f } from './theme';
@@ -104,8 +108,9 @@ function itineraire(depart: string, arrivee: string): P[] {
 
 const chemin = (pts: P[]) => pts.map((p, i) => `${i ? 'L' : 'M'}${proj(p)[0].toFixed(2)},${proj(p)[1].toFixed(2)}`).join(' ');
 
-const AnimatedPath = Animated.createAnimatedComponent(Path);
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+// Animations sur le fil d'affichage (Reanimated) : le tracé reste fluide même quand l'appli travaille.
+const AnimatedPath = Reanimated.createAnimatedComponent(Path);
+const AnimatedCircle = Reanimated.createAnimatedComponent(Circle);
 
 export function CartePlan({ departId, arriveeId, c, hauteur = 200, style }: {
   departId: string; arriveeId: string; c: Couleurs; hauteur?: number; style?: ViewStyle;
@@ -113,21 +118,21 @@ export function CartePlan({ departId, arriveeId, c, hauteur = 200, style }: {
   const [largeur, setLargeur] = useState(0);
   const trace = useMemo(() => itineraire(departId, arriveeId), [departId, arriveeId]);
   const L = useMemo(() => longueur(trace), [trace]);
-  const dessin = useRef(new Animated.Value(0)).current;
-  const pouls = useRef(new Animated.Value(0)).current;
+  const calme = useReducedMotion();
+  const dessin = useSharedValue(calme ? 1 : 0);
+  const pouls = useSharedValue(0);
 
-  useEffect(() => {
-    let boucle: Animated.CompositeAnimation | undefined;
-    dessin.setValue(0);
-    AccessibilityInfo.isReduceMotionEnabled().then((calme) => {
-      if (calme) { dessin.setValue(1); return; }
-      Animated.timing(dessin, { toValue: 1, duration: 1500, delay: 300, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start(() => {
-        boucle = Animated.loop(Animated.timing(pouls, { toValue: 1, duration: 1800, easing: Easing.out(Easing.quad), useNativeDriver: false }));
-        boucle.start();
-      });
-    }).catch(() => dessin.setValue(1));
-    return () => boucle?.stop();
-  }, [departId, arriveeId]);
+  // Le tracé se dessine à l'arrivée sur l'écran, puis l'arrivée pulse trois fois. Rien ne tourne
+  // quand l'écran est caché sous un autre.
+  useFocusEffect(useCallback(() => {
+    if (calme) { dessin.value = 1; return; }
+    if (dessin.value < 1) {
+      dessin.value = withDelay(250, withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.cubic) }));
+    }
+    pouls.value = 0;
+    pouls.value = withDelay(1700, withRepeat(withTiming(1, { duration: 1600, easing: Easing.out(Easing.quad) }), 3, false));
+    return () => cancelAnimation(pouls);
+  }, [departId, arriveeId, calme]));
 
   // Cadrage : le trajet au centre, avec du contexte autour.
   const cadre = useMemo(() => {
@@ -143,6 +148,26 @@ export function CartePlan({ departId, arriveeId, c, hauteur = 200, style }: {
 
   const px = (n: number) => n / cadre.k; // pixels écran → unités de la carte
   const a = proj(trace[0]), b = proj(trace[trace.length - 1]);
+
+  // Position de la « tête » du tracé : points et longueurs cumulées, lus par l'animation.
+  const pts = useMemo(() => trace.map(proj), [trace]);
+  const cumul = useMemo(() => pts.reduce<number[]>((acc, p, i) => [...acc, i ? acc[i - 1] + dist(pts[i - 1], p) : 0], []), [pts]);
+  const propsTrace = useAnimatedProps(() => ({ strokeDashoffset: L * (1 - dessin.value) }));
+  const k = cadre.k;
+  const propsTete = useAnimatedProps(() => {
+    const d = dessin.value * L;
+    let i = 1;
+    while (i < cumul.length - 1 && cumul[i] < d) i++;
+    const seg = cumul[i] - cumul[i - 1] || 1;
+    const t = Math.min(1, Math.max(0, (d - cumul[i - 1]) / seg));
+    return {
+      cx: pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t,
+      cy: pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t,
+      opacity: dessin.value > 0.01 && dessin.value < 0.99 ? 1 : 0,
+    };
+  });
+  const propsPouls = useAnimatedProps(() => ({ r: (6 + 16 * pouls.value) / k, opacity: 0.35 * (1 - pouls.value) }));
+  const propsArrivee = useAnimatedProps(() => ({ opacity: dessin.value > 0.97 ? 1 : 0 }));
   const etiquette = (p: P, nom: string, fort: boolean) => {
     const adroite = (p[0] - cadre.x) / cadre.w < 0.62;
     const commun = {
@@ -196,7 +221,7 @@ export function CartePlan({ departId, arriveeId, c, hauteur = 200, style }: {
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeDasharray={[L, L]}
-            strokeDashoffset={dessin.interpolate({ inputRange: [0, 1], outputRange: [L, 0] })}
+            animatedProps={propsTrace}
           />
           <AnimatedPath
             d={chemin(trace)}
@@ -206,8 +231,9 @@ export function CartePlan({ departId, arriveeId, c, hauteur = 200, style }: {
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeDasharray={[L, L]}
-            strokeDashoffset={dessin.interpolate({ inputRange: [0, 1], outputRange: [L, 0] })}
+            animatedProps={propsTrace}
           />
+          <AnimatedCircle r={px(5)} fill={c.surface} stroke={c.action} strokeWidth={px(3)} animatedProps={propsTete} />
           {troncons.filter((t) => t.nom && !prochesDuTrajet(polyline(t)[Math.floor(polyline(t).length / 2)])).map((t) => {
             const pts = polyline(t);
             const m = proj(pts[Math.floor(pts.length / 2)]);
@@ -228,14 +254,9 @@ export function CartePlan({ departId, arriveeId, c, hauteur = 200, style }: {
             );
           })}
 
-          <AnimatedCircle
-            cx={b[0]} cy={b[1]}
-            r={pouls.interpolate({ inputRange: [0, 1], outputRange: [px(6), px(22)] })}
-            fill={c.action}
-            opacity={pouls.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0] })}
-          />
+          <AnimatedCircle cx={b[0]} cy={b[1]} fill={c.action} animatedProps={propsPouls} />
           <Circle cx={a[0]} cy={a[1]} r={px(6)} fill={c.surface} stroke={c.action} strokeWidth={px(3)} />
-          <AnimatedCircle cx={b[0]} cy={b[1]} r={px(6.5)} fill={c.action} opacity={dessin.interpolate({ inputRange: [0, 0.9, 1], outputRange: [0, 0, 1] })} />
+          <AnimatedCircle cx={b[0]} cy={b[1]} r={px(6.5)} fill={c.action} animatedProps={propsArrivee} />
           {etiquette(a, nomCourt(departId), true)}
           {etiquette(b, nomCourt(arriveeId), true)}
         </Svg>
