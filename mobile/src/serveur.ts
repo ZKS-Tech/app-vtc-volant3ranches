@@ -45,10 +45,24 @@ export async function chargerTarifs(): Promise<TarifsServeur> {
   return { offres: o.data ?? [], parametres: p.data, joursFeries: (j.data ?? []).map((x) => x.jour) };
 }
 
-type LigneCourse = {
-  id: string; depart_ref: string | null; arrivee_ref: string | null; date_heure: string; aller_retour: boolean;
+export type LigneCourse = {
+  id: string; client_id: string | null; fiche_id: string | null; source: 'appli' | 'telephone' | 'email' | 'autre';
+  depart_ref: string | null; depart_libelle: string; depart_detail: string | null; depart_type: string | null;
+  depart_lat: number | null; depart_lon: number | null;
+  arrivee_ref: string | null; arrivee_libelle: string; arrivee_detail: string | null; arrivee_type: string | null;
+  arrivee_lat: number | null; arrivee_lon: number | null;
+  date_heure: string; aller_retour: boolean;
   passagers: number; bagages: number; numero_vol_train: string | null; offre_id: string; montant: number;
-  distance_km: number; duree_min: number | null; nom: string; statut: Statut | 'refusee'; envoyee_le: string;
+  prix_ajuste: boolean; prix_km: number; majorations: string[];
+  distance_km: number; duree_min: number | null; nom: string; telephone: string; email: string | null;
+  commentaire: string | null; note_chauffeur: string | null;
+  statut: Statut; envoyee_le: string; confirmee_le: string | null; refusee_le: string | null; motif_refus: string | null;
+  annulee_le: string | null; frais_annulation: number | null; terminee_le: string | null;
+};
+
+export type Fiche = {
+  id: string; nom: string; telephone: string | null; email: string | null; notes: string | null;
+  profil_id: string | null; cree_le: string; maj_le: string;
 };
 
 const deux = (n: number) => String(n).padStart(2, '0');
@@ -129,4 +143,112 @@ export function ecouterMesCourses(uid: string, surChangement: (c: Course) => voi
       if (c) surChangement(c);
     })
     .subscribe();
+}
+
+// ——— Espace chauffeur ———
+
+export async function estChauffeur(): Promise<boolean> {
+  if (!supabase) return false;
+  const { data, error } = await supabase.rpc('est_chauffeur');
+  if (error) return false;
+  return !!data;
+}
+
+// Connexion de Fabrice : email + mot de passe. Un compte sans le rôle chauffeur est refusé.
+export async function connexionChauffeur(email: string, motDePasse: string): Promise<string> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: motDePasse });
+  if (error || !data.user) {
+    throw new Error(error?.message === 'Invalid login credentials' ? 'Email ou mot de passe incorrect' : error?.message ?? 'Connexion impossible');
+  }
+  if (!(await estChauffeur())) {
+    await supabase.auth.signOut();
+    await connexionInvite();
+    throw new Error('Ce compte n’a pas accès à l’espace chauffeur');
+  }
+  return data.user.id;
+}
+
+// Déconnexion : le téléphone redevient un client invité.
+export async function deconnexion(): Promise<string> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  await supabase.auth.signOut();
+  return connexionInvite();
+}
+
+export async function emailConnecte(): Promise<string | null> {
+  if (!supabase) return null;
+  const { data } = await supabase.auth.getUser();
+  return data.user?.email ?? null;
+}
+
+const verifier = <T,>(r: { data: T | null; error: { message: string } | null }): T => {
+  if (r.error) throw new Error(r.error.message);
+  return r.data as T;
+};
+
+export async function chargerEspaceChauffeur(): Promise<{ courses: LigneCourse[]; fiches: Fiche[] }> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const [c, f] = await Promise.all([
+    supabase.from('courses').select('*').order('date_heure', { ascending: false }).limit(1000),
+    supabase.from('fiches_clients').select('*').order('nom'),
+  ]);
+  return { courses: verifier(c) as LigneCourse[], fiches: verifier(f) as Fiche[] };
+}
+
+export async function rpcChauffeur(nom: string, params: Record<string, unknown>): Promise<LigneCourse> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  return verifier(await supabase.rpc(nom, params)) as LigneCourse;
+}
+
+export async function enregistrerFiche(f: Partial<Fiche> & { nom: string }): Promise<Fiche> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const ligne = {
+    nom: f.nom.trim(),
+    telephone: f.telephone?.trim() || null,
+    telephone_norm: normaliserTelephone(f.telephone),
+    email: f.email?.trim() || null,
+    notes: f.notes?.trim() || null,
+    maj_le: new Date().toISOString(),
+  };
+  const r = f.id
+    ? await supabase.from('fiches_clients').update(ligne).eq('id', f.id).select().single()
+    : await supabase.from('fiches_clients').insert(ligne).select().single();
+  if (r.error?.code === '23505') throw new Error('Un client avec ce numéro de téléphone existe déjà');
+  return verifier(r) as Fiche;
+}
+
+export async function majTable(table: 'offres' | 'parametres', id: string | number, valeurs: Record<string, unknown>) {
+  if (!supabase) throw new Error('Serveur non configuré');
+  verifier(await supabase.from(table).update(valeurs).eq('id', id).select().single());
+}
+
+export async function ajouterFerie(jour: string) {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const r = await supabase.from('jours_feries').insert({ jour });
+  if (r.error && r.error.code !== '23505') throw new Error(r.error.message);
+}
+
+export async function retirerFerie(jour: string) {
+  if (!supabase) throw new Error('Serveur non configuré');
+  verifier(await supabase.from('jours_feries').delete().eq('jour', jour));
+}
+
+export function ecouterEspaceChauffeur(
+  surCourse: (c: LigneCourse) => void,
+  surFiche: (f: Fiche) => void,
+): RealtimeChannel | null {
+  if (!supabase) return null;
+  return supabase
+    .channel('espace-chauffeur')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'courses' }, (p) => { if (p.new && 'id' in p.new) surCourse(p.new as LigneCourse); })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'fiches_clients' }, (p) => { if (p.new && 'id' in p.new) surFiche(p.new as Fiche); })
+    .subscribe();
+}
+
+// Même règle que la fonction normaliser_telephone de la base.
+export function normaliserTelephone(t?: string | null): string | null {
+  const d = (t ?? '').replace(/\D/g, '');
+  if (!d) return null;
+  return /^33\d{9}$/.test(d) ? '0' + d.slice(2) : d;
 }

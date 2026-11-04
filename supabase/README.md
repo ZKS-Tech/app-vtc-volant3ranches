@@ -18,22 +18,44 @@ Projet : **Volant3Ranches** (organisation ZKS-Tech, région Paris, offre gratuit
 Vérification : relancer `npm run telephone`, puis Profil › Prototype › Serveur doit afficher
 « Connecté ».
 
+## Espace chauffeur (migration 2)
+
+1. **SQL Editor** › **New query** : coller tout le contenu de
+   [`migrations/20261105000000_espace_chauffeur.sql`](migrations/20261105000000_espace_chauffeur.sql), puis **Run**.
+   Message attendu : « Success. No rows returned ».
+2. **Créer le compte de Fabrice** : **Authentication** › **Users** › **Add user** › **Create new user**.
+   Saisir son email et un mot de passe (8 caractères ou plus), cocher **Auto Confirm User**, puis **Create user**.
+3. **Lui donner le rôle chauffeur** : **SQL Editor** › **New query**, remplacer l'email puis **Run** :
+
+   ```sql
+   insert into public.profils (id, role, nom, email)
+   select id, 'chauffeur', 'Fabrice', email from auth.users where email = 'adresse-de-fabrice@exemple.fr'
+   on conflict (id) do update set role = 'chauffeur';
+   ```
+
+   Message attendu : « Success. 1 row affected ». « 0 row » signifie que l'email ne correspond à aucun
+   compte : vérifier l'orthographe.
+4. Dans l'appli : **Profil** › tout en bas, **Espace chauffeur** › email et mot de passe.
+
+Pour essayer vous-même avant Fabrice, faites les étapes 2 et 3 avec votre propre email.
+
 ## Tester la confirmation en temps réel
 
-Tant que le mode chauffeur n'existe pas (étape 3), on peut jouer le rôle de Fabrice depuis le
-tableau de bord : **Table Editor** › `courses` › changer le `statut` d'une course de `envoyee` à
-`confirmee`. L'écran « Demande envoyée » du téléphone passe à l'indigo instantanément.
-
-## Donner le rôle chauffeur à Fabrice (étape 3)
-
-Une fois son compte créé dans l'appli, dans **SQL Editor** :
-
-```sql
-update public.profils set role = 'chauffeur' where email = 'adresse-de-fabrice@exemple.fr';
-```
+Avec deux téléphones (ou un téléphone et le navigateur) : envoyez une demande côté client, puis
+confirmez-la depuis l'espace chauffeur. L'écran « Demande envoyée » passe à l'indigo instantanément.
+On peut aussi changer le `statut` directement dans **Table Editor** › `courses`.
 
 ## Modifier un tarif
 
-**Table Editor** › `offres` (prix au km, minimum) ou `parametres` (heures de nuit, majoration
-week-end, attentes). L'appli prend les nouveaux tarifs à son prochain démarrage, et la base calcule
-toujours le prix final avec ces valeurs.
+Depuis l'appli : espace chauffeur › **Gestion** › **Tarifs et jours fériés**. Ou dans **Table Editor**
+› `offres` / `parametres` / `jours_feries`. La base calcule toujours le prix final avec ces valeurs.
+
+## Tests de la base
+
+Les règles de prix et de sécurité sont vérifiées sur un PostgreSQL local, sans toucher au projet :
+
+```bash
+cd supabase/tests && npm install && npm test
+```
+
+Les 33 vérifications doivent afficher « OK ».

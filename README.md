@@ -61,7 +61,9 @@ redéfinies pour sortir du style « crème et or » jugé trop générique.
 | `mobile/src/theme.ts` | Les deux palettes (clair et sombre) et la typographie |
 | `mobile/assets/photos/` | Logo et photos du site |
 | `mobile/src/serveur.ts` | Connexion à Supabase : compte invité, tarifs, demandes, temps réel |
-| `supabase/` | Base de données : structure, sécurité et tarifs (voir `supabase/README.md`) |
+| `supabase/` | Base de données : structure, sécurité, tarifs et tests (voir `supabase/README.md`) |
+| `mobile/app/chauffeur/` | Espace de Fabrice : tableau de bord, demandes, planning, clients, gestion |
+| `mobile/src/chauffeur.tsx` | Données de l'espace chauffeur (temps réel) et jeu de démonstration |
 | `docs/architecture.md` | Architecture et ordre de développement |
 | `PRODUCT.md` | Contexte produit : clients, règles métier, contraintes, décisions ouvertes |
 | `docs/brief-reservation.md` | Brief de conception du parcours de réservation et plan de statistiques (GA4) |
@@ -175,7 +177,10 @@ Chaque modification du code s'affiche immédiatement sur le téléphone.
   « Claire Martin » sont des exemples et rien n'est enregistré. **Avec la clé**, les tarifs viennent de
   la base, les demandes y sont enregistrées et la confirmation arrive en temps réel
   (voir `supabase/README.md`).
-- Mode chauffeur, notifications et emails ne sont pas encore branchés.
+- **Espace chauffeur** : Profil › tout en bas › Espace chauffeur. Fabrice s'y connecte avec son email
+  et son mot de passe (compte à créer : voir `supabase/README.md`). « Voir la démonstration » le montre
+  sans compte, avec des clients et des courses fictifs.
+- Notifications et emails ne sont pas encore branchés.
 
 ## Prochaines étapes
 

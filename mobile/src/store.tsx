@@ -1,6 +1,9 @@
-import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { OffreId, appliquerTarifs, lieu, offre, prix, trajet } from './data';
-import { annulerCourse, chargerTarifs, connexionInvite, creerDemande, ecouterMesCourses, mesCourses, supabase } from './serveur';
+import {
+  annulerCourse, chargerTarifs, connexionChauffeur, connexionInvite, creerDemande, deconnexion, ecouterMesCourses,
+  estChauffeur, mesCourses, supabase,
+} from './serveur';
 
 export type Statut = 'envoyee' | 'confirmee' | 'refusee' | 'terminee' | 'annulee';
 
@@ -104,6 +107,13 @@ type Store = {
   annuler: (id: string) => Promise<void>;
   serveur: EtatServeur;
   tarifsVersion: number;
+  recalculerTarifs: () => void;
+  // Espace chauffeur : rôle du compte connecté, ou démonstration sans serveur.
+  role: 'client' | 'chauffeur';
+  demoChauffeur: boolean;
+  connecterChauffeur: (email: string, motDePasse: string) => Promise<void>;
+  deconnecterChauffeur: () => Promise<void>;
+  entrerDemoChauffeur: () => void;
   simulerEchec: boolean;
   setSimulerEchec: (v: boolean) => void;
   prefs: { push: boolean; sms: boolean; email: boolean; stats: boolean };
@@ -126,29 +136,39 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [apparence, setApparence] = useState<Apparence>('auto');
   const [serveur, setServeur] = useState<EtatServeur>({ etat: supabase ? 'connexion' : 'non-configure' });
   const [tarifsVersion, setTarifsVersion] = useState(0);
+  const [role, setRole] = useState<'client' | 'chauffeur'>('client');
+  const [demoChauffeur, setDemoChauffeur] = useState(false);
+  const canal = useRef<ReturnType<typeof ecouterMesCourses>>(null);
 
-  // Connexion au démarrage : compte invité, tarifs à jour, courses du téléphone, temps réel.
+  // Côté client : les courses de ce téléphone, puis la confirmation de Fabrice en temps réel.
+  const demarrerClient = async (uid: string) => {
+    canal.current?.unsubscribe();
+    const liste = await mesCourses();
+    setCourses(liste);
+    canal.current = ecouterMesCourses(uid, (c) =>
+      setCourses((cs) => (cs.some((x) => x.id === c.id) ? cs.map((x) => (x.id === c.id ? c : x)) : [c, ...cs])),
+    );
+  };
+
+  // Connexion au démarrage : compte invité (ou session de Fabrice), tarifs à jour.
   useEffect(() => {
     if (!supabase) return;
-    let canal: ReturnType<typeof ecouterMesCourses> = null;
     let actif = true;
     (async () => {
       try {
         const uid = await connexionInvite();
         appliquerTarifs(await chargerTarifs());
-        const liste = await mesCourses();
+        const chauffeur = await estChauffeur();
         if (!actif) return;
         setTarifsVersion((v) => v + 1);
-        setCourses(liste);
-        canal = ecouterMesCourses(uid, (c) =>
-          setCourses((cs) => (cs.some((x) => x.id === c.id) ? cs.map((x) => (x.id === c.id ? c : x)) : [c, ...cs])),
-        );
+        if (chauffeur) setRole('chauffeur');
+        else await demarrerClient(uid);
         setServeur({ etat: 'connecte' });
       } catch (e) {
         if (actif) setServeur({ etat: 'erreur', message: e instanceof Error ? e.message : String(e) });
       }
     })();
-    return () => { actif = false; canal?.unsubscribe(); };
+    return () => { actif = false; canal.current?.unsubscribe(); };
   }, []);
 
   const value = useMemo<Store>(
@@ -195,6 +215,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
       serveur,
       tarifsVersion,
+      recalculerTarifs: () => setTarifsVersion((v) => v + 1),
+      role,
+      demoChauffeur,
+      connecterChauffeur: async (email, motDePasse) => {
+        await connexionChauffeur(email, motDePasse);
+        canal.current?.unsubscribe();
+        setCourses([]);
+        setRole('chauffeur');
+      },
+      deconnecterChauffeur: async () => {
+        if (demoChauffeur) { setDemoChauffeur(false); return; }
+        const uid = await deconnexion();
+        setRole('client');
+        await demarrerClient(uid);
+      },
+      entrerDemoChauffeur: () => setDemoChauffeur(true),
       simulerEchec,
       setSimulerEchec,
       prefs,
@@ -202,7 +238,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       apparence,
       setApparence,
     }),
-    [brouillon, courses, simulerEchec, prefs, apparence, serveur, tarifsVersion],
+    [brouillon, courses, simulerEchec, prefs, apparence, serveur, tarifsVersion, role, demoChauffeur],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -64,6 +64,7 @@ Fichier : [`supabase/migrations/20261104000000_fondations.sql`](../supabase/migr
 | `jours_feries` | Jours fériés 2026 à 2028. |
 | `courses` | Les demandes : adresses, date, passagers, véhicule, distance, prix, coordonnées, statut et horodatages. |
 | `profils` | Un par compte : rôle (`client` ou `chauffeur`), nom, téléphone, email. |
+| `fiches_clients` | Le carnet de Fabrice : un client par numéro de téléphone, qu'il réserve dans l'appli ou par téléphone ; notes privées. |
 
 Cycle de vie d'une course :
 
@@ -86,6 +87,8 @@ stateDiagram-v2
 | `creer_demande` | client | Vérifie capacités, date et coordonnées, **recalcule le prix**, enregistre la demande. |
 | `repondre_demande` | Fabrice | Confirme ou refuse une demande en attente. |
 | `terminer_course` | Fabrice | Passe une course confirmée en terminée. |
+| `creer_course_manuelle` | Fabrice | Réservation prise par téléphone ou email : fiche client retrouvée ou créée, prix calculé ou ajusté, course confirmée. |
+| `annuler_course_chauffeur` | Fabrice | Annulation à la demande du client, frais choisis par Fabrice. |
 | `annuler_course` | client | Annule ; frais selon les CGV (gratuit si pas encore confirmée ou à plus de 24 h, 50 % entre 24 h et 12 h, 100 % à moins de 12 h). |
 
 **Sécurité (Row Level Security)** : un client ne lit que ses courses, ne peut ni insérer une course
@@ -96,10 +99,13 @@ règles sont vérifiées par un jeu de 21 tests exécutés sur un PostgreSQL loc
 
 1. **Fondations** ✅ : base de données, sécurité, tarifs en base, connexion de l'appli (compte invité
    automatique), demandes enregistrées, confirmation reçue en temps réel.
-2. **Réservation réelle** : vraies adresses et vraie distance par la route via une Edge Function Google ;
-   la distance n'est plus transmise par l'appli mais calculée par le serveur.
-3. **Mode chauffeur** : compte de Fabrice ; onglets Demandes (avec le délai de 30 min), Planning,
-   Historique ; Confirmer / Refuser / Terminer.
+2. **Réservation réelle** (après l'espace chauffeur) : toutes les adresses de France avec l'API Adresse
+   (État, gratuite), distance et durée par la route avec l'IGN (Géoplateforme, gratuite), calculées par
+   le serveur ; plan du trajet dessiné sur le vrai itinéraire ; limite anti-abus des demandes.
+3. **Espace chauffeur** ✅ : connexion de Fabrice (email + mot de passe) ; tableau de bord, demandes
+   (Confirmer / Refuser avec motif), planning, carnet de clients (fiches, notes, historique), saisie
+   des réservations par téléphone, annulation avec frais, tarifs et jours fériés, chiffre d'affaires.
+   Mode démonstration sans compte.
 4. **Notifications et emails** : notification à Fabrice à chaque demande, au client à la confirmation,
    email récapitulatif (Brevo), relance après 30 min sans réponse, rappel la veille.
 5. **Comptes clients** : passer du compte invité à un compte email pour retrouver ses courses sur un

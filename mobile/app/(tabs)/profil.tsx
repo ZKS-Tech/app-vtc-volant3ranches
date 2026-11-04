@@ -1,3 +1,4 @@
+import { router } from 'expo-router';
 import { Linking, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { contact } from '../../src/data';
 import { useStore } from '../../src/store';
@@ -72,7 +73,8 @@ export default function Profil() {
           onChange={setSimulerEchec}
         />
       </View>
-      <Text style={[type.small, { marginTop: space.l }]}>Volant3ranches · prototype de démonstration, version 0.1</Text>
+      <Bouton titre="Espace chauffeur" variante="texte" icone="car-outline" onPress={() => router.push('/connexion-chauffeur')} style={{ alignSelf: 'flex-start', marginTop: space.xl, marginLeft: -space.s }} />
+      <Text style={[type.small, { marginTop: space.s }]}>Volant3ranches · version 0.2</Text>
     </ScrollView>
   );
 }
