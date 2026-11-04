@@ -24,7 +24,7 @@ export default function Coordonnees() {
   const telOk = b.telephone.replace(/\D/g, '').length >= 10;
   const mailOk = /.+@.+\..+/.test(b.email);
   const complet = b.nom.trim().length > 1 && telOk && mailOk && b.cgv;
-  const attente = depart.type === 'aeroport' ? '15 min après l’atterrissage' : depart.type === 'gare' ? '15 min en gare' : '10 min';
+  const attente = depart.type === 'aeroport' ? '30 min après l’atterrissage' : depart.type === 'gare' ? '15 min en gare' : '10 min';
 
   const valider = async () => {
     setTente(true);

@@ -72,7 +72,7 @@ départ, destination, nombre de passagers, bagages, téléphone. Plus : email, c
 arrêt intermédiaire), acceptation des CGV, aller simple / aller-retour.
 
 **Règles métier (CGV)**
-- Attente gratuite : 10 min standard, 15 min aéroport (après atterrissage), 15 min gare.
+- Attente gratuite : 10 min standard, **30 min aéroport** (après atterrissage, décision de Fabrice), 15 min gare.
 - Annulation : gratuite à plus de 24 h ; 50 % entre 24 h et 12 h ; 100 % à moins de 12 h ou absence.
 - Interdits à bord : fumer, alcool, substances illicites, objets dangereux.
 
@@ -91,11 +91,12 @@ proposée ensuite pour retrouver ses courses.
 **Confirmation au client (confirmé)** : notification push + SMS + email récapitulatif.
 
 **Décisions ouvertes**
-- Outil de Fabrice pour confirmer les demandes (application chauffeur, back-office web, lien dans
-  l'email/SMS).
 - Statuts de course au-delà de « en attente / confirmée / terminée / annulée ».
-- Incohérence à arbitrer avec Fabrice : le site annonce 30 min d'attente gratuite à l'aéroport,
-  les CGV 15 min ; la majoration week-end figure dans le module mais pas dans les CGV.
+- **Décisions de Fabrice (validation de la maquette, novembre 2026)** :
+  - attente gratuite à l'aéroport : 30 min, comme le site ; **les CGV (art. 6) sont à mettre à jour** ;
+  - majoration le samedi et le dimanche maintenue ; **à ajouter aux CGV (art. 5)** ;
+  - confirmation des demandes : **mode chauffeur dans l'application** (accès réservé à Fabrice :
+    liste des demandes, Confirmer / Refuser, notification à chaque nouvelle demande).
 
 ## Brand Commitments
 

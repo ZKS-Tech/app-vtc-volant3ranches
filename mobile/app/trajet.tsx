@@ -95,7 +95,7 @@ export default function Trajet() {
             />
             <Note ton="feuille">
               {aeroport
-                ? 'Fabrice suit votre vol : en cas de retard, il ajuste la prise en charge sans frais. Attente gratuite : 15 min après l’atterrissage.'
+                ? 'Fabrice suit votre vol : en cas de retard, il ajuste la prise en charge sans frais. Attente gratuite : 30 min après l’atterrissage.'
                 : 'Fabrice suit votre train : en cas de retard, il ajuste la prise en charge sans frais. Attente gratuite : 15 min en gare.'}
             </Note>
           </>

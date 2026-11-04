@@ -68,7 +68,7 @@ Fidélité visée : maquette haute fidélité puis prototype codé (Expo), parco
    notification, consentement statistiques.
 
 Hors périmètre v1 : paiement en ligne, suivi GPS du chauffeur en direct, application chauffeur
-(outil de confirmation de Fabrice : décision ouverte).
+(confirmation par Fabrice : mode chauffeur dans l'application, décidé à la validation).
 
 Anti-objectifs : écrans en cartes empilées interchangeables, icônes dans des carrés arrondis,
 dégradés, crème et or, slogans génériques (« expérience premium », « en quelques clics »).
@@ -107,8 +107,8 @@ dégradés, crème et or, slogans génériques (« expérience premium », « en
   plus `demande_echec_envoi`, `annulation` (délai, frais), `appel_chauffeur`, `compte_cree`,
   `raccourci_aeroport_gare` (lequel). Propriété GA4 commune avec le site pour comparer web et appli.
 - Décisions ouvertes :
-  - outil de confirmation pour Fabrice (application chauffeur, back-office web, lien email/SMS) ;
-  - attente gratuite aéroport : 30 min (site) ou 15 min (CGV) ;
-  - majoration week-end : appliquée par le module web mais absente des CGV ;
+  - ~~outil de confirmation pour Fabrice~~ : mode chauffeur dans l'application ;
+  - ~~attente gratuite aéroport~~ : 30 min (décision de Fabrice) ;
+  - ~~majoration week-end~~ : maintenue (décision de Fabrice), à ajouter aux CGV ;
   - police de caractère des grands moments ;
   - version anglaise.

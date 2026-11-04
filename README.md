@@ -173,9 +173,9 @@ Chaque modification du code s'affiche immédiatement sur le téléphone.
 
 ## Prochaines étapes
 
-- Valider les écrans et les décisions ouvertes avec Fabrice (voir `PRODUCT.md`) : outil de
-  confirmation des demandes, attente gratuite à l'aéroport (30 min sur le site, 15 min dans les CGV),
-  majoration du week-end absente des CGV.
+- ~~Valider la maquette avec Fabrice~~ : validée. Décisions : mode chauffeur dans l'application,
+  30 min d'attente gratuite à l'aéroport, majoration du week-end maintenue (CGV à mettre à jour).
+- Mode chauffeur : demandes en attente, Confirmer / Refuser, notification à chaque demande.
 - Serveur de réservation et outil de confirmation pour Fabrice.
 - Adresses et distances Google, notifications push, SMS et emails.
 - Statistiques **Firebase Analytics (GA4)**, avec consentement, sur le parcours décrit dans

@@ -68,7 +68,7 @@ export default function Panneau() {
             </Animated.View>
           </View>
         </Pressable>
-        <Text style={s.aide}>Hall des arrivées · attente gratuite 15 min après l’atterrissage</Text>
+        <Text style={s.aide}>Hall des arrivées · attente gratuite 30 min après l’atterrissage</Text>
       </View>
     </View>
   );

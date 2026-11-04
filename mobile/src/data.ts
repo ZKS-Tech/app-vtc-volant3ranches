@@ -165,7 +165,7 @@ export const prestations = [
     icone: 'airplane-outline',
     texte:
       'Prise en charge à Toulouse-Blagnac et aux gares d’Albi, Castres et Carcassonne. Votre vol est suivi en temps réel.',
-    points: ['Suivi des vols en temps réel', 'Accueil avec panneau nominatif', 'Aide aux bagages', 'Attente gratuite'],
+    points: ['Suivi des vols en temps réel', 'Accueil avec panneau nominatif', 'Aide aux bagages', 'Attente gratuite de 30 min'],
     reservable: true,
   },
   {
@@ -234,7 +234,7 @@ export const faq = [
   },
   {
     q: 'Combien de temps le chauffeur m’attend-il ?',
-    r: 'Attente gratuite : 10 minutes pour une prise en charge standard, 15 minutes après l’atterrissage à l’aéroport et 15 minutes en gare. Au-delà, des frais d’attente peuvent s’appliquer.',
+    r: 'Attente gratuite : 10 minutes pour une prise en charge standard, 30 minutes après l’atterrissage à l’aéroport et 15 minutes en gare. Au-delà, des frais d’attente peuvent s’appliquer.',
   },
   {
     q: 'Mon vol ou mon train a du retard ?',
