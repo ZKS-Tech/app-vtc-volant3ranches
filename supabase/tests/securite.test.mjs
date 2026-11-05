@@ -36,6 +36,9 @@ if (process.argv[4]) {
     declare m text[]; lon1 float8; lat1 float8; lon2 float8; lat2 float8; km float8;
     begin
       if current_setting('test.ign_panne', true) = 'oui' then return row(503, 'text/plain', '', 'indisponible')::extensions.http_response; end if;
+      if uri not like '%resource=bdtopo-valhalla%' and uri not like '%resource=bdtopo-pgr%' and current_setting('test.moteurs_actuels', true) = 'oui' then
+        return row(400, 'application/json', '', '{"error":{"message":"Parameter resource is invalid"}}')::extensions.http_response;
+      end if;
       m := regexp_match(uri, 'start=([-0-9.]+),([-0-9.]+)&end=([-0-9.]+),([-0-9.]+)');
       lon1 := m[1]::float8; lat1 := m[2]::float8; lon2 := m[3]::float8; lat2 := m[4]::float8;
       km := 1.3 * 111.2 * sqrt(power((lon2 - lon1) * cos(radians((lat1 + lat2) / 2)), 2) + power(lat2 - lat1, 2));
@@ -45,6 +48,7 @@ if (process.argv[4]) {
   `);
   await db.exec(readFileSync(process.argv[4], 'utf8').replace(/create extension if not exists http[^;]*;/, ''));
   ok(true, 'migration 3 appliquée sans erreur');
+  if (process.argv[5]) { await db.exec(readFileSync(process.argv[5], 'utf8')); ok(true, 'migration 4 appliquée sans erreur'); }
 }
 
 
@@ -145,6 +149,7 @@ if (process.argv[3]) {
 
 if (process.argv[4]) {
   console.log('--- itinéraires IGN');
+  await db.exec(`select set_config('test.moteurs_actuels', 'oui', false)`);
   await en(autre);
   r = await q(`select * from public.creer_demande(
     '{"ref":"castres-gare","libelle":"Gare de Castres","lat":43.6007,"lon":2.2329,"type":"gare"}',

@@ -47,11 +47,12 @@ function alleger(coords: [number, number][], max = 300): [number, number][] {
   return Array.from({ length: max }, (_, i) => coords[Math.round(i * pas)]);
 }
 
-// Variantes essayées dans l'ordre : nos unités (km, minutes), puis les réglages par défaut du service,
-// puis son second moteur de calcul. La première qui répond l'emporte.
+// Moteurs de calcul de l'IGN, essayés dans l'ordre (liste officielle : /navigation/getcapabilities).
+// Le premier qui répond l'emporte ; la dernière variante utilise les unités par défaut du service.
+const UNITES = '&distanceUnit=kilometer&timeUnit=minute&geometryFormat=geojson&getSteps=false';
 const VARIANTES = [
-  { resource: 'bdtopo-osrm', options: '&distanceUnit=kilometer&timeUnit=minute&geometryFormat=geojson&getSteps=false' },
-  { resource: 'bdtopo-osrm', options: '' },
+  { resource: 'bdtopo-valhalla', options: UNITES },
+  { resource: 'bdtopo-pgr', options: UNITES },
   { resource: 'bdtopo-valhalla', options: '' },
 ];
 

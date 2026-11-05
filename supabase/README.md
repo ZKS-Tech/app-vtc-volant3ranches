@@ -57,6 +57,12 @@ d'itinéraire de l'IGN (gratuit, sans clé) pour calculer la distance et la dur�
 La distance envoyée par l'appli n'est plus prise en compte, et un client ne peut pas envoyer plus de
 5 demandes par heure.
 
+### Correctif du moteur d'itinéraire (migration 4)
+
+L'IGN a retiré le moteur « bdtopo-osrm » utilisé par la migration 3. **SQL Editor** › **New query** :
+coller [`migrations/20261107000000_itineraire_ign_moteurs.sql`](migrations/20261107000000_itineraire_ign_moteurs.sql),
+puis **Run**. La base utilise alors « bdtopo-valhalla », avec « bdtopo-pgr » en secours.
+
 ## Tester la confirmation en temps réel
 
 Avec deux téléphones (ou un téléphone et le navigateur) : envoyez une demande côté client, puis
@@ -76,4 +82,4 @@ Les règles de prix et de sécurité sont vérifiées sur un PostgreSQL local, s
 cd supabase/tests && npm install && npm test
 ```
 
-Les 41 vérifications doivent afficher « OK ».
+Les 42 vérifications doivent afficher « OK ».
