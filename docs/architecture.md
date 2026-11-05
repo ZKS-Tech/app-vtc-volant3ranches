@@ -128,11 +128,13 @@ règles sont vérifiées par un jeu de 21 tests exécutés sur un PostgreSQL loc
   avant), qui ouvre une page de détail. Pendant une indisponibilité, les dates sont bloquées dans le
   choix de la date et la base refuse les demandes sur ces jours (`creer_demande`). Notification
   éventuelle aux clients qui ont une course pendant la période.
-- **Garantie contre les annulations de dernière minute** : paiement en ligne d'une partie de la course
-  (Stripe), conservé selon les CGV si le client annule tard ; le reste payé à bord (espèces, carte) ou
-  dans l'appli. Option à trancher avec Fabrice : empreinte bancaire (rien n'est débité sauf annulation
-  tardive) ou acompte débité à la confirmation. Demande : compte Stripe au nom de l'entreprise, fonctions
-  serveur (Supabase Edge Functions), écran de paiement dans l'appli, mise à jour des CGV.
+- **Acompte de 10 % pour confirmer** (décision de Fabrice) : Fabrice accepte la demande, le client paie
+  l'acompte dans l'appli, et seulement alors la course passe à « Confirmée ». Sans paiement dans le
+  délai, la demande expire. Le reste est payé à bord (terminal SumUp, espèces) ou dans l'appli.
+  Prestataire envisagé : **SumUp** (déjà utilisé par Fabrice), paiement en ligne via une fonction
+  serveur (Supabase Edge Functions) et la page de paiement SumUp ; Stripe en solution de repli.
+  À trancher : remboursement de l'acompte selon le délai d'annulation, délai pour payer, courses
+  saisies par téléphone (lien de paiement). CGV à mettre à jour.
 
 **Ensuite :** SMS, suivi de Fabrice en approche, version anglaise, paiement en ligne, factures
 entreprise, formulaire du site branché sur la même base.
