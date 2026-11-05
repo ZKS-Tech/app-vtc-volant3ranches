@@ -121,5 +121,18 @@ règles sont vérifiées par un jeu de 21 tests exécutés sur un PostgreSQL loc
 (table `messages`, fonctions `envoyer_message` et `marquer_lus`), réponses toutes prêtes, indicateur
 « Lu ». Gratuite, sans SMS : utile aux voyageurs étrangers. Chaque nouveau message envoie une notification.
 
+**Demandes de Fabrice (mise au point du 05/11)** — à faire :
+
+- **Annonces et indisponibilités** : dans Gestion, Fabrice crée une annonce (texte, dates de début et de
+  fin, par exemple ses vacances). Côté client, un bandeau sur l'accueil pendant la période (et un peu
+  avant), qui ouvre une page de détail. Pendant une indisponibilité, les dates sont bloquées dans le
+  choix de la date et la base refuse les demandes sur ces jours (`creer_demande`). Notification
+  éventuelle aux clients qui ont une course pendant la période.
+- **Garantie contre les annulations de dernière minute** : paiement en ligne d'une partie de la course
+  (Stripe), conservé selon les CGV si le client annule tard ; le reste payé à bord (espèces, carte) ou
+  dans l'appli. Option à trancher avec Fabrice : empreinte bancaire (rien n'est débité sauf annulation
+  tardive) ou acompte débité à la confirmation. Demande : compte Stripe au nom de l'entreprise, fonctions
+  serveur (Supabase Edge Functions), écran de paiement dans l'appli, mise à jour des CGV.
+
 **Ensuite :** SMS, suivi de Fabrice en approche, version anglaise, paiement en ligne, factures
 entreprise, formulaire du site branché sur la même base.
