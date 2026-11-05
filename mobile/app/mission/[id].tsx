@@ -7,6 +7,7 @@ import { DemandeCarte, TrajetLibre, appeler, dansCombien, ecrireEmail, ecrireSms
 import { dateCourte, duree, euros, fraisAnnulation, offre } from '../../src/data';
 import { Couleurs, f, radius, sansContourWeb, space } from '../../src/theme';
 import { Bouton, Ligne, Note, Teinture, Titre, teintesDe } from '../../src/ui';
+import { useMessagerie } from '../../src/messagerie';
 import { useTheme } from '../../src/useTheme';
 
 // Une course vue par Fabrice : le client, le trajet, les actions selon le statut.
@@ -14,6 +15,7 @@ export default function Mission() {
   const { c, type, s } = useTheme(creerStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { missions, fiche, terminer, annuler, noter } = useChauffeur();
+  const { nonLus } = useMessagerie();
   const maintenant = useMaintenant();
   const m = missions.find((x) => x.id === id);
   const [note, setNote] = useState(m?.note_chauffeur ?? '');
@@ -60,6 +62,17 @@ export default function Mission() {
             <Bouton titre="SMS" icone="chatbubble-outline" variante="contour" onPress={() => ecrireSms(m!.telephone)} desactive={!m!.telephone} style={{ flex: 1, paddingHorizontal: space.s }} />
             <Bouton titre="Email" icone="mail-outline" variante="contour" onPress={() => ecrireEmail(m!.email)} desactive={!m!.email} style={{ flex: 1, paddingHorizontal: space.s }} />
           </View>
+          {m!.client_id ? (
+            <Bouton
+              titre={nonLus(m!.id) ? `Messages · ${nonLus(m!.id)} nouveau${nonLus(m!.id) > 1 ? 'x' : ''}` : 'Écrire dans l’appli (gratuit)'}
+              variante={nonLus(m!.id) ? 'plein' : 'texte'}
+              icone="chatbubbles-outline"
+              onPress={() => router.push(`/conversation/${m!.id}`)}
+              style={{ marginTop: -space.s, marginBottom: space.m }}
+            />
+          ) : (
+            <Text style={[type.small, { marginTop: -space.s, marginBottom: space.l }]}>Client sans l’appli : messagerie indisponible.</Text>
+          )}
         </View>
         <View style={s.bloc}>
           <Ligne libelle="Véhicule" valeur={`${o.nom} · ${o.vehicule}`} />

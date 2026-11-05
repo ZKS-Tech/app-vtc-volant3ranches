@@ -263,3 +263,33 @@ export function normaliserTelephone(t?: string | null): string | null {
   if (!d) return null;
   return /^33\d{9}$/.test(d) ? '0' + d.slice(2) : d;
 }
+
+// ——— Messagerie client ↔ chauffeur ———
+
+export type Message = {
+  id: string; course_id: string; auteur_id: string; de_chauffeur: boolean; texte: string; envoye_le: string; lu_le: string | null;
+};
+
+export async function chargerMessages(): Promise<Message[]> {
+  if (!supabase) return [];
+  const r = await supabase.from('messages').select('*').order('envoye_le', { ascending: true }).limit(2000);
+  return verifier(r) as Message[];
+}
+
+export async function envoyerMessageServeur(courseId: string, texte: string): Promise<Message> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  return verifier(await supabase.rpc('envoyer_message', { p_course: courseId, p_texte: texte })) as Message;
+}
+
+export async function marquerLusServeur(courseId: string): Promise<void> {
+  if (!supabase) return;
+  await supabase.rpc('marquer_lus', { p_course: courseId });
+}
+
+export function ecouterMessages(surMessage: (m: Message) => void): RealtimeChannel | null {
+  if (!supabase) return null;
+  return supabase
+    .channel(`messages-${Date.now()}`)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, (p) => { if (p.new && 'id' in p.new) surMessage(p.new as Message); })
+    .subscribe();
+}

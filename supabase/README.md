@@ -63,6 +63,13 @@ L'IGN a retiré le moteur « bdtopo-osrm » utilisé par la migration 3. **SQL E
 coller [`migrations/20261107000000_itineraire_ign_moteurs.sql`](migrations/20261107000000_itineraire_ign_moteurs.sql),
 puis **Run**. La base utilise alors « bdtopo-valhalla », avec « bdtopo-pgr » en secours.
 
+## Messagerie client ↔ chauffeur (migration 5)
+
+**SQL Editor** › **New query** : coller [`migrations/20261108000000_messagerie.sql`](migrations/20261108000000_messagerie.sql),
+puis **Run**. Une conversation par course, en temps réel, visible uniquement par le client de la course
+et par Fabrice. Elle reste ouverte jusqu'à deux jours après la course. Un client sans l'appli (course
+saisie par téléphone) ne peut pas recevoir de messages : il faut l'appeler.
+
 ## Tester la confirmation en temps réel
 
 Avec deux téléphones (ou un téléphone et le navigateur) : envoyez une demande côté client, puis
@@ -82,4 +89,4 @@ Les règles de prix et de sécurité sont vérifiées sur un PostgreSQL local, s
 cd supabase/tests && npm install && npm test
 ```
 
-Les 42 vérifications doivent afficher « OK ».
+Les 53 vérifications doivent afficher « OK ».

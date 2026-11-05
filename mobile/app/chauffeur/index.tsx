@@ -8,6 +8,7 @@ import { CuveIndigo } from '../../src/CuveIndigo';
 import { euros, offre } from '../../src/data';
 import { Couleurs, f, radius, space } from '../../src/theme';
 import { Bouton, Note, Titre } from '../../src/ui';
+import { useMessagerie } from '../../src/messagerie';
 import { useTheme } from '../../src/useTheme';
 
 const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
@@ -19,6 +20,7 @@ export default function TableauDeBord() {
   const insets = useSafeAreaInsets();
   const { missions, demo, chargement, erreur, recharger } = useChauffeur();
   const maintenant = useMaintenant();
+  const { conversationsNonLues, nonLus, messagesDe } = useMessagerie();
 
   const aTraiter = missions.filter((m) => m.statut === 'envoyee').sort((a, b) => +new Date(a.envoyee_le) - +new Date(b.envoyee_le));
   const aVenir = missions.filter((m) => m.statut === 'confirmee' && m.date.getTime() > maintenant.getTime() - 30 * 60000).sort((a, b) => +a.date - +b.date);
@@ -58,6 +60,29 @@ export default function TableauDeBord() {
           </View>
         ) : null}
         {chargement ? <Text style={[type.small, { marginTop: space.l }]}>Chargement…</Text> : null}
+
+        {conversationsNonLues.length ? (
+          <>
+            <Titre>Messages</Titre>
+            <View style={s.bloc}>
+              {conversationsNonLues.map((idC) => {
+                const m = missions.find((x) => x.id === idC);
+                if (!m) return null;
+                const dernier = messagesDe(idC).filter((x) => !x.de_chauffeur).slice(-1)[0];
+                return (
+                  <Pressable key={idC} onPress={() => router.push(`/conversation/${idC}`)} style={({ pressed }) => [s.message, pressed && { opacity: 0.7 }]} accessibilityRole="button">
+                    <View style={s.pastilleMessage}><Text style={{ color: c.blanc, fontWeight: '700', fontSize: 12 }}>{nonLus(idC)}</Text></View>
+                    <View style={{ flex: 1 }}>
+                      <Text style={[type.body, { fontWeight: '700' }]} numberOfLines={1}>{m.nom} · {heureDe(m.date)} {m.date.getDate()}/{m.date.getMonth() + 1}</Text>
+                      <Text style={type.small} numberOfLines={2}>{dernier?.texte}</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={c.pierre} />
+                  </Pressable>
+                );
+              })}
+            </View>
+          </>
+        ) : null}
 
         {aTraiter.length ? (
           <>
@@ -128,6 +153,8 @@ const creerStyles = (c: Couleurs) => StyleSheet.create({
   bonjour: { fontFamily: f.display, fontSize: 40, color: c.blanc, marginTop: 2 },
   resume: { color: c.surCuve2, fontSize: 16, marginTop: space.xs },
   bloc: { backgroundColor: c.surface, borderRadius: radius.l, paddingHorizontal: space.m, paddingVertical: space.s },
+  message: { flexDirection: 'row', alignItems: 'center', gap: space.m, paddingVertical: space.m, minHeight: 56 },
+  pastilleMessage: { minWidth: 24, height: 24, borderRadius: 12, paddingHorizontal: 6, backgroundColor: c.alerte, alignItems: 'center', justifyContent: 'center' },
   prochaine: { backgroundColor: c.action, borderRadius: radius.l, padding: space.l },
   prochaineHeure: { fontFamily: f.display, fontSize: 44, color: c.blanc, lineHeight: 48 },
   compte: { fontSize: 15, fontWeight: '600' },

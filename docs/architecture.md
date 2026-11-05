@@ -114,11 +114,10 @@ règles sont vérifiées par un jeu de 21 tests exécutés sur un PostgreSQL loc
    mise à jour.
 7. **Publication** : version de développement (EAS), test par Fabrice et quelques clients, stores.
 
-**Demandé par Fabrice (à planifier) :** une **messagerie client ↔ chauffeur** dans l'appli, rattachée
-à chaque course, pour gérer un imprévu (retard, changement de terminal, bagage en plus) sans SMS : les
-voyageurs étrangers n'ont alors aucun frais d'envoi. Piste : une table `messages` dans Supabase en temps
-réel (gratuit), visible seulement par le client de la course et par Fabrice, avec notification à chaque
-nouveau message.
+**Messagerie client ↔ chauffeur** ✅ (demande de Fabrice) : une conversation par course, en temps réel
+(table `messages`, fonctions `envoyer_message` et `marquer_lus`), réponses toutes prêtes, indicateur
+« Lu ». Gratuite, sans SMS : utile aux voyageurs étrangers. Les notifications de nouveaux messages
+arrivent avec l'étape 4.
 
 **Ensuite :** SMS, suivi de Fabrice en approche, version anglaise, paiement en ligne, factures
 entreprise, formulaire du site branché sur la même base.

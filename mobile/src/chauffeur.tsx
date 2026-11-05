@@ -224,6 +224,8 @@ export function ChauffeurProvider({ children }: { children: ReactNode }) {
 }
 
 export const useChauffeur = () => useContext(C)!;
+// Hors de l'espace chauffeur (côté client), renvoie null.
+export const useChauffeurOptionnel = () => useContext(C);
 
 // ——— Calculs pour le tableau de bord et le chiffre d'affaires ———
 

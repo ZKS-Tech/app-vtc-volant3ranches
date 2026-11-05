@@ -4,6 +4,7 @@ import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Annonce } from '../../src/chauffeurUi';
 import { useChauffeur } from '../../src/chauffeur';
+import { useMessagerie } from '../../src/messagerie';
 import { useTheme } from '../../src/useTheme';
 
 const icone = (nom: React.ComponentProps<typeof Ionicons>['name']) =>
@@ -14,6 +15,7 @@ export default function OngletsChauffeur() {
   const { c } = useTheme();
   const { missions } = useChauffeur();
   const aTraiter = missions.filter((m) => m.statut === 'envoyee').length;
+  const { totalNonLus } = useMessagerie();
   const insets = useSafeAreaInsets();
   return (
     <View style={{ flex: 1 }}>
@@ -29,7 +31,13 @@ export default function OngletsChauffeur() {
         sceneStyle: { backgroundColor: c.sol },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Tableau de bord', tabBarLabel: 'Tableau', headerShown: false, tabBarIcon: icone('speedometer-outline') }} />
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Tableau de bord', tabBarLabel: 'Tableau', headerShown: false, tabBarIcon: icone('speedometer-outline'),
+          tabBarBadge: totalNonLus || undefined, tabBarBadgeStyle: { backgroundColor: c.alerte, color: c.blanc, fontSize: 11 },
+        }}
+      />
       <Tabs.Screen
         name="demandes"
         options={{

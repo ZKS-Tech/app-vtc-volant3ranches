@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { LogBox } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ChauffeurProvider } from '../src/chauffeur';
+import { MessagerieProvider } from '../src/messagerie';
 import { StoreProvider, useStore } from '../src/store';
 import { useTheme } from '../src/useTheme';
 
@@ -72,12 +73,15 @@ function Navigation() {
         <Stack.Screen name="tarifs" options={{ title: 'Tarifs et jours fériés' }} />
         <Stack.Screen name="chiffre-affaires" options={{ title: "Chiffre d'affaires" }} />
       </Stack.Protected>
+      <Stack.Screen name="conversation/[id]" options={{ title: 'Messages' }} />
     </Stack>
   );
   return (
     <>
       <StatusBar style={estSombre ? 'light' : 'dark'} />
-      {chauffeur ? <ChauffeurProvider key={demoChauffeur ? 'demo' : 'serveur'}>{pile}</ChauffeurProvider> : pile}
+      <MessagerieProvider key={chauffeur ? 'chauffeur' : 'client'}>
+        {chauffeur ? <ChauffeurProvider key={demoChauffeur ? 'demo' : 'serveur'}>{pile}</ChauffeurProvider> : pile}
+      </MessagerieProvider>
     </>
   );
 }

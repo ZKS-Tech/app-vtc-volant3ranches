@@ -49,6 +49,7 @@ if (process.argv[4]) {
   await db.exec(readFileSync(process.argv[4], 'utf8').replace(/create extension if not exists http[^;]*;/, ''));
   ok(true, 'migration 3 appliquée sans erreur');
   if (process.argv[5]) { await db.exec(readFileSync(process.argv[5], 'utf8')); ok(true, 'migration 4 appliquée sans erreur'); }
+  if (process.argv[6]) { await db.exec(readFileSync(process.argv[6], 'utf8')); ok(true, 'migration 5 appliquée sans erreur'); }
 }
 
 
@@ -178,4 +179,32 @@ if (process.argv[4]) {
   }
   ok(bloque && n === 5, `limite anti-abus : bloqué après ${n} demandes dans l'heure`);
   await echoue(() => q(`select * from public.itineraire_ign(2.2, 43.6, 1.4, 43.6)`), 'le service IGN n\'est pas appelable directement par un client');
+}
+
+if (process.argv[6]) {
+  console.log('--- messagerie');
+  await en(client);
+  r = await q(`select id from public.courses where client_id = '${client}' and statut in ('envoyee','confirmee') order by envoyee_le desc limit 1`);
+  const course = r[0].id;
+  r = await q(`select * from public.envoyer_message('${course}', '  Mon vol a 20 minutes de retard  ')`);
+  ok(r[0].texte === 'Mon vol a 20 minutes de retard' && r[0].de_chauffeur === false, 'le client écrit à Fabrice');
+  await en(autre);
+  r = await q(`select count(*)::int n from public.messages`);
+  ok(r[0].n === 0, 'un autre client ne lit pas la conversation');
+  await echoue(() => q(`select public.envoyer_message('${course}', 'intrus')`), 'un autre client ne peut pas écrire dans cette conversation');
+  await en(fabrice);
+  r = await q(`select count(*)::int n from public.messages where course_id = '${course}' and lu_le is null`);
+  ok(r[0].n === 1, 'Fabrice voit le message non lu');
+  r = await q(`select public.marquer_lus('${course}') n`);
+  ok(r[0].n === 1, 'Fabrice marque le message comme lu');
+  r = await q(`select * from public.envoyer_message('${course}', 'Bien reçu, je suis le vol.')`);
+  ok(r[0].de_chauffeur === true, 'Fabrice répond');
+  await en(client);
+  r = await q(`select public.marquer_lus('${course}') n`);
+  ok(r[0].n === 1, 'le client lit la réponse (seuls les messages de Fabrice sont marqués)');
+  await echoue(() => q(`select public.envoyer_message('${course}', '   ')`), 'message vide refusé');
+  await echoue(() => q(`insert into public.messages (course_id, auteur_id, texte) values ('${course}', '${client}', 'direct')`), 'écriture directe dans la table interdite');
+  await en(fabrice);
+  r = await q(`select id from public.courses where client_id is null limit 1`);
+  await echoue(() => q(`select public.envoyer_message('${r[0].id}', 'Bonjour')`), 'client sans l’appli : messagerie impossible, il faut appeler');
 }

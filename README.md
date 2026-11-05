@@ -185,8 +185,8 @@ Chaque modification du code s'affiche immédiatement sur le téléphone.
 
 ## Prochaines étapes
 
-- **Messagerie client ↔ chauffeur** (demande de Fabrice) : discuter d'un imprévu directement dans
-  l'appli, sans frais de SMS pour les voyageurs étrangers. Voir `docs/architecture.md`.
+- ~~Messagerie client ↔ chauffeur~~ : faite (détail d'une course › « Écrire à Fabrice » ; côté Fabrice,
+  section « Messages » du tableau de bord). Prochaine étape : les notifications.
 - ~~Valider la maquette avec Fabrice~~ : validée. Décisions : mode chauffeur dans l'application,
   30 min d'attente gratuite à l'aéroport, majoration du week-end maintenue (CGV à mettre à jour).
 - Mode chauffeur : demandes en attente, Confirmer / Refuser, notification à chaque demande.
