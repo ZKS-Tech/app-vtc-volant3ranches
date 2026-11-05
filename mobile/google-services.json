@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "922217959908",
+    "project_id": "volant3ranches-8a5d4",
+    "storage_bucket": "volant3ranches-8a5d4.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:922217959908:android:eb1a39145a3a98f0cab7f1",
+        "android_client_info": {
+          "package_name": "fr.volant3ranches.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCJLPlcX8fvfDbXzMTQP27_W--VLcVklZI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

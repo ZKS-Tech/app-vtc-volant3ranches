@@ -42,6 +42,17 @@
     "primaryColor": "#1E3277",
     "experiments": {
       "typedRoutes": false
-    }
+    },
+    "extra": {
+      "router": {
+        "asyncRoutes": {
+          "web": true
+        }
+      },
+      "eas": {
+        "projectId": "2b77d497-e738-4649-9dbb-b65f75e30933"
+      }
+    },
+    "owner": "evanlgz"
   }
 }
