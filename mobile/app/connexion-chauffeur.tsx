@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-native';
+import { Platform, ScrollView, Text, View } from 'react-native';
 import { useStore } from '../src/store';
 import { space } from '../src/theme';
 import { Bouton, Champ, Note } from '../src/ui';
+import { EcranAvecClavier } from '../src/Clavier';
 import { useTheme } from '../src/useTheme';
 
 // Connexion de Fabrice à son espace. Les clients ne voient ce lien qu'en bas de leur profil.
@@ -23,7 +24,7 @@ export default function ConnexionChauffeur() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.sol }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <EcranAvecClavier style={{ flex: 1, backgroundColor: c.sol }}>
       <ScrollView contentContainerStyle={{ padding: space.l }} keyboardShouldPersistTaps="handled">
         <Text style={[type.title, { marginBottom: space.s }]}>Espace chauffeur</Text>
         <Text style={[type.small, { marginBottom: space.xl }]}>Réservé à Fabrice : demandes, planning, clients et tarifs.</Text>
@@ -42,6 +43,6 @@ export default function ConnexionChauffeur() {
           <Bouton titre="Voir la démonstration" variante="contour" icone="eye-outline" onPress={entrerDemoChauffeur} />
         </View>
       </ScrollView>
-    </KeyboardAvoidingView>
+    </EcranAvecClavier>
   );
 }

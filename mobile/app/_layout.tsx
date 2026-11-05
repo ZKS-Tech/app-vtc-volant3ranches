@@ -72,6 +72,7 @@ function Navigation() {
         <Stack.Screen name="choix-lieu" options={{ presentation: 'modal', title: 'Lieu' }} />
         <Stack.Screen name="tarifs" options={{ title: 'Tarifs et jours fériés' }} />
         <Stack.Screen name="chiffre-affaires" options={{ title: "Chiffre d'affaires" }} />
+        <Stack.Screen name="gestion" options={{ title: 'Gestion' }} />
       </Stack.Protected>
       <Stack.Screen name="conversation/[id]" options={{ title: 'Messages' }} />
     </Stack>

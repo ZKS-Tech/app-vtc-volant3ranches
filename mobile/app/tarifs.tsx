@@ -6,6 +6,7 @@ import { OffreId, dateCourte, joursFeries, offres, regles } from '../src/data';
 import { useStore } from '../src/store';
 import { Couleurs, radius, sansContourWeb, space } from '../src/theme';
 import { Bouton, Compteur, Note, Titre, couleursSwitch } from '../src/ui';
+import { EcranAvecClavier } from '../src/Clavier';
 import { useTheme } from '../src/useTheme';
 
 const nombre = (t: string) => Number(t.replace(',', '.'));
@@ -35,6 +36,7 @@ export default function Tarifs() {
   const ferieValide = /^\d{4}-\d{2}-\d{2}$/.test(nouveauFerie) && !Number.isNaN(Date.parse(nouveauFerie));
 
   return (
+    <EcranAvecClavier style={{ backgroundColor: c.sol }}>
     <ScrollView style={{ backgroundColor: c.sol }} contentContainerStyle={{ padding: space.l, paddingBottom: space.xxl }} keyboardShouldPersistTaps="handled">
       <Text style={type.small}>
         {demo ? 'Démonstration : les changements ne sont pas enregistrés.' : 'Les nouveaux tarifs s’appliquent tout de suite aux nouvelles demandes. Les courses déjà enregistrées gardent leur prix.'}
@@ -107,6 +109,7 @@ export default function Tarifs() {
       </View>
       {retour('ferie')}
     </ScrollView>
+    </EcranAvecClavier>
   );
 }
 

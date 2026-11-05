@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dateCourte, euros, lieu, offre, prix, trajet } from '../src/data';
 import { useStore } from '../src/store';
 import { Couleurs, radius, space } from '../src/theme';
+import { EcranAvecClavier } from '../src/Clavier';
 import { useTheme } from '../src/useTheme';
 import { Bouton, couleursSwitch, Champ, Ligne, Note, Titre, appelerFabrice } from '../src/ui';
 
@@ -41,7 +42,7 @@ export default function Coordonnees() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.sol }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <EcranAvecClavier style={{ flex: 1, backgroundColor: c.sol }}>
       <ScrollView contentContainerStyle={{ padding: space.l, paddingBottom: 140 }} keyboardShouldPersistTaps="handled">
         <Text style={type.small}>Pas besoin de compte : ces informations servent à Fabrice pour vous confirmer la course.</Text>
         <View style={{ marginTop: space.l }}>
@@ -112,7 +113,7 @@ export default function Coordonnees() {
           onPress={valider}
         />
       </View>
-    </KeyboardAvoidingView>
+    </EcranAvecClavier>
   );
 }
 

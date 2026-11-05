@@ -39,6 +39,9 @@ export default function TableauDeBord() {
     >
       <View style={[s.entete, { paddingTop: insets.top + space.l }]}>
         <CuveIndigo niveau={1} couleurs={{ eau: c.cuve, voile: c.bain4, indigo: c.indigo, cuve: c.cuve }} />
+        <Pressable onPress={() => router.push('/gestion')} style={[s.reglages, { top: insets.top + space.s }]} accessibilityLabel="Gestion : chiffre d'affaires, tarifs, compte" hitSlop={8}>
+          <Ionicons name="settings-outline" size={22} color={c.blanc} />
+        </Pressable>
         <Text style={s.date}>{JOURS[maintenant.getDay()][0].toUpperCase() + JOURS[maintenant.getDay()].slice(1)} {maintenant.getDate()} {MOIS[maintenant.getMonth()]}</Text>
         <Text style={s.bonjour}>Bonjour Fabrice</Text>
         <Text style={s.resume}>
@@ -153,6 +156,7 @@ const creerStyles = (c: Couleurs) => StyleSheet.create({
   bonjour: { fontFamily: f.display, fontSize: 40, color: c.blanc, marginTop: 2 },
   resume: { color: c.surCuve2, fontSize: 16, marginTop: space.xs },
   bloc: { backgroundColor: c.surface, borderRadius: radius.l, paddingHorizontal: space.m, paddingVertical: space.s },
+  reglages: { position: 'absolute', right: space.l, top: 0, width: 44, height: 44, borderRadius: 22, backgroundColor: 'rgba(255,255,255,0.14)', alignItems: 'center', justifyContent: 'center', zIndex: 2 },
   message: { flexDirection: 'row', alignItems: 'center', gap: space.m, paddingVertical: space.m, minHeight: 56 },
   pastilleMessage: { minWidth: 24, height: 24, borderRadius: 12, paddingHorizontal: 6, backgroundColor: c.alerte, alignItems: 'center', justifyContent: 'center' },
   prochaine: { backgroundColor: c.action, borderRadius: radius.l, padding: space.l },

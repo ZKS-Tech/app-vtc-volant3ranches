@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Source, useChauffeur } from '../src/chauffeur';
 import { dateCourte, euros, lieu, offre, offres, prix, trajet } from '../src/data';
@@ -9,6 +9,7 @@ import { dansJours } from '../src/store';
 import { Couleurs, f, radius, sansContourWeb, space } from '../src/theme';
 import { Bouton, Champ, Compteur, Note, Segment, Titre } from '../src/ui';
 import { useItineraire } from '../src/geo';
+import { EcranAvecClavier } from '../src/Clavier';
 import { useTheme } from '../src/useTheme';
 
 const jours = Array.from({ length: 30 }, (_, i) => dansJours(i));
@@ -55,7 +56,7 @@ export default function Saisie() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.sol }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <EcranAvecClavier style={{ flex: 1, backgroundColor: c.sol }}>
       <ScrollView contentContainerStyle={{ padding: space.l, paddingBottom: 130 }} keyboardShouldPersistTaps="handled">
         <Text style={type.small}>Pour une réservation reçue par téléphone ou par email. La course est enregistrée directement comme confirmée.</Text>
 
@@ -188,7 +189,7 @@ export default function Saisie() {
       <View style={[s.pied, { paddingBottom: insets.bottom + space.m }]}>
         <Bouton titre={calc ? `Enregistrer la course · ${euros(sa.prixAjuste ? Number(sa.prixAjuste.replace(',', '.')) || 0 : calc.montant)}` : 'Enregistrer la course'} icone="checkmark" onPress={enregistrer} chargement={envoi} desactive={!calc} />
       </View>
-    </KeyboardAvoidingView>
+    </EcranAvecClavier>
   );
 }
 

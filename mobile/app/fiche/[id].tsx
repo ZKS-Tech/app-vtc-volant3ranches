@@ -6,6 +6,7 @@ import { Chiffre, LigneMission, appeler, ecrireEmail, ecrireSms } from '../../sr
 import { dateCourte, euros } from '../../src/data';
 import { Couleurs, radius, space } from '../../src/theme';
 import { Bouton, Champ, Note, Titre } from '../../src/ui';
+import { EcranAvecClavier } from '../../src/Clavier';
 import { useTheme } from '../../src/useTheme';
 
 // Fiche client : coordonnées et notes modifiables, chiffres, historique, nouvelle course.
@@ -37,6 +38,7 @@ export default function FicheClient() {
   };
 
   return (
+    <EcranAvecClavier style={{ backgroundColor: c.sol }}>
     <ScrollView style={{ backgroundColor: c.sol }} contentContainerStyle={{ padding: space.l, paddingBottom: space.xxl }} keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: nouveau ? 'Nouveau client' : f!.nom }} />
       {f ? (
@@ -83,6 +85,7 @@ export default function FicheClient() {
         </>
       ) : null}
     </ScrollView>
+    </EcranAvecClavier>
   );
 }
 

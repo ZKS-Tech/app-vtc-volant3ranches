@@ -62,7 +62,7 @@ redéfinies pour sortir du style « crème et or » jugé trop générique.
 | `mobile/assets/photos/` | Logo et photos du site |
 | `mobile/src/serveur.ts` | Connexion à Supabase : compte invité, tarifs, demandes, temps réel |
 | `supabase/` | Base de données : structure, sécurité, tarifs et tests (voir `supabase/README.md`) |
-| `mobile/app/chauffeur/` | Espace de Fabrice : tableau de bord, demandes, planning, clients, gestion |
+| `mobile/app/chauffeur/` | Espace de Fabrice : tableau de bord, demandes, messages, planning, clients (Gestion : roue dentée du tableau de bord) |
 | `mobile/src/chauffeur.tsx` | Données de l'espace chauffeur (temps réel) et jeu de démonstration |
 | `docs/architecture.md` | Architecture et ordre de développement |
 | `PRODUCT.md` | Contexte produit : clients, règles métier, contraintes, décisions ouvertes |

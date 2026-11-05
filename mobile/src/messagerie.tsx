@@ -12,6 +12,9 @@ type Ctx = {
   nonLus: (courseId: string) => number;
   totalNonLus: number;
   conversationsNonLues: string[];
+  // Toutes les conversations, la plus récente en premier.
+  conversations: { courseId: string; dernier: Message; nonLus: number }[];
+  estAMoi: (m: Message) => boolean;
   envoyer: (courseId: string, texte: string) => Promise<void>;
   marquerLus: (courseId: string) => void;
 };
@@ -42,9 +45,18 @@ export function MessagerieProvider({ children }: { children: ReactNode }) {
   const value = useMemo<Ctx>(() => {
     const nonLusParCourse = new Map<string, number>();
     for (const m of messages) if (recu(m) && !m.lu_le) nonLusParCourse.set(m.course_id, (nonLusParCourse.get(m.course_id) ?? 0) + 1);
+    const derniers = new Map<string, Message>();
+    for (const m of messages) {
+      const d = derniers.get(m.course_id);
+      if (!d || m.envoye_le > d.envoye_le) derniers.set(m.course_id, m);
+    }
     return {
       cote,
       demo,
+      conversations: [...derniers.entries()]
+        .map(([courseId, dernier]) => ({ courseId, dernier, nonLus: nonLusParCourse.get(courseId) ?? 0 }))
+        .sort((a, b) => (a.dernier.envoye_le < b.dernier.envoye_le ? 1 : -1)),
+      estAMoi: (m) => !recu(m),
       messagesDe: (id) => messages.filter((m) => m.course_id === id),
       nonLus: (id) => nonLusParCourse.get(id) ?? 0,
       totalNonLus: [...nonLusParCourse.values()].reduce((a, b) => a + b, 0),

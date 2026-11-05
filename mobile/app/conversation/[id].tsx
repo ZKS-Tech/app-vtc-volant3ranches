@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useChauffeurOptionnel } from '../../src/chauffeur';
 import { appeler } from '../../src/chauffeurUi';
@@ -10,6 +10,7 @@ import { useMessagerie } from '../../src/messagerie';
 import { useStore } from '../../src/store';
 import { Couleurs, radius, sansContourWeb, space } from '../../src/theme';
 import { appelerFabrice } from '../../src/ui';
+import { EcranAvecClavier } from '../../src/Clavier';
 import { useTheme } from '../../src/useTheme';
 
 // Réponses toutes prêtes : un geste suffit, même pour un voyageur qui parle peu français.
@@ -53,7 +54,7 @@ export default function Conversation() {
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.sol }} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}>
+    <EcranAvecClavier style={{ flex: 1, backgroundColor: c.sol }}>
       <Stack.Screen
         options={{
           title: interlocuteur,
@@ -125,7 +126,7 @@ export default function Conversation() {
           <Ionicons name="send" size={20} color={c.blanc} />
         </Pressable>
       </View>
-    </KeyboardAvoidingView>
+    </EcranAvecClavier>
   );
 }
 

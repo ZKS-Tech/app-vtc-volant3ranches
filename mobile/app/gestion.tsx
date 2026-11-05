@@ -2,12 +2,12 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useChauffeur } from '../../src/chauffeur';
-import { emailConnecte } from '../../src/serveur';
-import { useStore } from '../../src/store';
-import { Couleurs, radius, space } from '../../src/theme';
-import { Bouton, IconName, Segment, Titre } from '../../src/ui';
-import { useTheme } from '../../src/useTheme';
+import { useChauffeur } from '../src/chauffeur';
+import { emailConnecte } from '../src/serveur';
+import { useStore } from '../src/store';
+import { Couleurs, radius, space } from '../src/theme';
+import { Bouton, IconName, Segment, Titre } from '../src/ui';
+import { useTheme } from '../src/useTheme';
 
 export default function Gestion() {
   const { c, type, s } = useTheme(creerStyles);

@@ -31,13 +31,7 @@ export default function OngletsChauffeur() {
         sceneStyle: { backgroundColor: c.sol },
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Tableau de bord', tabBarLabel: 'Tableau', headerShown: false, tabBarIcon: icone('speedometer-outline'),
-          tabBarBadge: totalNonLus || undefined, tabBarBadgeStyle: { backgroundColor: c.alerte, color: c.blanc, fontSize: 11 },
-        }}
-      />
+      <Tabs.Screen name="index" options={{ title: 'Tableau de bord', tabBarLabel: 'Tableau', headerShown: false, tabBarIcon: icone('speedometer-outline') }} />
       <Tabs.Screen
         name="demandes"
         options={{
@@ -45,9 +39,15 @@ export default function OngletsChauffeur() {
           tabBarBadge: aTraiter || undefined, tabBarBadgeStyle: { backgroundColor: c.alerte, color: c.blanc, fontSize: 11 },
         }}
       />
+      <Tabs.Screen
+        name="messages"
+        options={{
+          title: 'Messages', tabBarIcon: icone('chatbubbles-outline'),
+          tabBarBadge: totalNonLus || undefined, tabBarBadgeStyle: { backgroundColor: c.alerte, color: c.blanc, fontSize: 11 },
+        }}
+      />
       <Tabs.Screen name="planning" options={{ title: 'Planning', tabBarIcon: icone('calendar-outline') }} />
       <Tabs.Screen name="clients" options={{ title: 'Clients', tabBarIcon: icone('people-outline') }} />
-      <Tabs.Screen name="gestion" options={{ title: 'Gestion', tabBarIcon: icone('options-outline') }} />
     </Tabs>
     <Annonce bas={insets.bottom + 64} />
     </View>
