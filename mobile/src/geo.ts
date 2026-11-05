@@ -47,28 +47,47 @@ function alleger(coords: [number, number][], max = 300): [number, number][] {
   return Array.from({ length: max }, (_, i) => coords[Math.round(i * pas)]);
 }
 
+// Variantes essayées dans l'ordre : nos unités (km, minutes), puis les réglages par défaut du service,
+// puis son second moteur de calcul. La première qui répond l'emporte.
+const VARIANTES = [
+  { resource: 'bdtopo-osrm', options: '&distanceUnit=kilometer&timeUnit=minute&geometryFormat=geojson&getSteps=false' },
+  { resource: 'bdtopo-osrm', options: '' },
+  { resource: 'bdtopo-valhalla', options: '' },
+];
+
+type ReponseItineraire = {
+  distance?: number | string; duration?: number | string; distanceUnit?: string; timeUnit?: string;
+  geometry?: { coordinates?: [number, number][] } | string;
+};
+
 export async function calculerItineraire(a: Lieu, b: Lieu, signal?: AbortSignal): Promise<Itineraire> {
   const deja = itineraireEnCache(a, b);
   if (deja) return deja;
-  const url = `${ITINERAIRE}?resource=bdtopo-osrm&profile=car&optimization=fastest`
-    + `&start=${a.lon},${a.lat}&end=${b.lon},${b.lat}`
-    + '&distanceUnit=kilometer&timeUnit=minute&geometryFormat=geojson&getSteps=false';
-  const r = await fetch(url, { signal });
-  if (!r.ok) throw new Error(`Itinéraire indisponible (${r.status})`);
-  const j = (await r.json()) as {
-    distance?: number; duration?: number; distanceUnit?: string; timeUnit?: string;
-    geometry?: { coordinates?: [number, number][] };
-  };
-  let km = Number(j.distance);
-  let minutes = Number(j.duration);
-  if (j.distanceUnit === 'meter' || j.distanceUnit === 'm') km /= 1000;
-  if (j.timeUnit === 'second' || j.timeUnit === 's') minutes /= 60;
-  if (!(km > 0)) throw new Error('Itinéraire indisponible');
-  return memoriserItineraire(a, b, {
-    km: Math.round(km * 10) / 10,
-    minutes: Math.max(1, Math.round(minutes || 0)),
-    coords: alleger(j.geometry?.coordinates ?? [[a.lon, a.lat], [b.lon, b.lat]]),
-  });
+  const erreurs: string[] = [];
+  for (const v of VARIANTES) {
+    const url = `${ITINERAIRE}?resource=${v.resource}&profile=car&optimization=fastest`
+      + `&start=${a.lon.toFixed(6)},${a.lat.toFixed(6)}&end=${b.lon.toFixed(6)},${b.lat.toFixed(6)}${v.options}`;
+    try {
+      const r = await fetch(url, { signal });
+      const texte = await r.text();
+      if (!r.ok) { erreurs.push(`${v.resource}${v.options ? '' : ' (défaut)'} : ${r.status} ${texte.slice(0, 140)}`); continue; }
+      const j = JSON.parse(texte) as ReponseItineraire;
+      let km = Number(j.distance);
+      let minutes = Number(j.duration);
+      const unite = (j.distanceUnit ?? (v.options ? 'kilometer' : 'meter')).toLowerCase();
+      const temps = (j.timeUnit ?? (v.options ? 'minute' : 'second')).toLowerCase();
+      if (unite.startsWith('m')) km /= 1000;
+      if (temps.startsWith('s')) minutes /= 60;
+      if (temps.startsWith('h')) minutes *= 60;
+      if (!(km > 0)) { erreurs.push(`${v.resource} : réponse sans distance (${texte.slice(0, 140)})`); continue; }
+      const coords = typeof j.geometry === 'object' && j.geometry?.coordinates?.length ? j.geometry.coordinates : [[a.lon, a.lat], [b.lon, b.lat]] as [number, number][];
+      return memoriserItineraire(a, b, { km: Math.round(km * 10) / 10, minutes: Math.max(1, Math.round(minutes || 0)), coords: alleger(coords) });
+    } catch (e) {
+      if (signal?.aborted) throw e;
+      erreurs.push(`${v.resource} : ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+  throw new Error(erreurs.join(' | ') || 'Itinéraire indisponible');
 }
 
 export type EtatItineraire =

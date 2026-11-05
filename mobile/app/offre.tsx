@@ -52,6 +52,7 @@ export default function Offre() {
               Le calcul de l'itinéraire n'a pas abouti. Sans la distance réelle, nous ne pouvons pas vous donner de prix :
               réessayez dans un instant, ou appelez Fabrice.
             </Note>
+            <Text style={[type.small, { fontSize: 11 }]} selectable>Détail technique : {it.message}</Text>
             <View style={{ flexDirection: 'row', gap: space.s }}>
               <Bouton titre="Réessayer" variante="contour" icone="refresh" onPress={it.reessayer} style={{ flex: 1 }} />
               <Bouton titre="Appeler" variante="contour" icone="call-outline" onPress={appelerFabrice} style={{ flex: 1 }} />
