@@ -81,7 +81,8 @@ export const offres: Offre[] = [
 
 export const offre = (id: OffreId) => offres.find((o) => o.id === id)!;
 
-export type LieuType = 'aeroport' | 'gare' | 'ville';
+// 'adresse' : une adresse précise trouvée par l'API Adresse (Géoplateforme).
+export type LieuType = 'aeroport' | 'gare' | 'ville' | 'adresse';
 export type Lieu = { id: string; nom: string; detail: string; type: LieuType; lat: number; lon: number };
 
 export const lieux: Lieu[] = [
@@ -102,12 +103,26 @@ export const lieux: Lieu[] = [
   { id: 'carcassonne', nom: 'Carcassonne, la Cité', detail: '11000 Carcassonne', type: 'ville', lat: 43.2063, lon: 2.3644 },
 ];
 
-export const lieu = (id: string) => lieux.find((l) => l.id === id)!;
-export const estTransfert = (l?: Lieu) => !!l && l.type !== 'ville';
+// Les lieux du raccourci (aéroport, gares, villes) plus tous ceux rencontrés : adresses choisies
+// dans la recherche, départs et arrivées des courses chargées depuis le serveur.
+const lieuxConnus = new Map<string, Lieu>();
+export const enregistrerLieu = (l: Lieu) => { lieuxConnus.set(l.id, l); return l; };
+export const lieu = (id: string): Lieu =>
+  lieux.find((l) => l.id === id) ?? lieuxConnus.get(id) ?? { id, nom: 'Adresse', detail: '', type: 'adresse', lat: 0, lon: 0 };
+export const estTransfert = (l?: Lieu) => !!l && (l.type === 'aeroport' || l.type === 'gare');
 
-// Prototype : distance estimée à vol d'oiseau × 1,25. L'application réelle utilisera la distance
-// par la route (Google Distance Matrix), comme le module du site.
+// Itinéraires réels (IGN) déjà calculés, par couple de positions.
+export type Itineraire = { km: number; minutes: number; coords: [number, number][] };
+const itineraires = new Map<string, Itineraire>();
+const cle = (a: Lieu, b: Lieu) => `${a.lat.toFixed(5)},${a.lon.toFixed(5)}>${b.lat.toFixed(5)},${b.lon.toFixed(5)}`;
+export const itineraireEnCache = (a: Lieu, b: Lieu) => itineraires.get(cle(a, b));
+export const memoriserItineraire = (a: Lieu, b: Lieu, it: Itineraire) => { itineraires.set(cle(a, b), it); return it; };
+
+// Distance et durée : l'itinéraire IGN s'il est connu, sinon une estimation (vol d'oiseau × 1,25)
+// qui ne sert qu'en démonstration hors ligne. Pour une vraie demande, la base recalcule toujours.
 export function trajet(a: Lieu, b: Lieu) {
+  const it = itineraireEnCache(a, b);
+  if (it) return { km: it.km, minutes: it.minutes };
   const R = 6371;
   const rad = (d: number) => (d * Math.PI) / 180;
   const dLat = rad(b.lat - a.lat);

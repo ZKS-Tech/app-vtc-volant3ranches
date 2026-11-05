@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Reanimated, { FadeOut, LinearTransition } from 'react-native-reanimated';
 import { CuveIndigo } from '../src/CuveIndigo';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { dateCourte, euros, offre } from '../src/data';
+import { dateCourte, euros, itineraireEnCache, lieu, offre } from '../src/data';
 import { useStore } from '../src/store';
 import { Couleurs, f, radius, space } from '../src/theme';
 import { CartePlan } from '../src/CartePlan';
@@ -79,6 +79,7 @@ export default function Envoyee() {
         <CartePlan
           departId={course.departId}
           arriveeId={course.arriveeId}
+          itineraireReel={itineraireEnCache(lieu(course.departId), lieu(course.arriveeId))?.coords}
           c={c}
           hauteur={190}
           style={{ borderRadius: radius.l, marginTop: space.xl }}

@@ -1,5 +1,5 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { LayoutChangeEvent, View, ViewStyle } from 'react-native';
 import Reanimated, {
   Easing, cancelAnimation, useAnimatedProps, useReducedMotion, useSharedValue, withDelay, withRepeat, withTiming,
@@ -112,11 +112,19 @@ const chemin = (pts: P[]) => pts.map((p, i) => `${i ? 'L' : 'M'}${proj(p)[0].toF
 const AnimatedPath = Reanimated.createAnimatedComponent(Path);
 const AnimatedCircle = Reanimated.createAnimatedComponent(Circle);
 
-export function CartePlan({ departId, arriveeId, c, hauteur = 200, style }: {
+export function CartePlan({ departId, arriveeId, c, hauteur = 200, style, itineraireReel }: {
   departId: string; arriveeId: string; c: Couleurs; hauteur?: number; style?: ViewStyle;
+  // Tracé réel de l'IGN ([lon, lat]) : prioritaire sur le réseau simplifié du plan.
+  itineraireReel?: [number, number][];
 }) {
   const [largeur, setLargeur] = useState(0);
-  const trace = useMemo(() => itineraire(departId, arriveeId), [departId, arriveeId]);
+  const trace = useMemo<P[]>(() => {
+    if (itineraireReel && itineraireReel.length >= 2) return itineraireReel;
+    if (noeuds[departId] && noeuds[arriveeId]) return itineraire(departId, arriveeId);
+    // Adresse hors du plan simplifié et itinéraire pas encore connu : ligne droite provisoire.
+    const a = lieu(departId), b = lieu(arriveeId);
+    return [[a.lon, a.lat], [b.lon, b.lat]];
+  }, [departId, arriveeId, itineraireReel]);
   const L = useMemo(() => longueur(trace), [trace]);
   const calme = useReducedMotion();
   const dessin = useSharedValue(calme ? 1 : 0);
@@ -124,15 +132,19 @@ export function CartePlan({ departId, arriveeId, c, hauteur = 200, style }: {
 
   // Le tracé se dessine à l'arrivée sur l'écran, puis l'arrivée pulse trois fois. Rien ne tourne
   // quand l'écran est caché sous un autre.
+  // Un nouveau tracé (itinéraire réel arrivé) se redessine depuis le départ.
+  const dessinePour = useRef(-1);
   useFocusEffect(useCallback(() => {
     if (calme) { dessin.value = 1; return; }
-    if (dessin.value < 1) {
+    if (dessinePour.current !== L) {
+      dessinePour.current = L;
+      dessin.value = 0;
       dessin.value = withDelay(250, withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.cubic) }));
     }
     pouls.value = 0;
     pouls.value = withDelay(1700, withRepeat(withTiming(1, { duration: 1600, easing: Easing.out(Easing.quad) }), 3, false));
     return () => cancelAnimation(pouls);
-  }, [departId, arriveeId, calme]));
+  }, [L, calme]));
 
   // Cadrage : le trajet au centre, avec du contexte autour.
   const cadre = useMemo(() => {

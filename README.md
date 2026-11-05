@@ -171,8 +171,9 @@ Chaque modification du code s'affiche immédiatement sur le téléphone.
 
 ## Limites du prototype
 
-- Seule une sélection de lieux (Tarn, Toulouse, Carcassonne) est proposée et la distance est
-  estimée ; la version finale utilisera Google pour les adresses et la distance réelle par la route.
+- Adresses : toutes les adresses de France (API Adresse de l'IGN), plus les raccourcis aéroport et
+  gares. Distance et durée : itinéraire réel par la route (IGN), recalculé par la base à chaque demande.
+  Sans réponse de l'IGN, aucun prix n'est affiché.
 - **Sans clé Supabase** dans `mobile/.env`, l'appli tourne en démonstration : les courses de
   « Claire Martin » sont des exemples et rien n'est enregistré. **Avec la clé**, les tarifs viennent de
   la base, les demandes y sont enregistrées et la confirmation arrive en temps réel

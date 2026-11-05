@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node securite.test.mjs ../migrations/20261104000000_fondations.sql ../migrations/20261105000000_espace_chauffeur.sql"
+    "test": "node securite.test.mjs ../migrations/20261104000000_fondations.sql ../migrations/20261105000000_espace_chauffeur.sql ../migrations/20261106000000_itineraires.sql"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.15"

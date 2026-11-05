@@ -2,7 +2,7 @@ import 'react-native-url-polyfill/auto';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
-import { TarifsServeur, lieu, lieux } from './data';
+import { TarifsServeur, enregistrerLieu, lieu, lieux } from './data';
 import type { Brouillon, Course, Statut } from './store';
 
 // Connexion à Supabase. Adresse du projet et clé publique dans mobile/.env (variables EXPO_PUBLIC_…).
@@ -67,13 +67,23 @@ export type Fiche = {
 
 const deux = (n: number) => String(n).padStart(2, '0');
 export function versCourse(l: LigneCourse): Course | null {
-  const connu = (id: string | null) => !!id && lieux.some((x) => x.id === id);
-  if (!connu(l.depart_ref) || !connu(l.arrivee_ref)) return null; // adresses hors prototype : étape 2
+  // Départ et arrivée : raccourcis connus, ou adresses enregistrées dans le registre des lieux.
+  const enregistrer = (cote: 'depart' | 'arrivee') => {
+    const ref = l[`${cote}_ref`] ?? `srv:${l.id}:${cote}`;
+    if (lieux.some((x) => x.id === ref)) return ref;
+    const type = l[`${cote}_type`];
+    enregistrerLieu({
+      id: ref, nom: l[`${cote}_libelle`], detail: l[`${cote}_detail`] ?? '',
+      type: type === 'aeroport' || type === 'gare' || type === 'ville' ? type : 'adresse',
+      lat: l[`${cote}_lat`] ?? 0, lon: l[`${cote}_lon`] ?? 0,
+    });
+    return ref;
+  };
   const date = new Date(l.date_heure);
   return {
     id: l.id,
-    departId: l.depart_ref!,
-    arriveeId: l.arrivee_ref!,
+    departId: enregistrer('depart'),
+    arriveeId: enregistrer('arrivee'),
     date,
     heure: `${deux(date.getHours())}:${deux(date.getMinutes())}`,
     allerRetour: l.aller_retour,

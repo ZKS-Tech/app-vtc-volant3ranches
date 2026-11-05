@@ -46,6 +46,17 @@ Vérification : relancer `npm run telephone`, puis Profil › Prototype › Serv
 
 Pour essayer vous-même avant Fabrice, faites les étapes 2 et 3 avec votre propre email.
 
+## Vraies adresses et distance par la route (migration 3)
+
+**SQL Editor** › **New query** : coller tout le contenu de
+[`migrations/20261106000000_itineraires.sql`](migrations/20261106000000_itineraires.sql), puis **Run**.
+Message attendu : « Success. No rows returned ».
+
+Cette migration active l'extension `http` de Supabase : la base interroge elle-même le service
+d'itinéraire de l'IGN (gratuit, sans clé) pour calculer la distance et la durée de chaque demande.
+La distance envoyée par l'appli n'est plus prise en compte, et un client ne peut pas envoyer plus de
+5 demandes par heure.
+
 ## Tester la confirmation en temps réel
 
 Avec deux téléphones (ou un téléphone et le navigateur) : envoyez une demande côté client, puis
@@ -65,4 +76,4 @@ Les règles de prix et de sécurité sont vérifiées sur un PostgreSQL local, s
 cd supabase/tests && npm install && npm test
 ```
 
-Les 33 vérifications doivent afficher « OK ».
+Les 41 vérifications doivent afficher « OK ».

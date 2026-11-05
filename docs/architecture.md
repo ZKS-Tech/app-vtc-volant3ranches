@@ -42,7 +42,7 @@ flowchart LR
 |---|---|---|
 | Application | **Expo / React Native** (le prototype validé), une seule appli pour les clients et Fabrice | Gratuit |
 | Base de données, comptes, temps réel, fonctions serveur | **Supabase**, offre gratuite, région Paris | Gratuit |
-| Adresses et distances | **Google Places + Routes**, appelés par une fonction serveur (clé jamais dans l'appli) | Quota gratuit mensuel |
+| Adresses et distances | **Géoplateforme de l'IGN** : géocodage (Base Adresse Nationale) et itinéraire, gratuits et sans clé ; la base recalcule la distance de chaque demande | Gratuit |
 | Notifications | **Expo Push** | Gratuit |
 | Emails de confirmation | **Brevo** | Gratuit (environ 300 emails par jour) |
 | Statistiques | **Firebase Analytics = GA4** (compte Google existant), avec consentement | Gratuit |
@@ -99,9 +99,9 @@ règles sont vérifiées par un jeu de 21 tests exécutés sur un PostgreSQL loc
 
 1. **Fondations** ✅ : base de données, sécurité, tarifs en base, connexion de l'appli (compte invité
    automatique), demandes enregistrées, confirmation reçue en temps réel.
-2. **Réservation réelle** (après l'espace chauffeur) : toutes les adresses de France avec l'API Adresse
-   (État, gratuite), distance et durée par la route avec l'IGN (Géoplateforme, gratuite), calculées par
-   le serveur ; plan du trajet dessiné sur le vrai itinéraire ; limite anti-abus des demandes.
+2. **Réservation réelle** ✅ : toutes les adresses de France (API Adresse / Géoplateforme), distance et
+   durée par la route (itinéraire IGN), recalculées par la base à chaque demande ; plan tracé sur la vraie
+   route ; pas de prix si l'itinéraire est indisponible ; 5 demandes par heure au plus par téléphone.
 3. **Espace chauffeur** ✅ : connexion de Fabrice (email + mot de passe) ; tableau de bord, demandes
    (Confirmer / Refuser avec motif), planning, carnet de clients (fiches, notes, historique), saisie
    des réservations par téléphone, annulation avec frais, tarifs et jours fériés, chiffre d'affaires.

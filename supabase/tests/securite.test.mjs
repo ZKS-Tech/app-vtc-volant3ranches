@@ -26,6 +26,27 @@ await db.exec(`insert into auth.users values ('44444444-4444-4444-4444-444444444
   insert into public.courses (client_id, depart_libelle, arrivee_libelle, date_heure, passagers, bagages, offre_id, distance_km, montant, prix_km, nom, telephone, email)
   values ('44444444-4444-4444-4444-444444444444','A','B', now() + interval '2 days', 1, 0, 'tesla', 10, 20, 1.8, 'Ancien Client', '+33 6 99 88 77 66', 'ancien@exemple.fr');`);
 if (process.argv[3]) { await db.exec(readFileSync(process.argv[3], 'utf8')); ok(true, 'migration 2 appliquée sans erreur'); }
+if (process.argv[4]) {
+  // Simulation du service d'itinéraire IGN (extension http de Supabase) : distance ≈ vol d'oiseau × 1,3.
+  await db.exec(`
+    create schema if not exists extensions;
+    create type extensions.http_response as (status int, content_type varchar, headers text, content varchar);
+    create function extensions.http_set_curlopt(text, text) returns boolean language sql as $$ select true $$;
+    create function extensions.http_get(uri varchar) returns extensions.http_response language plpgsql as $f$
+    declare m text[]; lon1 float8; lat1 float8; lon2 float8; lat2 float8; km float8;
+    begin
+      if current_setting('test.ign_panne', true) = 'oui' then return row(503, 'text/plain', '', 'indisponible')::extensions.http_response; end if;
+      m := regexp_match(uri, 'start=([-0-9.]+),([-0-9.]+)&end=([-0-9.]+),([-0-9.]+)');
+      lon1 := m[1]::float8; lat1 := m[2]::float8; lon2 := m[3]::float8; lat2 := m[4]::float8;
+      km := 1.3 * 111.2 * sqrt(power((lon2 - lon1) * cos(radians((lat1 + lat2) / 2)), 2) + power(lat2 - lat1, 2));
+      return row(200, 'application/json', '', json_build_object('distance', round(km::numeric, 2), 'duration', round((km / 70 * 60)::numeric, 1), 'distanceUnit', 'kilometer', 'timeUnit', 'minute')::text)::extensions.http_response;
+    end $f$;
+    grant usage on schema extensions to anon, authenticated;
+  `);
+  await db.exec(readFileSync(process.argv[4], 'utf8').replace(/create extension if not exists http[^;]*;/, ''));
+  ok(true, 'migration 3 appliquée sans erreur');
+}
+
 
 
 const client = '11111111-1111-1111-1111-111111111111';
@@ -120,4 +141,36 @@ if (process.argv[3]) {
   await echoue(() => q(`insert into public.fiches_clients (nom) values ('Pirate') returning id`), 'un client ne crée pas de fiche');
   await echoue(() => q(`select public.creer_course_manuelle(null,'X','0600000000',null,'{}','{}',now(),false,1,0,null,'tesla',10,10,null,'telephone',null)`), 'un client ne saisit pas de course manuelle');
   await echoue(() => q(`select public.fiche_pour('X','0600000000',null,null)`), 'fiche_pour non appelable directement');
+}
+
+if (process.argv[4]) {
+  console.log('--- itinéraires IGN');
+  await en(autre);
+  r = await q(`select * from public.creer_demande(
+    '{"ref":"castres-gare","libelle":"Gare de Castres","lat":43.6007,"lon":2.2329,"type":"gare"}',
+    '{"ref":"tls","libelle":"Aéroport Toulouse-Blagnac","lat":43.6293,"lon":1.3638,"type":"aeroport"}',
+    now() + interval '3 days', false, 1, 1, null, 'tesla', 5, 5, 'Paul Test', '06 00 00 00 01', 'paul@exemple.fr', null)`);
+  ok(Number(r[0].distance_km) > 80 && Number(r[0].distance_km) < 100, `distance recalculée par la base (${r[0].distance_km} km au lieu des 5 km envoyés)`);
+  ok(Number(r[0].montant) > 100, `prix calculé sur la vraie distance (${r[0].montant} €)`);
+  await echoue(() => q(`select * from public.creer_demande('{"libelle":"Sans position"}', '{"libelle":"Arrivée","lat":43.6,"lon":1.4}',
+    now() + interval '3 days', false, 1, 1, null, 'tesla', 5, 5, 'Paul Test', '06 00 00 00 01', 'paul@exemple.fr', null)`), 'adresse sans position refusée');
+  await db.exec(`select set_config('test.ign_panne', 'oui', false)`);
+  await echoue(() => q(`select * from public.creer_demande(
+    '{"libelle":"A","lat":43.6,"lon":2.2}', '{"libelle":"B","lat":43.6,"lon":1.4}',
+    now() + interval '3 days', false, 1, 1, null, 'tesla', 50, 40, 'Paul Test', '06 00 00 00 01', 'paul@exemple.fr', null)`), 'IGN en panne : pas de prix inventé, demande refusée');
+  await en(fabrice);
+  r = await q(`select * from public.creer_course_manuelle(null, 'Client Téléphone', '07 00 00 00 09', null,
+    '{"libelle":"A","lat":43.6,"lon":2.2}', '{"libelle":"B","lat":43.6,"lon":1.4}',
+    now() + interval '2 days', false, 1, 0, null, 'tesla', 66, 50, null, 'telephone', null)`);
+  ok(Number(r[0].distance_km) === 66, 'IGN en panne : la saisie de Fabrice garde sa distance');
+  await db.exec(`select set_config('test.ign_panne', 'non', false)`);
+  await en(autre);
+  let n = 1, bloque = false;
+  for (let k = 0; k < 6 && !bloque; k++) {
+    try { await q(`select * from public.creer_demande('{"libelle":"A","lat":43.6,"lon":2.2}', '{"libelle":"B","lat":43.6,"lon":1.4}',
+      now() + interval '3 days', false, 1, 1, null, 'tesla', 5, 5, 'Paul Test', '06 00 00 00 01', 'paul@exemple.fr', null)`); n++; }
+    catch (e) { bloque = /Trop de demandes/.test(e.message); }
+  }
+  ok(bloque && n === 5, `limite anti-abus : bloqué après ${n} demandes dans l'heure`);
+  await echoue(() => q(`select * from public.itineraire_ign(2.2, 43.6, 1.4, 43.6)`), 'le service IGN n\'est pas appelable directement par un client');
 }

@@ -8,6 +8,7 @@ import { dateCourte, euros, lieu, offre, offres, prix, trajet } from '../src/dat
 import { dansJours } from '../src/store';
 import { Couleurs, f, radius, sansContourWeb, space } from '../src/theme';
 import { Bouton, Champ, Compteur, Note, Segment, Titre } from '../src/ui';
+import { useItineraire } from '../src/geo';
 import { useTheme } from '../src/useTheme';
 
 const jours = Array.from({ length: 30 }, (_, i) => dansJours(i));
@@ -36,7 +37,11 @@ export default function Saisie() {
 
   const depart = sa.departId ? lieu(sa.departId) : undefined;
   const arrivee = sa.arriveeId ? lieu(sa.arriveeId) : undefined;
-  const t = depart && arrivee ? trajet(depart, arrivee) : undefined;
+  // Distance réelle (IGN). Si le service ne répond pas, Fabrice peut quand même enregistrer avec une
+  // estimation ; la base retentera l'IGN à l'enregistrement.
+  const it = useItineraire(depart, arrivee);
+  const estimation = it.etat === 'erreur';
+  const t = it.etat === 'ok' ? { km: it.itineraire.km, minutes: it.itineraire.minutes } : estimation && depart && arrivee ? trajet(depart, arrivee) : undefined;
   const calc = t ? prix(offre(sa.offreId), t.km, sa.jour, sa.heure, sa.allerRetour) : undefined;
   const transfert = depart?.type === 'aeroport' || depart?.type === 'gare' || arrivee?.type === 'aeroport' || arrivee?.type === 'gare';
 
@@ -154,7 +159,7 @@ export default function Saisie() {
           {calc && t ? (
             <>
               <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
-                <Text style={type.small}>Tarif calculé · {t.km.toLocaleString('fr-FR')} km{calc.raisons.length ? ` · majoré (${calc.raisons.join(', ')})` : ''}</Text>
+                <Text style={[type.small, { flex: 1 }]}>{estimation ? 'Estimation (itinéraire indisponible)' : 'Tarif calculé'} · {t.km.toLocaleString('fr-FR')} km{calc.raisons.length ? ` · majoré (${calc.raisons.join(', ')})` : ''}</Text>
                 <Text style={s.prix}>{euros(calc.montant)}</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.s }}>
@@ -165,7 +170,7 @@ export default function Saisie() {
               <Text style={type.small}>Laissez vide pour appliquer le tarif calculé.</Text>
             </>
           ) : (
-            <Text style={type.small}>Choisissez le départ et l’arrivée pour calculer le prix.</Text>
+            <Text style={type.small}>{depart && arrivee ? 'Calcul de l’itinéraire par la route…' : 'Choisissez le départ et l’arrivée pour calculer le prix.'}</Text>
           )}
         </View>
 
