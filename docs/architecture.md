@@ -133,8 +133,15 @@ règles sont vérifiées par un jeu de 21 tests exécutés sur un PostgreSQL loc
   délai, la demande expire. Le reste est payé à bord (terminal SumUp, espèces) ou dans l'appli.
   Prestataire envisagé : **SumUp** (déjà utilisé par Fabrice), paiement en ligne via une fonction
   serveur (Supabase Edge Functions) et la page de paiement SumUp ; Stripe en solution de repli.
-  À trancher : remboursement de l'acompte selon le délai d'annulation, délai pour payer, courses
-  saisies par téléphone (lien de paiement). CGV à mettre à jour.
+  Décisions (05/11) :
+  1. Annulation : on garde les CGV. Acompte remboursé si le client annule plus de 24 h avant, conservé
+     en dessous (les frais de 50 % / 100 % restent dus selon les CGV, l'acompte en couvre une partie).
+     Annulation par Fabrice : remboursement intégral.
+  2. Délai pour payer : 1 h après l'acceptation (au plus tard avant l'heure de la course). Passé ce
+     délai, la demande expire et le client est prévenu.
+  3. Courses saisies par téléphone : Fabrice envoie un lien de paiement, au choix par email
+     automatique ou en le partageant lui-même (SMS, WhatsApp…).
+  4. Terme retenu : « acompte » (CGV du site à mettre à jour : 10 %, règles de remboursement).
 
 **Ensuite :** SMS, suivi de Fabrice en approche, version anglaise, paiement en ligne, factures
 entreprise, formulaire du site branché sur la même base.
