@@ -70,6 +70,21 @@ puis **Run**. Une conversation par course, en temps réel, visible uniquement pa
 et par Fabrice. Elle reste ouverte jusqu'à deux jours après la course. Un client sans l'appli (course
 saisie par téléphone) ne peut pas recevoir de messages : il faut l'appeler.
 
+## Notifications push (migration 6)
+
+**SQL Editor** › **New query** : coller [`migrations/20261109000000_notifications.sql`](migrations/20261109000000_notifications.sql),
+puis **Run**. Elle active deux extensions fournies par Supabase (gratuites) : `pg_net` pour envoyer
+les notifications au service d'Expo, et `pg_cron` pour la tâche qui tourne toutes les 5 minutes.
+
+| Qui | Quand |
+|---|---|
+| Fabrice | nouvelle demande · demande sans réponse depuis 30 min · annulation par un client · message d'un client |
+| Client | course confirmée · demande refusée (avec le motif) · annulation par Fabrice · message de Fabrice · rappel la veille (entre 24 h et 2 h avant) |
+
+Les téléphones sont enregistrés dans la table `appareils` (un jeton par téléphone, rattaché au compte
+connecté). Pour vérifier les envois : **SQL Editor** › `select * from net._http_response order by id desc limit 10;`
+(statut 200 = accepté par Expo). Tâche planifiée : **Integrations** › **Cron**.
+
 ## Tester la confirmation en temps réel
 
 Avec deux téléphones (ou un téléphone et le navigateur) : envoyez une demande côté client, puis
@@ -89,4 +104,4 @@ Les règles de prix et de sécurité sont vérifiées sur un PostgreSQL local, s
 cd supabase/tests && npm install && npm test
 ```
 
-Les 53 vérifications doivent afficher « OK ».
+Les 64 vérifications doivent afficher « OK ».

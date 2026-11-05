@@ -1,3 +1,4 @@
+import { activerNotifications, oublierTelephone } from './notifications';
 import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { OffreId, appliquerTarifs, lieu, offre, prix, trajet } from './data';
 import {
@@ -184,6 +185,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           const t = trajet(lieu(b.departId!), lieu(b.arriveeId!));
           const c = await creerDemande(b, avecHeure(b.jour, b.heure), t.km, t.minutes);
           setCourses((cs) => [c, ...cs.filter((x) => x.id !== c.id)]);
+          activerNotifications(); // la demande d'autorisation arrive au moment où elle a un sens
           return c;
         }
         return new Promise<Course>((resolve, reject) => {
@@ -220,13 +222,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       role,
       demoChauffeur,
       connecterChauffeur: async (email, motDePasse) => {
+        await oublierTelephone();
         await connexionChauffeur(email, motDePasse);
         canal.current?.unsubscribe();
         setCourses([]);
         setRole('chauffeur');
+        activerNotifications();
       },
       deconnecterChauffeur: async () => {
         if (demoChauffeur) { setDemoChauffeur(false); return; }
+        await oublierTelephone().catch(() => {});
         const uid = await deconnexion();
         setRole('client');
         await demarrerClient(uid);

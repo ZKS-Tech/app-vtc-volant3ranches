@@ -6,6 +6,7 @@ import { useChauffeur } from '../src/chauffeur';
 import { emailConnecte } from '../src/serveur';
 import { useStore } from '../src/store';
 import { Couleurs, radius, space } from '../src/theme';
+import { LigneNotifications } from '../src/LigneNotifications';
 import { Bouton, IconName, Segment, Titre } from '../src/ui';
 import { useTheme } from '../src/useTheme';
 
@@ -33,6 +34,11 @@ export default function Gestion() {
       <View style={s.bloc}>
         <Lien icone="stats-chart-outline" titre="Chiffre d'affaires" sous="Recettes, courses, kilomètres, annulations" vers="/chiffre-affaires" />
         <Lien icone="pricetags-outline" titre="Tarifs et jours fériés" sous="Prix au km, minimums, nuit, week-end, attentes" vers="/tarifs" trait />
+      </View>
+
+      <Titre>Être prévenu</Titre>
+      <View style={s.bloc}>
+        <LigneNotifications sous="Nouvelle demande, demande sans réponse depuis 30 min, annulation, message d'un client" />
       </View>
 
       <Titre>Apparence</Titre>

@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { Linking, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { contact } from '../../src/data';
+import { LigneNotifications } from '../../src/LigneNotifications';
 import { useStore } from '../../src/store';
 import { Couleurs, radius, space } from '../../src/theme';
 import { useTheme } from '../../src/useTheme';
@@ -28,11 +29,15 @@ export default function Profil() {
       />
       <Text style={[type.small, { marginTop: space.s }]}>Automatique : suit le réglage du téléphone.</Text>
 
-      <Titre>Confirmations de course</Titre>
+      <Titre>Être prévenu</Titre>
       <View style={s.bloc}>
-        <Interrupteur titre="Notifications" sous="Dès que Fabrice confirme" valeur={prefs.push} onChange={(v) => setPrefs({ push: v })} />
-        <Interrupteur titre="SMS" sous="Même appli fermée" valeur={prefs.sms} onChange={(v) => setPrefs({ sms: v })} trait />
-        <Interrupteur titre="Email" sous="Récapitulatif écrit, pratique pour les notes de frais" valeur={prefs.email} onChange={(v) => setPrefs({ email: v })} trait />
+        <LigneNotifications sous="Confirmation, refus, messages de Fabrice et rappel la veille" />
+        <View style={[s.ligne, s.trait]}>
+          <View style={{ flex: 1 }}>
+            <Text style={type.body}>Email récapitulatif</Text>
+            <Text style={type.small}>Bientôt : pratique pour les notes de frais</Text>
+          </View>
+        </View>
       </View>
 
       <Titre>Confidentialité</Titre>

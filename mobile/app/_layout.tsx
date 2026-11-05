@@ -7,6 +7,7 @@ import { LogBox } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ChauffeurProvider } from '../src/chauffeur';
 import { MessagerieProvider } from '../src/messagerie';
+import { useNotifications } from '../src/notifications';
 import { StoreProvider, useStore } from '../src/store';
 import { useTheme } from '../src/useTheme';
 
@@ -32,8 +33,9 @@ export default function Racine() {
 // Stack.Protected n'ouvre que celle qui correspond au compte connecté.
 function Navigation() {
   const { c, estSombre } = useTheme();
-  const { role, demoChauffeur } = useStore();
+  const { role, demoChauffeur, serveur } = useStore();
   const chauffeur = role === 'chauffeur' || demoChauffeur;
+  useNotifications(serveur.etat === 'connecte' ? role : null);
   // À chaque bascule client ↔ chauffeur, on ouvre l'accueil de l'interface qui vient d'être autorisée.
   const precedent = useRef(chauffeur);
   useEffect(() => {

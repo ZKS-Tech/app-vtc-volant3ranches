@@ -22,7 +22,7 @@ Site actuel : <https://volant3ranches-vtc.fr>
 2. Il voit tout de suite le **prix** des deux offres, calculé au kilomètre avec les tarifs du site
    (majoration nuit, week-end et jours fériés, aller-retour à -5 %, minimum de course).
 3. Il envoie une **demande** sans créer de compte. Fabrice la confirme sous 30 minutes ; le client est
-   prévenu par notification, SMS et email.
+   prévenu par notification (email récapitulatif à venir).
 4. Il retrouve ses courses, peut appeler Fabrice, annuler (frais selon les CGV) et afficher le
    **panneau à son nom** pour le hall des arrivées.
 
@@ -148,6 +148,51 @@ Chaque modification du code s'affiche immédiatement sur le téléphone.
 - Mettre à jour Expo Go : le projet utilise Expo SDK 58.
 - Dans Expo Go, « View error log » donne le message exact ; le terminal d'`npx expo start` aussi.
 
+### Recevoir les notifications (version de développement)
+
+Expo Go ne reçoit plus les notifications push sur Android. Pour les tester, on installe une fois sur
+le téléphone une **version de développement** : une vraie appli Volant3ranches (APK), qui se connecte
+ensuite à l'ordinateur comme Expo Go et se met à jour à chaque modification du code. Gratuit avec un
+compte Expo (offre gratuite d'EAS Build), sans compte Google Play.
+
+1. Une seule fois, relier le projet au compte Expo (le numéro du projet s'ajoute dans `app.json`,
+   à committer) :
+
+   ```bash
+   npx eas-cli login
+   ```
+
+   ```bash
+   npx eas-cli init
+   ```
+
+2. Construire l'APK (environ 15 minutes sur les serveurs d'Expo, file d'attente comprise) :
+
+   ```bash
+   npx eas-cli build -p android --profile development
+   ```
+
+   À la question sur les identifiants Android, accepter de **générer un nouveau keystore**. À la fin,
+   un lien et un QR code permettent de télécharger l'APK sur le téléphone ; autoriser l'installation
+   d'applications inconnues quand Android le demande.
+
+3. Lancer le serveur pour cette version (au lieu de `npm run telephone`) :
+
+   ```bash
+   npm run appli
+   ```
+
+   puis ouvrir l'appli Volant3ranches et scanner le QR code.
+
+À la première demande envoyée, l'appli demande l'autorisation d'envoyer des notifications ; côté
+Fabrice, à la connexion. L'état se voit dans Profil › Être prévenu (ou Gestion côté Fabrice).
+Il faut aussi avoir exécuté la migration 6 dans Supabase (voir `supabase/README.md`).
+
+Sur iPhone, une version installable demande un compte Apple Developer (99 €/an) ; on le fera à la
+publication.
+
+`npm run telephone` continue d'ouvrir Expo Go pour tout le reste.
+
 ### Autres façons de l'essayer
 
 - **Dans le navigateur** : `npx expo start --web` (pratique pour un aperçu rapide, mais le rendu
@@ -181,17 +226,19 @@ Chaque modification du code s'affiche immédiatement sur le téléphone.
 - **Espace chauffeur** : Profil › tout en bas › Espace chauffeur. Fabrice s'y connecte avec son email
   et son mot de passe (compte à créer : voir `supabase/README.md`). « Voir la démonstration » le montre
   sans compte, avec des clients et des courses fictifs.
-- Notifications et emails ne sont pas encore branchés.
+- **Notifications** : pas dans Expo Go sur Android, ni dans le navigateur. Voir « Recevoir les
+  notifications » ci-dessus. L'email récapitulatif n'est pas encore branché.
 
 ## Prochaines étapes
 
 - ~~Messagerie client ↔ chauffeur~~ : faite (détail d'une course › « Écrire à Fabrice » ; côté Fabrice,
-  section « Messages » du tableau de bord). Prochaine étape : les notifications.
+  onglet « Messages » de l'espace chauffeur).
+- ~~Notifications push~~ : faites (voir `supabase/README.md`, migration 6). Prochaine étape : l'email
+  récapitulatif (Brevo, gratuit).
 - ~~Valider la maquette avec Fabrice~~ : validée. Décisions : mode chauffeur dans l'application,
   30 min d'attente gratuite à l'aéroport, majoration du week-end maintenue (CGV à mettre à jour).
-- Mode chauffeur : demandes en attente, Confirmer / Refuser, notification à chaque demande.
 - Serveur de réservation et outil de confirmation pour Fabrice.
-- Adresses et distances Google, notifications push, SMS et emails.
+- SMS (plus tard, payant).
 - Statistiques **Firebase Analytics (GA4)**, avec consentement, sur le parcours décrit dans
   `docs/brief-reservation.md`.
 - Version installable sans ordinateur pour les testeurs (EAS Build, TestFlight / test interne

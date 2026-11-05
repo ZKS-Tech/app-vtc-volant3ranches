@@ -106,8 +106,11 @@ règles sont vérifiées par un jeu de 21 tests exécutés sur un PostgreSQL loc
    (Confirmer / Refuser avec motif), planning, carnet de clients (fiches, notes, historique), saisie
    des réservations par téléphone, annulation avec frais, tarifs et jours fériés, chiffre d'affaires.
    Mode démonstration sans compte.
-4. **Notifications et emails** : notification à Fabrice à chaque demande, au client à la confirmation,
-   email récapitulatif (Brevo), relance après 30 min sans réponse, rappel la veille.
+4. **Notifications** ✅ (push) : envoyées par la base elle-même (pg_net vers Expo Push, pg_cron toutes
+   les 5 min) : Fabrice à chaque demande, relance après 30 min sans réponse, annulation, message ;
+   le client à la confirmation, au refus (motif), à l'annulation, au message, rappel la veille.
+   Reste : **email récapitulatif** (Brevo). Test : version de développement (Expo Go Android ne reçoit
+   plus les push).
 5. **Comptes clients** : passer du compte invité à un compte email pour retrouver ses courses sur un
    autre téléphone ; adresses favorites.
 6. **Statistiques et confidentialité** : GA4 avec consentement ; politique de confidentialité du site
@@ -116,8 +119,7 @@ règles sont vérifiées par un jeu de 21 tests exécutés sur un PostgreSQL loc
 
 **Messagerie client ↔ chauffeur** ✅ (demande de Fabrice) : une conversation par course, en temps réel
 (table `messages`, fonctions `envoyer_message` et `marquer_lus`), réponses toutes prêtes, indicateur
-« Lu ». Gratuite, sans SMS : utile aux voyageurs étrangers. Les notifications de nouveaux messages
-arrivent avec l'étape 4.
+« Lu ». Gratuite, sans SMS : utile aux voyageurs étrangers. Chaque nouveau message envoie une notification.
 
 **Ensuite :** SMS, suivi de Fabrice en approche, version anglaise, paiement en ligne, factures
 entreprise, formulaire du site branché sur la même base.

@@ -50,6 +50,22 @@ if (process.argv[4]) {
   ok(true, 'migration 3 appliquée sans erreur');
   if (process.argv[5]) { await db.exec(readFileSync(process.argv[5], 'utf8')); ok(true, 'migration 4 appliquée sans erreur'); }
   if (process.argv[6]) { await db.exec(readFileSync(process.argv[6], 'utf8')); ok(true, 'migration 5 appliquée sans erreur'); }
+  if (process.argv[7]) {
+    // Simulation de pg_net (les envois sont notés dans une table) et de pg_cron.
+    await db.exec(`
+      create schema if not exists net;
+      create table net.envois (id serial, url text, body jsonb);
+      create function net.http_post(url text, body jsonb default '{}', params jsonb default '{}', headers jsonb default '{}', timeout_milliseconds int default 5000)
+        returns bigint language sql as $$ insert into net.envois (url, body) values (url, body) returning id::bigint $$;
+      create schema if not exists cron;
+      create table cron.taches (nom text, quand text, commande text);
+      create function cron.schedule(nom text, quand text, commande text) returns bigint language sql as $$ insert into cron.taches values (nom, quand, commande); select 1::bigint $$;
+      grant usage on schema net to anon, authenticated;
+      grant select, insert, delete on net.envois to anon, authenticated; grant usage on sequence net.envois_id_seq to anon, authenticated;
+    `);
+    await db.exec(readFileSync(process.argv[7], 'utf8').replace(/create extension if not exists pg_net;/, '').replace(/create extension if not exists pg_cron;/, ''));
+    ok(true, 'migration 6 appliquée sans erreur');
+  }
 }
 
 
@@ -207,4 +223,59 @@ if (process.argv[6]) {
   await en(fabrice);
   r = await q(`select id from public.courses where client_id is null limit 1`);
   await echoue(() => q(`select public.envoyer_message('${r[0].id}', 'Bonjour')`), 'client sans l’appli : messagerie impossible, il faut appeler');
+}
+
+if (process.argv[7]) {
+  console.log('--- notifications');
+  const envois = async () => (await db.query(`select body from net.envois order by id`)).rows.map((x) => x.body).flat();
+  const vider = () => db.exec(`delete from net.envois`);
+  await en(fabrice);
+  await q(`select public.enregistrer_appareil('ExponentPushToken[fabrice-tel]', 'android')`);
+  await en(client);
+  await q(`select public.enregistrer_appareil('ExponentPushToken[client-tel]', 'ios')`);
+  await echoue(() => q(`select public.enregistrer_appareil('pas-un-jeton', 'ios')`), 'jeton invalide refusé');
+  await en(autre);
+  r = await q(`select count(*)::int n from public.appareils`);
+  ok(r[0].n === 0, 'un client ne voit pas les téléphones des autres');
+  await en(null); await db.exec(`reset role`); await vider();
+  await en(client);
+  r = await q(`select * from public.creer_demande(
+    '{"ref":"castres-gare","libelle":"Gare de Castres","lat":43.6007,"lon":2.2329,"type":"gare"}',
+    '{"ref":"tls","libelle":"Aéroport Toulouse-Blagnac","lat":43.6293,"lon":1.3638,"type":"aeroport"}',
+    now() + interval '3 days', false, 1, 1, null, 'tesla', 5, 5, 'Claire Martin', '06 12 34 56 78', 'claire@exemple.fr', null)`).catch(async (e) => {
+      // limite anti-abus atteinte par les tests précédents : on passe par un client neuf
+      await db.exec(`reset role; insert into auth.users values ('55555555-5555-5555-5555-555555555555')`);
+      await en('55555555-5555-5555-5555-555555555555');
+      await q(`select public.enregistrer_appareil('ExponentPushToken[client-tel]', 'ios')`);
+      return q(`select * from public.creer_demande(
+        '{"ref":"castres-gare","libelle":"Gare de Castres","lat":43.6007,"lon":2.2329,"type":"gare"}',
+        '{"ref":"tls","libelle":"Aéroport Toulouse-Blagnac","lat":43.6293,"lon":1.3638,"type":"aeroport"}',
+        now() + interval '3 days', false, 1, 1, null, 'tesla', 5, 5, 'Claire Martin', '06 12 34 56 78', 'claire@exemple.fr', null)`);
+    });
+  const idC = r[0].id;
+  let e = await envois();
+  ok(e.length === 1 && e[0].to === 'ExponentPushToken[fabrice-tel]' && e[0].title.startsWith('Nouvelle demande'), `Fabrice prévenu de la nouvelle demande (« ${e[0]?.title} » · ${e[0]?.body})`);
+  await vider();
+  await en(fabrice);
+  await q(`select public.repondre_demande('${idC}', false, 'Indisponible à cet horaire')`);
+  e = await envois();
+  ok(e.length === 1 && e[0].to === 'ExponentPushToken[client-tel]' && e[0].body.includes('indisponible'), `client prévenu du refus avec le motif (${e[0]?.body})`);
+  ok(e[0]?.data?.url === '/course/' + idC, 'la notification ouvre la bonne course');
+  await vider();
+  await q(`select * from public.envoyer_message('${idC}', 'Je peux vous proposer 10h à la place ?')`);
+  e = await envois();
+  ok(e.length === 1 && e[0].to === 'ExponentPushToken[client-tel]' && e[0].title === 'Fabrice', 'message de Fabrice notifié au client');
+  await vider();
+  // relance après 30 min sans réponse
+  await db.exec(`reset role; update public.courses set statut = 'envoyee', envoyee_le = now() - interval '40 minutes', relance_le = null where id = '${idC}'`); await vider();
+  await db.exec(`select public.relances_notifications()`);
+  e = await envois();
+  ok(e.some((x) => x.title.startsWith('Demande en attente')), 'Fabrice relancé après 30 min sans réponse');
+  await vider(); await db.exec(`select public.relances_notifications()`);
+  e = await envois();
+  ok(!e.some((x) => x.title.startsWith('Demande en attente')), 'une seule relance par demande');
+  r = await db.query(`select count(*)::int n from cron.taches where commande like '%relances_notifications%'`);
+  ok(r.rows[0].n === 1, 'tâche planifiée toutes les 5 minutes');
+  await en(client);
+  await echoue(() => q(`select public.notifier(array['${client}']::uuid[], 'x', 'y', '{}')`), 'un client ne peut pas envoyer de notification lui-même');
 }

@@ -9,10 +9,13 @@
     "@supabase/supabase-js": "^2.118.0",
     "expo": "~58.0.22",
     "expo-constants": "~58.0.14",
+    "expo-dev-client": "~58.0.18",
+    "expo-device": "~58.0.5",
     "expo-font": "~58.0.11",
     "expo-gl": "~58.0.4",
     "expo-image": "~58.0.18",
     "expo-linking": "~58.0.15",
+    "expo-notifications": "~58.1.8",
     "expo-router": "~58.0.29",
     "expo-sensors": "~58.0.4",
     "expo-status-bar": "~58.0.4",
@@ -37,7 +40,8 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "export:web": "expo export -p web",
-    "telephone": "expo start --tunnel ngrok"
+    "telephone": "expo start --tunnel ngrok --go",
+    "appli": "expo start --tunnel ngrok --dev-client"
   },
   "private": true
 }
