@@ -17,7 +17,17 @@ const projectId: string | undefined =
 
 const expoGoAndroid = Platform.OS === 'android' && Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
 
-export const pushPossible = Platform.OS !== 'web' && Device.isDevice && !expoGoAndroid && !!projectId && !!supabase;
+// Pourquoi les notifications ne peuvent pas marcher ici (null si tout va bien).
+export const raisonIndisponible: string | null =
+  Platform.OS === 'web' ? "Uniquement dans l'application mobile"
+  : expoGoAndroid ? 'Pas disponibles dans Expo Go : utiliser la version de développement'
+  : !Device.isDevice ? 'Pas disponibles sur un simulateur'
+  : !projectId ? 'Projet Expo non relié (npx eas-cli init, puis relancer le serveur)'
+  : !supabase ? 'Serveur non configuré (mobile/.env)'
+  : null;
+
+export const pushPossible = raisonIndisponible === null;
+let derniereErreur: string | null = null;
 
 export type EtatNotifications = 'actives' | 'refusees' | 'a-demander' | 'indisponibles';
 
@@ -63,7 +73,8 @@ export async function activerNotifications(): Promise<EtatNotifications> {
     await enregistrer();
     return 'actives';
   } catch (e) {
-    console.warn('Notifications non activées :', e instanceof Error ? e.message : e);
+    derniereErreur = e instanceof Error ? e.message : String(e);
+    console.warn('Notifications non activées :', derniereErreur);
     return 'indisponibles';
   }
 }
@@ -117,11 +128,9 @@ export function useEtatNotifications() {
   return { etat, agir };
 }
 
-export const libelleNotifications: Record<EtatNotifications, string> = {
-  actives: 'Activées sur ce téléphone',
-  'a-demander': 'Pas encore activées',
-  refusees: 'Refusées : à réactiver dans les réglages du téléphone',
-  indisponibles: Platform.OS === 'web'
-    ? 'Uniquement dans l\'application mobile'
-    : 'Pas disponibles dans cette version de test (Expo Go)',
-};
+export function libelleNotifications(e: EtatNotifications): string {
+  if (e === 'actives') return 'Activées sur ce téléphone';
+  if (e === 'a-demander') return 'Pas encore activées';
+  if (e === 'refusees') return 'Refusées : à réactiver dans les réglages du téléphone';
+  return raisonIndisponible ?? `Erreur : ${derniereErreur ?? 'inconnue'}`;
+}

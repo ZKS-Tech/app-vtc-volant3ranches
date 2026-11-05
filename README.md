@@ -166,6 +166,19 @@ compte Expo (offre gratuite d'EAS Build), sans compte Google Play.
    npx eas-cli init
    ```
 
+   Puis, toujours une seule fois, **Firebase** (gratuit), indispensable pour les notifications sur
+   Android :
+   - sur <https://console.firebase.google.com>, créer un projet « Volant3ranches » (Google Analytics :
+     on peut refuser pour l'instant) ;
+   - **Ajouter une application › Android**, nom du package `fr.volant3ranches.app`, puis télécharger
+     `google-services.json` et le placer dans `mobile/` (il peut être committé) ;
+   - **Paramètres du projet › Comptes de service › Générer une nouvelle clé privée** : un fichier
+     `…-firebase-adminsdk-….json` se télécharge. C'est une clé **secrète** : ne pas la mettre dans le
+     dépôt (elle est ignorée par Git) ;
+   - la confier à Expo : `npx eas-cli credentials` › Android › development › **Google Service Account**
+     › **Manage your Google Service Account Key for Push Notifications (FCM V1)** › Upload, et choisir
+     ce fichier.
+
 2. Construire l'APK (environ 15 minutes sur les serveurs d'Expo, file d'attente comprise) :
 
    ```bash
@@ -183,6 +196,9 @@ compte Expo (offre gratuite d'EAS Build), sans compte Google Play.
    ```
 
    puis ouvrir l'appli Volant3ranches et scanner le QR code.
+
+   « Android internal error » au scan : l'adresse du tunnel contient un `_`, refusé par Android.
+   Changer `urlRandomness` dans `mobile/.expo/settings.json` (lettres et chiffres seulement) et relancer.
 
 À la première demande envoyée, l'appli demande l'autorisation d'envoyer des notifications ; côté
 Fabrice, à la connexion. L'état se voit dans Profil › Être prévenu (ou Gestion côté Fabrice).

@@ -1,5 +1,5 @@
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { libelleNotifications, useEtatNotifications } from './notifications';
+import { libelleNotifications, pushPossible, useEtatNotifications } from './notifications';
 import { space } from './theme';
 import { Bouton } from './ui';
 import { useTheme } from './useTheme';
@@ -8,7 +8,7 @@ import { useTheme } from './useTheme';
 export function LigneNotifications({ sous }: { sous: string }) {
   const { c, type } = useTheme();
   const { etat, agir } = useEtatNotifications();
-  const action = etat === 'a-demander' ? 'Activer' : etat === 'refusees' ? 'Réglages' : null;
+  const action = etat === 'a-demander' ? 'Activer' : etat === 'refusees' ? 'Réglages' : etat === 'indisponibles' && pushPossible ? 'Réessayer' : null;
   return (
     <View style={styles.ligne}>
       <View style={{ flex: 1 }}>
@@ -16,7 +16,7 @@ export function LigneNotifications({ sous }: { sous: string }) {
         <Text style={type.small}>{sous}</Text>
         {etat ? (
           <Text style={[type.small, { marginTop: 2, fontWeight: '600', color: etat === 'actives' ? c.accent : etat === 'refusees' ? c.alerte : c.pierre }]}>
-            {libelleNotifications[etat]}
+            {libelleNotifications(etat)}
           </Text>
         ) : null}
       </View>
