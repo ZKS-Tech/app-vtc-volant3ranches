@@ -20,15 +20,21 @@ dans l'esprit de « The Renaissance Edition » de Shopify (hiver 2026), avec les
 Les captures d'écran (`assets/ecrans/`) sont découpées dans `docs/prototype/`. Les photos et le logo
 viennent de `mobile/assets/photos/`. Polices : Archivo (variable, axe de largeur) et EB Garamond, auto-hébergées.
 
-## Deuxième version : `printemps.html`
+## Photos 4K et effets (novembre 2026)
 
-D'après Shopify Editions printemps 2026 (« Everywhere ») : nuit continue, grotesque fine.
-- Ouverture : la photo de la flotte rendue en particules ; le curseur étire l'image comme de la
-  peinture fraîche (champ de déformation entraîné par lui-même, qui se résorbe). Au-dessus, un anneau
-  3D de destinations qui tourne et s'incline selon la souris.
-- Têtes de chapitre : photo en flou radial dont le centre suit le curseur ; le flou se dissipe quand
-  la tête arrive au centre de l'écran.
-- Grilles de trois colonnes avec les écrans de l'application, pastille flottante du chapitre en cours.
+Les originaux sont dans `site/images/` (photos de Fabrice, logo, et quatre photos Pexels). Le site
+utilise des copies optimisées dans `assets/photos/` (2560 px pour les tableaux, 2000 px pour les
+cartes, vignettes carrées de 640 px pour le garage).
+
+- **Le logo-volant** dans l'en-tête braque quand on fait défiler la page, puis revient droit.
+- **La loupe** : quand une photo est devenue gravure, le curseur révèle la vraie photo en couleur
+  dans un cercle bordé de paillettes.
+- **Le garage** (d'après la page d'accueil des Shopify Editions) : deux étagères de pochettes ; au
+  survol, la pochette sort de l'étagère ; au clic, la photo s'ouvre en grand (flèches du clavier,
+  Échap pour fermer).
+- **Les cartes véhicules** s'inclinent sous la souris, avec un reflet.
+- Dernière page : un volant Tesla dans la nuit (photo Pexels, Holyson H), sans le présenter comme
+  le véhicule de Fabrice.
 
 ## Œuvres du domaine public
 

@@ -41,7 +41,7 @@
   --sans: "Archivo V3R", "Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
   --serif: "Garamond V3R", "EB Garamond", Garamond, "Times New Roman", serif;
   --pas: clamp(80px, 11vw, 150px);
-  --large: 1120px;
+  --large: 1280px;
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --dechire: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 40' preserveAspectRatio='none'%3E%3Cpath d='M0,40 L0.0,14.8 L4.9,18.6 L15.0,9.7 L20.0,16.6 L26.7,20.3 L35.5,32.3 L43.0,8.5 L56.8,12.3 L65.2,11.8 L71.7,21.2 L82.7,17.2 L95.1,13.4 L109.6,22.1 L115.0,16.5 L124.9,9.7 L135.8,24.8 L146.9,19.4 L162.2,17.5 L174.7,20.6 L182.1,15.9 L191.6,5.0 L204.8,11.3 L219.3,10.5 L233.9,23.7 L242.9,15.5 L248.7,12.2 L258.5,19.6 L267.5,15.6 L279.8,18.3 L284.5,25.2 L298.0,16.1 L309.7,5.5 L315.6,7.1 L321.4,10.8 L335.9,16.1 L344.1,21.1 L360.0,17.4 L365.2,15.2 L371.2,9.4 L376.9,19.2 L392.7,24.5 L401.1,12.0 L414.4,14.9 L430.2,24.3 L443.1,13.1 L447.5,9.5 L459.8,26.2 L475.6,26.2 L482.3,12.5 L497.1,24.1 L510.7,10.5 L524.1,22.5 L537.6,15.0 L546.3,16.2 L552.4,11.3 L566.1,11.6 L578.0,15.3 L582.1,26.5 L597.3,16.8 L603.9,13.5 L614.9,13.7 L629.8,15.4 L644.7,16.6 L655.1,17.5 L661.2,9.1 L670.9,22.1 L681.1,19.0 L691.9,13.5 L702.0,19.1 L711.3,20.0 L723.6,17.1 L738.9,21.6 L746.0,19.1 L751.7,11.2 L758.5,10.3 L773.3,11.8 L779.0,24.9 L794.5,16.2 L808.4,11.9 L816.5,12.5 L820.7,19.0 L828.7,20.2 L844.5,23.2 L851.7,9.7 L857.3,16.6 L864.4,11.7 L876.8,13.6 L885.9,10.3 L899.5,10.5 L913.9,17.2 L929.0,14.3 L935.9,11.0 L942.3,14.6 L949.8,18.0 L954.0,17.2 L964.6,12.4 L969.9,23.7 L983.9,16.1 L999.7,15.2 L1011.3,16.3 L1016.9,10.3 L1022.8,10.5 L1034.9,14.1 L1044.4,11.8 L1059.9,26.5 L1075.5,14.6 L1084.1,17.5 L1094.1,9.1 L1102.9,6.6 L1109.7,19.5 L1121.6,21.9 L1129.5,30.3 L1141.2,9.8 L1152.8,22.2 L1163.1,18.1 L1177.0,19.5 L1189.3,7.3 L1197.6,10.9 L1200.0,14.8 L1200,40 Z'/%3E%3C/svg%3E");
 }
@@ -134,7 +134,7 @@ img { max-width: 100%; display: block; }
 .index a:hover { opacity: .85; }
 .index a[aria-current="true"] { opacity: 1; font-weight: 700; }
 .index span:last-child { font-family: var(--serif); text-align: right; font-size: 14px; }
-@media (max-width: 1399px) { .index { display: none; } }
+@media (max-width: 1559px) { .index { display: none; } }
 
 /* --- tableaux --- */
 .tableau { position: relative; height: 250vh; background: var(--nuit); z-index: 1; }
@@ -345,6 +345,66 @@ img { max-width: 100%; display: block; }
 .copie-etat { font-size: 14px; color: var(--feuille); min-height: 1.4em; margin-top: 10px; }
 .pied { margin-top: clamp(64px, 10vw, 140px); padding-top: 24px; border-top: 1px solid var(--nuit-ligne); display: flex; flex-wrap: wrap; gap: 8px 32px; justify-content: space-between; font-size: 13px; color: var(--nuit-texte2); }
 
+/* logo-volant */
+.marque .volant { width: 30px; height: 30px; flex: none; background: currentColor; -webkit-mask: url("assets/logo-volant.png") center / contain no-repeat; mask: url("assets/logo-volant.png") center / contain no-repeat; will-change: transform; }
+
+/* cartes véhicules : inclinaison 3D et reflet */
+.flotte { perspective: 1400px; }
+.vehicule-carte { transform: rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); transition: transform .5s var(--ease), box-shadow .5s var(--ease); transform-style: preserve-3d; box-shadow: 0 30px 60px -40px rgba(10, 16, 41, .6); }
+.vehicule-carte:hover { box-shadow: 0 50px 80px -40px rgba(10, 16, 41, .75); transition: transform .12s linear, box-shadow .5s var(--ease); }
+.vehicule-carte::after { content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0; transition: opacity .4s var(--ease);
+  background: radial-gradient(600px circle at var(--gx, 50%) var(--gy, 50%), rgba(255, 255, 255, .22), rgba(255, 255, 255, 0) 45%); mix-blend-mode: soft-light; }
+.vehicule-carte:hover::after { opacity: 1; }
+
+/* le garage : deux étagères de pochettes */
+.garage { margin-top: 8px; }
+.etagere { position: relative; margin-top: clamp(36px, 5vw, 64px); perspective: 1600px; perspective-origin: 50% 30%; }
+.etagere-nom { margin: 0 0 14px; font-size: 13px; font-weight: 600; color: var(--texte2); letter-spacing: .02em; }
+.etagere ul { list-style: none; margin: 0; padding: 0 clamp(8px, 2vw, 24px); display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: clamp(10px, 1.4vw, 20px); align-items: end; position: relative; z-index: 1; }
+.etagere li { perspective: 900px; perspective-origin: 50% 20%; position: relative; }
+.etagere li:hover { z-index: 2; }
+.etagere::after { /* la planche */
+  content: ""; display: block; height: 14px; margin-top: -2px; border-radius: 3px;
+  background: linear-gradient(to bottom, color-mix(in srgb, var(--surface) 92%, #fff), color-mix(in srgb, var(--papier2) 80%, #000 4%));
+  box-shadow: 0 26px 30px -16px rgba(16, 27, 69, .35), 0 1px 0 rgba(255, 255, 255, .6) inset;
+}
+.pochette {
+  display: block; width: 100%; padding: 0; border: 0; background: none; cursor: zoom-in; position: relative; font: inherit; color: inherit;
+  transform-origin: 50% 100%; transform: rotateX(4deg); transition: transform .6s var(--ease), filter .6s var(--ease);
+}
+.pochette img { width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 3px; box-shadow: 0 2px 2px rgba(16, 27, 69, .18), 0 14px 22px -12px rgba(16, 27, 69, .45); transition: box-shadow .6s var(--ease); }
+.pochette span {
+  position: absolute; left: 8px; right: 8px; bottom: 8px; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; text-align: center;
+  background: rgba(247, 249, 252, .92); color: #0E1740; opacity: 0; transform: translateY(6px); transition: opacity .35s var(--ease), transform .35s var(--ease);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.etagere ul:hover .pochette { filter: saturate(.75) brightness(.96); }
+.etagere ul .pochette:hover, .etagere ul .pochette:focus-visible { transform: translateY(-22px) translateZ(60px) rotateX(-6deg) scale(1.08); filter: none; z-index: 2; }
+.pochette:hover img, .pochette:focus-visible img { box-shadow: 0 4px 6px rgba(16, 27, 69, .2), 0 40px 50px -24px rgba(16, 27, 69, .7); }
+.pochette:hover span, .pochette:focus-visible span { opacity: 1; transform: none; }
+@media (max-width: 900px) { .etagere ul { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 28px; } }
+
+/* la visionneuse */
+.visionneuse { width: 100vw; height: 100vh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: rgba(5, 8, 22, .94); color: #fff; }
+.visionneuse[open] { display: grid; place-items: center; animation: apparait .45s var(--ease); }
+.visionneuse::backdrop { background: transparent; }
+.visionneuse figure { margin: 0; display: grid; justify-items: center; gap: 14px; padding: 64px 88px 28px; }
+.visionneuse img { max-width: min(92vw, 2200px); max-height: 82vh; width: auto; height: auto; border-radius: 4px; box-shadow: 0 40px 90px -30px rgba(0, 0, 0, .8); opacity: 0; transform: scale(.985); transition: opacity .5s var(--ease), transform .7s var(--ease); }
+.visionneuse img.charge { opacity: 1; transform: none; }
+.visionneuse figcaption { font-family: var(--serif); font-style: italic; font-size: 1.25rem; color: #DDE4F5; }
+.vis-btn { position: fixed; width: 52px; height: 52px; border-radius: 50%; border: 1px solid rgba(255, 255, 255, .25); background: rgba(255, 255, 255, .06); color: #fff; display: grid; place-items: center; cursor: pointer; transition: background .25s var(--ease); }
+.vis-btn:hover { background: rgba(255, 255, 255, .16); }
+.vis-btn svg { width: 20px; height: 20px; }
+.vis-prec { left: max(20px, env(safe-area-inset-left, 0px)); top: 50%; transform: translateY(-50%); }
+.vis-suiv { right: max(20px, env(safe-area-inset-right, 0px)); top: 50%; transform: translateY(-50%); }
+.vis-fermer { right: max(20px, env(safe-area-inset-right, 0px)); top: max(20px, env(safe-area-inset-top, 0px)); }
+@keyframes apparait { from { opacity: 0; } to { opacity: 1; } }
+
+/* dernière page : un volant dans la nuit */
+.avec-volant { background: var(--nuit) url("assets/photos/volant-nuit.webp") right center / auto 120% no-repeat; }
+.avec-volant::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, var(--nuit) 30%, rgba(11, 18, 51, .55) 70%, rgba(11, 18, 51, .3)); pointer-events: none; }
+.avec-volant .cadre { position: relative; z-index: 1; }
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   .panneau, .vehicule-carte img, .pellicule .ecran, .inverser { transition: none; }
@@ -355,7 +415,7 @@ img { max-width: 100%; display: block; }
 
 <header class="entete" id="entete" data-ton="sombre">
   <a class="marque" href="#haut" aria-label="Volant3ranches, retour en haut">
-    <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 13c4-2 7.5-2.6 11-2.6S23 11 27 13M16 16.5v11M9 18l7-1.5 7 1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <span class="volant" id="volant" aria-hidden="true"></span>
     <span>Volant3ranches <span class="ed">Édition hiver 2026</span></span>
   </a>
   <a class="appel" href="tel:+33616531491">Appeler Fabrice</a>
@@ -373,9 +433,9 @@ img { max-width: 100%; display: block; }
 
 <main id="haut">
   <!-- I. Ouverture : la flotte dans le Lauragais, qui se change en gravure -->
-  <section class="tableau" data-photo="assets/lauragais-flotte.webp" data-focus="0.62 0.6" aria-labelledby="titre-ouverture">
+  <section class="tableau" data-photo="assets/photos/van-eglise.webp" data-focus="0.5 0.02" aria-labelledby="titre-ouverture">
     <div class="scene">
-      <img class="photo" src="assets/lauragais-flotte.webp" alt="La Tesla et le Van de Volant3ranches garés devant les collines du Lauragais au coucher du soleil" style="object-position: 62% 60%">
+      <img class="photo" src="assets/photos/van-eglise.webp" alt="Le Van 9 places de Volant3ranches garé sur la place d'un village, devant l'église et la mairie" style="object-position: 50% 2%">
       <div class="voile-bas"></div>
       <div class="cadre-titre" data-role="cadre">
         <h1 class="geant" id="titre-ouverture">Un chauffeur, pas une <em>plateforme.</em></h1>
@@ -405,9 +465,9 @@ img { max-width: 100%; display: block; }
   </section>
 
   <!-- II. Le prix -->
-  <section class="tableau" data-photo="assets/tesla-route.webp" data-focus="0.5 0.55" aria-labelledby="mot-prix">
+  <section class="tableau" data-photo="assets/photos/tesla-trois-quarts.webp" data-focus="0.62 0.55" aria-labelledby="mot-prix">
     <div class="scene">
-      <img class="photo" src="assets/tesla-route.webp" alt="La Tesla Model 3 sur un chemin de campagne, entre deux champs">
+      <img class="photo" src="assets/photos/tesla-trois-quarts.webp" alt="La Tesla Model 3 Performance noire de Fabrice, vue de trois quarts avant" style="object-position: 62% 55%">
       <div class="voile-bas"></div>
       <h2 class="geant mot" data-role="mot" id="mot-prix">Le prix d'abord</h2>
       <div class="recit" data-role="recit"><p class="texte lettrine">Le tarif au kilomètre du site, appliqué devant vous. Aucun frais caché ; paiement à bord ou sur facture.</p></div>
@@ -544,22 +604,30 @@ img { max-width: 100%; display: block; }
         </figcaption>
       </figure>
       <div class="flotte">
-        <article class="vehicule-carte">
-          <img src="assets/tesla-route.webp" alt="La Tesla Model 3 Performance sur un chemin de campagne" loading="lazy">
+        <article class="vehicule-carte" data-incline>
+          <img src="assets/photos/tesla-profil.webp" alt="La Tesla Model 3 Performance noire de Fabrice, de profil" loading="lazy" style="object-position: 50% 60%">
           <div>
             <h3>Offre Confort</h3>
             <p class="modele">Tesla Model 3 Performance · 3 passagers, 3 bagages</p>
             <div class="tarifs"><span><b>1,80 €/km</b>en semaine, 6h–22h</span><span><b>2,20 €/km</b>nuit, week-end, férié</span><span><b>20 €</b>minimum</span></div>
           </div>
         </article>
-        <article class="vehicule-carte">
-          <img src="assets/van-face.webp" alt="Le Van 9 places Volant3ranches vu de face" loading="lazy" style="object-position: 50% 40%">
+        <article class="vehicule-carte" data-incline>
+          <img src="assets/photos/van-avant-4k.webp" alt="Le Van 9 places de Fabrice, vue de trois quarts avant" loading="lazy" style="object-position: 60% 55%">
           <div>
             <h3>Offre Premium</h3>
             <p class="modele">Van 9 places · 8 passagers, 8 bagages</p>
             <div class="tarifs"><span><b>2,60 €/km</b>en semaine, 6h–22h</span><span><b>3,00 €/km</b>nuit, week-end, férié</span><span><b>35 €</b>minimum</span></div>
           </div>
         </article>
+      </div>
+      <div class="garage" id="garage">
+        <div class="entree" style="margin-top:clamp(72px,9vw,128px)">
+          <h3 class="titre" style="font-size:clamp(2.2rem,4.4vw,3.6rem)">Le garage</h3>
+          <p class="texte">Les vrais véhicules de Fabrice, photographiés dans le Tarn. Survolez une photo, cliquez pour l'ouvrir en grand.</p>
+        </div>
+        <div class="etagere"><p class="etagere-nom">Offre Confort · Tesla Model 3 Performance</p><ul><li><button class="pochette" type="button" data-grand="assets/photos/g-tesla-face.webp" data-legende="Tesla Model 3 Performance, de face"><img src="assets/photos/vignettes/g-tesla-face.webp" alt="Tesla Model 3 Performance, de face" loading="lazy" width="640" height="640"><span>Tesla Model 3 Performance, de face</span></button></li><li><button class="pochette" type="button" data-grand="assets/photos/tesla-trois-quarts.webp" data-legende="Tesla, trois quarts avant"><img src="assets/photos/vignettes/tesla-trois-quarts.webp" alt="Tesla, trois quarts avant" loading="lazy" width="640" height="640"><span>Tesla, trois quarts avant</span></button></li><li><button class="pochette" type="button" data-grand="assets/photos/tesla-profil.webp" data-legende="Tesla, de profil"><img src="assets/photos/vignettes/tesla-profil.webp" alt="Tesla, de profil" loading="lazy" width="640" height="640"><span>Tesla, de profil</span></button></li><li><button class="pochette" type="button" data-grand="assets/photos/g-tesla-arriere.webp" data-legende="Tesla, de dos"><img src="assets/photos/vignettes/g-tesla-arriere.webp" alt="Tesla, de dos" loading="lazy" width="640" height="640"><span>Tesla, de dos</span></button></li><li><button class="pochette" type="button" data-grand="assets/photos/g-tesla-avant-int.webp" data-legende="Tesla, places avant"><img src="assets/photos/vignettes/g-tesla-avant-int.webp" alt="Tesla, places avant" loading="lazy" width="640" height="640"><span>Tesla, places avant</span></button></li><li><button class="pochette" type="button" data-grand="assets/photos/g-tesla-arriere-int.webp" data-legende="Tesla, banquette arrière"><img src="assets/photos/vignettes/g-tesla-arriere-int.webp" alt="Tesla, banquette arrière" loading="lazy" width="640" height="640"><span>Tesla, banquette arrière</span></button></li></ul></div>
+        <div class="etagere"><p class="etagere-nom">Offre Premium · Van 9 places</p><ul><li><button class="pochette" type="button" data-grand="assets/photos/van-avant-4k.webp" data-legende="Van 9 places, trois quarts avant"><img src="assets/photos/vignettes/van-avant-4k.webp" alt="Van 9 places, trois quarts avant" loading="lazy" width="640" height="640"><span>Van 9 places, trois quarts avant</span></button></li><li><button class="pochette" type="button" data-grand="assets/photos/van-eglise.webp" data-legende="Van, sur la place du village"><img src="assets/photos/vignettes/van-eglise.webp" alt="Van, sur la place du village" loading="lazy" width="640" height="640"><span>Van, sur la place du village</span></button></li><li><button class="pochette" type="button" data-grand="assets/photos/g-van-village.webp" data-legende="Van, de trois quarts arrière"><img src="assets/photos/vignettes/g-van-village.webp" alt="Van, de trois quarts arrière" loading="lazy" width="640" height="640"><span>Van, de trois quarts arrière</span></button></li><li><button class="pochette" type="button" data-grand="assets/photos/g-van-rangs.webp" data-legende="Van, les rangs de sièges"><img src="assets/photos/vignettes/g-van-rangs.webp" alt="Van, les rangs de sièges" loading="lazy" width="640" height="640"><span>Van, les rangs de sièges</span></button></li><li><button class="pochette" type="button" data-grand="assets/photos/g-van-sieges.webp" data-legende="Van, la troisième rangée"><img src="assets/photos/vignettes/g-van-sieges.webp" alt="Van, la troisième rangée" loading="lazy" width="640" height="640"><span>Van, la troisième rangée</span></button></li><li><button class="pochette" type="button" data-grand="assets/photos/g-van-coffre.webp" data-legende="Van, le coffre"><img src="assets/photos/vignettes/g-van-coffre.webp" alt="Van, le coffre" loading="lazy" width="640" height="640"><span>Van, le coffre</span></button></li></ul></div>
       </div>
       <ul class="liste">
         <li><h3>Sans créer de compte</h3><p>Première réservation en invité : nom, téléphone, email. Le compte est proposé ensuite, pour retrouver vos courses.</p><span class="statut oui">Dans le prototype</span></li>
@@ -582,7 +650,7 @@ img { max-width: 100%; display: block; }
     </div>
   </section>
 
-  <section class="nuit dechire fin" data-ton="sombre" aria-labelledby="titre-fin" style="--bord: var(--nuit); margin-top:-18vh">
+  <section class="nuit dechire fin avec-volant" data-ton="sombre" aria-labelledby="titre-fin" style="--bord: var(--nuit); margin-top:-18vh">
     <div class="cadre">
       <h2 class="geant" id="titre-fin">Bientôt sur iOS et <em>Android.</em></h2>
       <p class="texte" style="margin-top:28px">Basé à Viterbe, dans le Tarn. Le prototype a été validé avec Fabrice en novembre 2026 ; en attendant l'application, il prend vos réservations par téléphone, par email et sur son site.</p>
@@ -600,11 +668,18 @@ img { max-width: 100%; display: block; }
       <p class="note">contact@volant3ranches-vtc.fr</p>
       <footer class="pied">
         <span>Volant3ranches, SASU · SIRET 932 513 443 · 11 chemin de la Baissade, 81220 Viterbe</span>
-        <span>Photos : véhicules et chauffeur réels. Captures : prototype de l'application. Œuvres du domaine public via Wikimedia Commons : Georges Picard, affiche, 1900 ; Toulouse-Lautrec, <i>L'Automobiliste</i>, 1896 (National Gallery of Art, CC0).</span>
+        <span>Photos : véhicules et chauffeur réels ; volant en dernière page : Holyson H, Pexels. Captures : prototype de l'application. Œuvres du domaine public via Wikimedia Commons : Georges Picard, affiche, 1900 ; Toulouse-Lautrec, <i>L'Automobiliste</i>, 1896 (National Gallery of Art, CC0).</span>
       </footer>
     </div>
   </section>
 </main>
+
+<dialog class="visionneuse" id="visionneuse" aria-label="Photo en grand">
+  <figure><img id="vis-img" alt=""><figcaption id="vis-legende"></figcaption></figure>
+  <button type="button" class="vis-btn vis-prec" id="vis-prec" aria-label="Photo précédente"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 4l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  <button type="button" class="vis-btn vis-suiv" id="vis-suiv" aria-label="Photo suivante"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M7.5 4l6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  <button type="button" class="vis-btn vis-fermer" id="vis-fermer" aria-label="Fermer"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+</dialog>
 
 <script>
 (() => {
@@ -613,6 +688,9 @@ img { max-width: 100%; display: block; }
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const borne = x => Math.max(0, Math.min(1, x));
+  const souris = { x: -1, y: -1, sx: -1, sy: -1, ok: false };
+  addEventListener('pointermove', e => { if (e.pointerType === 'touch') return; souris.x = e.clientX; souris.y = e.clientY; if (!souris.ok) { souris.sx = souris.x; souris.sy = souris.y; } souris.ok = true; }, { passive: true });
+  document.addEventListener('pointerleave', () => { souris.ok = false; });
   const lisseur = (a, b, x) => { const t = borne((x - a) / (b - a)); return t * t * (3 - 2 * t); };
 
   /* ---------- Données (reprises de l'application) ---------- */
@@ -793,7 +871,7 @@ float fbm(vec2 p){float v=0.0;float a=0.5;mat2 m=mat2(1.6,1.2,-1.2,1.6);for(int 
 
   /* ---------- Les tableaux : photo → gravure argentée ---------- */
   const GRAVURE = `precision mediump float;
-uniform sampler2D u_img;uniform vec2 u_res;uniform vec2 u_ir;uniform vec2 u_focus;uniform float u_p;uniform float u_t;uniform float u_px;
+uniform sampler2D u_img;uniform vec2 u_res;uniform vec2 u_ir;uniform vec2 u_focus;uniform float u_p;uniform float u_t;uniform float u_px;uniform vec2 u_m;uniform float u_loupe;
 ${BRUIT}
 vec2 couvre(vec2 fc){vec2 uv=fc/u_res;uv.y=1.0-uv.y;float ra=u_res.x/u_res.y;float ri=u_ir.x/u_ir.y;
 vec2 s=ra>ri?vec2(1.0,ri/ra):vec2(ra/ri,1.0);return (uv-0.5)*s+0.5+(u_focus-0.5)*(1.0-s);}
@@ -828,6 +906,13 @@ float m=1.0-smoothstep(front-0.05,front+0.05,champ);
 float lis=smoothstep(0.06,0.0,abs(champ-front))*step(0.001,u_p)*step(u_p,0.999);
 vec3 avant=photo*(1.0-0.2*u_p);
 vec3 col=mix(avant,grav,m)+vec3(0.95,0.97,0.8)*lis*(0.35+0.65*step(0.9,hash(cel+7.0)));
+/* la loupe : sous le curseur, la gravure redevient photo */
+float dm=length(fc-u_m);float L=max(u_loupe,0.001);
+float dedans=(1.0-smoothstep(L*0.86,L,dm))*step(1.0,u_loupe);
+float anneau=smoothstep(L*0.8,L*0.97,dm)*(1.0-smoothstep(L*0.97,L*1.1,dm))*step(1.0,u_loupe);
+col=mix(col,photo*1.04,dedans*m);
+float scin=step(0.6,hash(floor(fc/(4.0*u_px))+floor(u_t*6.0)));
+col+=vec3(0.96,0.98,0.82)*anneau*m*(0.25+0.75*scin)*0.9;
 float vig=smoothstep(0.35,1.0,length((su-0.5)*vec2(1.2,1.0))*1.35);
 col*=1.0-0.4*vig*m;
 gl_FragColor=vec4(col,1.0);}`;
@@ -849,14 +934,23 @@ gl_FragColor=vec4(col,1.0);}`;
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
       const [fx, fy] = (sec.dataset.focus || '0.5 0.5').split(' ').map(Number);
       gl.uniform2f(U('u_ir'), img.naturalWidth, img.naturalHeight); gl.uniform2f(U('u_focus'), fx, fy);
-      const uRes = U('u_res'), uP = U('u_p'), uT = U('u_t'), uPx = U('u_px');
+      const uRes = U('u_res'), uP = U('u_p'), uT = U('u_t'), uPx = U('u_px'), uM = U('u_m'), uL = U('u_loupe');
+      let dpr = 1;
       const taille = () => {
-        const dpr = Math.min(devicePixelRatio || 1, 2);
+        dpr = Math.min(devicePixelRatio || 1, 2);
         canvas.width = Math.round(scene.clientWidth * dpr); canvas.height = Math.round(scene.clientHeight * dpr);
         gl.viewport(0, 0, canvas.width, canvas.height); gl.uniform2f(uRes, canvas.width, canvas.height); gl.uniform1f(uPx, dpr);
       };
       taille(); addEventListener('resize', taille);
-      t.rendu = now => { gl.uniform1f(uP, t.p); gl.uniform1f(uT, reduit ? 10 : now / 1000); gl.drawArrays(gl.TRIANGLES, 0, 3); };
+      t.rendu = now => {
+        const r = scene.getBoundingClientRect();
+        const dedans = souris.ok && souris.x > r.left && souris.x < r.right && souris.y > r.top && souris.y < r.bottom;
+        const cible = dedans && t.p > .3 && !reduit ? Math.min(r.width, r.height) * .2 : 0;
+        t.loupe = (t.loupe || 0) + (cible - (t.loupe || 0)) * .12;
+        gl.uniform2f(uM, (souris.sx - r.left) * dpr, (r.height - (souris.sy - r.top)) * dpr);
+        gl.uniform1f(uL, t.loupe * dpr);
+        gl.uniform1f(uP, t.p); gl.uniform1f(uT, reduit ? 10 : now / 1000); gl.drawArrays(gl.TRIANGLES, 0, 3);
+      };
       t.rendu(performance.now()); canvas.classList.add('pret');
     };
     img.src = sec.dataset.photo;
@@ -944,7 +1038,43 @@ vec3 col=mix(eau,dense,m);col*=1.0-0.16*dot(p,p)*m;gl_FragColor=vec4(col,1.0);}`
   addEventListener('resize', auDefilement);
   auDefilement(); niveau = niveauCible;
 
+  /* le volant de l'en-tête braque quand on fait défiler la page, puis revient droit */
+  const volant = $('#volant');
+  let dernierY = scrollY, braquage = 0, braquageCible = 0;
+  addEventListener('scroll', () => { braquageCible = Math.max(-110, Math.min(110, braquageCible + (scrollY - dernierY) * .9)); dernierY = scrollY; }, { passive: true });
+
+  /* cartes véhicules : inclinaison et reflet sous la souris */
+  $$('[data-incline]').forEach(c => {
+    c.addEventListener('pointermove', e => {
+      if (reduit || e.pointerType === 'touch') return;
+      const r = c.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+      c.style.setProperty('--rx', ((.5 - y) * 7).toFixed(2) + 'deg'); c.style.setProperty('--ry', ((x - .5) * 9).toFixed(2) + 'deg');
+      c.style.setProperty('--gx', (x * 100).toFixed(1) + '%'); c.style.setProperty('--gy', (y * 100).toFixed(1) + '%');
+    });
+    c.addEventListener('pointerleave', () => { c.style.setProperty('--rx', '0deg'); c.style.setProperty('--ry', '0deg'); });
+  });
+
+  /* le garage : les pochettes s'ouvrent en grand */
+  const vis = $('#visionneuse'), visImg = $('#vis-img'), visLeg = $('#vis-legende');
+  const pochettes = $$('.pochette');
+  let visI = 0;
+  const montrer = i => {
+    visI = (i + pochettes.length) % pochettes.length; const b = pochettes[visI];
+    visImg.classList.remove('charge'); visImg.src = b.dataset.grand; visImg.alt = b.dataset.legende; visLeg.textContent = b.dataset.legende;
+    const pre = new Image(); pre.src = pochettes[(visI + 1) % pochettes.length].dataset.grand;
+  };
+  visImg.addEventListener('load', () => visImg.classList.add('charge'));
+  pochettes.forEach((b, i) => b.addEventListener('click', () => { montrer(i); if (vis.showModal) vis.showModal(); else vis.setAttribute('open', ''); }));
+  $('#vis-prec').addEventListener('click', () => montrer(visI - 1));
+  $('#vis-suiv').addEventListener('click', () => montrer(visI + 1));
+  $('#vis-fermer').addEventListener('click', () => vis.close());
+  vis.addEventListener('click', e => { if (e.target === vis) vis.close(); });
+  vis.addEventListener('keydown', e => { if (e.key === 'ArrowLeft') montrer(visI - 1); if (e.key === 'ArrowRight') montrer(visI + 1); });
+
   function boucle(now) {
+    if (souris.ok) { souris.sx += (souris.x - souris.sx) * .18; souris.sy += (souris.y - souris.sy) * .18; }
+    braquageCible *= reduit ? 0 : .9; braquage += (braquageCible - braquage) * .12;
+    volant.style.transform = `rotate(${braquage.toFixed(1)}deg)`;
     if (!document.hidden) {
       for (const t of tableaux) if (t.rendu && t.visible) t.rendu(now);
       if (cuveRendu && cuveVisible) cuveRendu(now);
