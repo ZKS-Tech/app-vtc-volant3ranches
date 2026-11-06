@@ -20,6 +20,18 @@ dans l'esprit de « The Renaissance Edition » de Shopify (hiver 2026), avec les
 Les captures d'écran (`assets/ecrans/`) sont découpées dans `docs/prototype/`. Les photos et le logo
 viennent de `mobile/assets/photos/`. Polices : Archivo (variable, axe de largeur) et EB Garamond, auto-hébergées.
 
+## Œuvres du domaine public
+
+Récupérées sur Wikimedia Commons, recadrées et converties dans `assets/oeuvres/` :
+
+- Georges Picard, *Femme dans une automobile survolant le Grand Palais*, affiche, 1900. Domaine public.
+  Tableau du chapitre « Le trajet ».
+- Henri de Toulouse-Lautrec (né à Albi), *L'Automobiliste*, 1896, lithographie, National Gallery of
+  Art, Washington. CC0. Fond de papier blanchi pour que le trait se pose sur le papier du site ; il se
+  dessine au défilement dans le chapitre des véhicules.
+
+Les crédits figurent en pied de page.
+
 ## Voir le site
 
 ```bash

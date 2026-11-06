@@ -302,6 +302,18 @@ img { max-width: 100%; display: block; }
 .attentes p { margin: 8px 0 0; color: var(--nuit-texte2); font-family: var(--serif); font-size: 18px; max-width: 24ch; }
 @media (max-width: 640px) { .attentes { grid-template-columns: minmax(0, 1fr); } }
 
+/* Lautrec : la lithographie se dessine sur le papier */
+.lautrec { margin: clamp(56px, 7vw, 96px) 0 0; display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: clamp(28px, 5vw, 80px); align-items: center; --r: 1; }
+.lautrec img {
+  width: 100%; mix-blend-mode: multiply;
+  -webkit-mask-image: linear-gradient(160deg, #000 calc(var(--r) * 130% - 30%), transparent calc(var(--r) * 130%));
+  mask-image: linear-gradient(160deg, #000 calc(var(--r) * 130% - 30%), transparent calc(var(--r) * 130%));
+}
+:root[data-theme="dark"] .lautrec img { mix-blend-mode: screen; filter: invert(1) contrast(1.2) saturate(0); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .lautrec img { mix-blend-mode: screen; filter: invert(1) contrast(1.2) saturate(0); } }
+.lautrec figcaption span { display: block; margin-top: 18px; font-size: 13px; color: var(--texte2); }
+@media (max-width: 760px) { .lautrec { grid-template-columns: minmax(0, 1fr); } .lautrec img { max-width: 420px; } }
+
 /* véhicules */
 .flotte { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(16px, 2vw, 28px); margin-top: clamp(40px, 6vw, 72px); }
 @media (max-width: 800px) { .flotte { grid-template-columns: minmax(0, 1fr); } }
@@ -437,8 +449,17 @@ img { max-width: 100%; display: block; }
     </div>
   </section>
 
-  <!-- III. Le trajet, sous un ciel de nuit -->
-  <section class="nuit dechire chapitre" id="trajet" data-ton="sombre" aria-labelledby="titre-trajet" style="--bord: var(--nuit)">
+  <!-- III. Le trajet : l'affiche de 1900, qui se change en gravure puis en carte étoilée -->
+  <section class="tableau" data-photo="assets/oeuvres/picard-1900.webp" data-focus="0.5 0.64" aria-labelledby="mot-trajet">
+    <div class="scene">
+      <img class="photo" src="assets/oeuvres/picard-1900.webp" alt="Affiche de Georges Picard, 1900 : une femme en manteau de fourrure conduit une automobile rouge, phares allumés, au-dessus de Paris la nuit" style="object-position: 50% 70%">
+      <div class="voile-bas"></div>
+      <h2 class="geant mot" data-role="mot" id="mot-trajet">Le trajet</h2>
+      <div class="recit" data-role="recit"><p class="texte lettrine">En 1900, Georges Picard faisait voler une automobile au-dessus de Paris. Celle de Fabrice reste sur la route, mais l'application vous montre tout le chemin.</p></div>
+    </div>
+  </section>
+
+  <section class="nuit dechire chapitre" id="trajet" data-ton="sombre" aria-labelledby="titre-trajet" style="--bord: var(--nuit); margin-top:-18vh">
     <div class="cadre">
       <div class="entree">
         <h2 class="titre" id="titre-trajet">Le trajet, dessiné sur les vraies routes</h2>
@@ -515,6 +536,13 @@ img { max-width: 100%; display: block; }
         <h2 class="titre" id="titre-vehicules">Deux véhicules électriques, les vrais</h2>
         <p class="texte">Pas de flotte simulée : l'application réserve la Tesla ou le Van de Fabrice. Au-delà de trois passagers, elle propose le Van.</p>
       </div>
+      <figure class="lautrec" id="lautrec">
+        <img src="assets/oeuvres/lautrec-automobiliste.webp" alt="Lithographie de Toulouse-Lautrec : un conducteur en manteau de fourrure, casquette et lunettes, tient le volant d'une automobile ; une passante et un petit chien sur le côté" loading="lazy">
+        <figcaption>
+          <p class="texte lettrine">Henri de Toulouse-Lautrec, né à Albi, dessinait <i>L'Automobiliste</i> en 1896 : lunettes, manteau de fourrure, et un volant tenu à deux mains. Cent trente ans plus tard, on roule toujours au départ du Tarn ; en électrique, et sans le manteau.</p>
+          <span>Henri de Toulouse-Lautrec, <i>L'Automobiliste</i>, 1896, lithographie. National Gallery of Art, Washington (CC0).</span>
+        </figcaption>
+      </figure>
       <div class="flotte">
         <article class="vehicule-carte">
           <img src="assets/tesla-route.webp" alt="La Tesla Model 3 Performance sur un chemin de campagne" loading="lazy">
@@ -572,7 +600,7 @@ img { max-width: 100%; display: block; }
       <p class="note">contact@volant3ranches-vtc.fr</p>
       <footer class="pied">
         <span>Volant3ranches, SASU · SIRET 932 513 443 · 11 chemin de la Baissade, 81220 Viterbe</span>
-        <span>Photos : véhicules et chauffeur réels. Captures : prototype de l'application.</span>
+        <span>Photos : véhicules et chauffeur réels. Captures : prototype de l'application. Œuvres du domaine public via Wikimedia Commons : Georges Picard, affiche, 1900 ; Toulouse-Lautrec, <i>L'Automobiliste</i>, 1896 (National Gallery of Art, CC0).</span>
       </footer>
     </div>
   </section>
@@ -871,8 +899,9 @@ vec3 col=mix(eau,dense,m);col*=1.0-0.16*dot(p,p)*m;gl_FragColor=vec4(col,1.0);}`
   const sections = $$('main > section');
   const etats = $$('#etats li'), ecrans = $$('.teinte .telephone img');
   const liens = $$('#index a');
-  const chapitres = liens.map(a => document.getElementById(a.getAttribute('href').slice(1)));
+  const chapitres = liens.map(a => { const c = document.getElementById(a.getAttribute('href').slice(1)); const avant = c.previousElementSibling; return avant && avant.classList.contains('tableau') ? avant : c; });
   const premier = $('.tableau');
+  const lautrec = $('#lautrec');
 
   function auDefilement() {
     const h = innerHeight;
@@ -886,6 +915,8 @@ vec3 col=mix(eau,dense,m);col*=1.0-0.16*dot(p,p)*m;gl_FragColor=vec4(col,1.0);}`
       if (t.recit) { t.recit.style.opacity = aRecit; t.recit.style.transform = `translate(-50%, ${((1 - aRecit) * 30).toFixed(1)}px)`; }
       t.cadres.forEach(c => { c.style.opacity = 1 - lisseur(.02, .2, t.q); });
     }
+    const rl = lautrec.getBoundingClientRect();
+    lautrec.style.setProperty('--r', reduit ? 1 : lisseur(0, .75, (h - rl.top) / (h * .9)).toFixed(3));
     const rt = teinte.getBoundingClientRect();
     const p = borne(-rt.top / (rt.height - h));
     cuveVisible = rt.bottom > 0 && rt.top < h;
