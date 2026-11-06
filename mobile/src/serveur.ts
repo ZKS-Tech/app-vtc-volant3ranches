@@ -293,3 +293,33 @@ export function ecouterMessages(surMessage: (m: Message) => void): RealtimeChann
     .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, (p) => { if (p.new && 'id' in p.new) surMessage(p.new as Message); })
     .subscribe();
 }
+
+// ——— Annonces et indisponibilités (migration 7) ———
+export type AnnonceServeur = { id: string; debut: string; fin: string; bloquer: boolean; message: string | null; cree_le: string };
+
+export async function chargerAnnonces(): Promise<AnnonceServeur[]> {
+  if (!supabase) return [];
+  return verifier(await supabase.from('annonces').select('*').order('debut')) as AnnonceServeur[];
+}
+
+export async function enregistrerAnnonceServeur(a: Omit<AnnonceServeur, 'id' | 'cree_le'> & { id?: string }): Promise<AnnonceServeur> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const { id, ...valeurs } = a;
+  const r = id
+    ? await supabase.from('annonces').update(valeurs).eq('id', id).select().single()
+    : await supabase.from('annonces').insert(valeurs).select().single();
+  return verifier(r) as AnnonceServeur;
+}
+
+export async function supprimerAnnonceServeur(id: string) {
+  if (!supabase) throw new Error('Serveur non configuré');
+  verifier(await supabase.from('annonces').delete().eq('id', id));
+}
+
+export function ecouterAnnonces(surChangement: () => void): RealtimeChannel | null {
+  if (!supabase) return null;
+  return supabase
+    .channel('annonces')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'annonces' }, surChangement)
+    .subscribe();
+}

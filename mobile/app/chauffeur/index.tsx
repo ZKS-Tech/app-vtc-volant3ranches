@@ -9,6 +9,8 @@ import { euros, offre } from '../../src/data';
 import { Couleurs, f, radius, space } from '../../src/theme';
 import { Bouton, Note, Titre } from '../../src/ui';
 import { useMessagerie } from '../../src/messagerie';
+import { periode, useAnnonces } from '../../src/annonces';
+import { isoJour } from '../../src/data';
 import { useTheme } from '../../src/useTheme';
 
 const JOURS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
@@ -21,6 +23,7 @@ export default function TableauDeBord() {
   const { missions, demo, chargement, erreur, recharger } = useChauffeur();
   const maintenant = useMaintenant();
   const { conversationsNonLues, nonLus, messagesDe } = useMessagerie();
+  const absence = useAnnonces().visibles.find((a) => a.bloquer);
 
   const aTraiter = missions.filter((m) => m.statut === 'envoyee').sort((a, b) => +new Date(a.envoyee_le) - +new Date(b.envoyee_le));
   const aVenir = missions.filter((m) => m.statut === 'confirmee' && m.date.getTime() > maintenant.getTime() - 30 * 60000).sort((a, b) => +a.date - +b.date);
@@ -56,6 +59,13 @@ export default function TableauDeBord() {
           <View style={{ marginTop: space.l }}>
             <Note ton="bain" icone="eye-outline">Démonstration : clients et courses fictifs. Rien n'est enregistré.</Note>
           </View>
+        ) : null}
+        {absence ? (
+          <Pressable onPress={() => router.push({ pathname: '/annonce-edition', params: { id: absence.id } })} style={{ marginTop: space.l }} accessibilityRole="button">
+            <Note ton="alerte" icone="calendar-outline">
+              {absence.debut <= isoJour(maintenant) ? 'Absence en cours' : 'Absence prévue'} {periode(absence)} : les clients ne peuvent pas réserver ces jours-là.
+            </Note>
+          </Pressable>
         ) : null}
         {erreur ? (
           <View style={{ marginTop: space.l }}>

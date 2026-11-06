@@ -66,6 +66,7 @@ if (process.argv[4]) {
     await db.exec(readFileSync(process.argv[7], 'utf8').replace(/create extension if not exists pg_net;/, '').replace(/create extension if not exists pg_cron;/, ''));
     ok(true, 'migration 6 appliquée sans erreur');
   }
+  if (process.argv[8]) { await db.exec(readFileSync(process.argv[8], 'utf8')); ok(true, 'migration 7 appliquée sans erreur'); }
 }
 
 
@@ -278,4 +279,42 @@ if (process.argv[7]) {
   ok(r.rows[0].n === 1, 'tâche planifiée toutes les 5 minutes');
   await en(client);
   await echoue(() => q(`select public.notifier(array['${client}']::uuid[], 'x', 'y', '{}')`), 'un client ne peut pas envoyer de notification lui-même');
+}
+
+if (process.argv[8]) {
+  console.log('--- annonces');
+  const demande = (jours) => q(`select * from public.creer_demande(
+    '{"ref":"castres-gare","libelle":"Gare de Castres","lat":43.6007,"lon":2.2329,"type":"gare"}',
+    '{"ref":"tls","libelle":"Aéroport Toulouse-Blagnac","lat":43.6293,"lon":1.3638,"type":"aeroport"}',
+    now() + interval '${jours} days', false, 1, 1, null, 'tesla', 5, 5, 'Paul Durand', '06 22 33 44 55', 'paul@exemple.fr', null)`);
+  await db.exec(`reset role; insert into auth.users values ('66666666-6666-6666-6666-666666666666') on conflict do nothing`);
+  const voyageur = '66666666-6666-6666-6666-666666666666';
+  await en(voyageur);
+  await echoue(() => q(`insert into public.annonces (debut, fin) values (current_date, current_date + 3)`), 'un client ne peut pas publier d\'annonce');
+  await en(fabrice);
+  await q(`insert into public.annonces (debut, fin, message) values (current_date + 10, current_date + 20, 'Vacances, de retour le 27')`);
+  await q(`insert into public.annonces (debut, fin, bloquer, message) values (current_date - 30, current_date - 20, true, 'Ancienne')`);
+  await q(`insert into public.annonces (debut, fin, bloquer, message) values (current_date, current_date + 5, false, 'Nouveau : siège enfant disponible')`);
+  await echoue(() => q(`insert into public.annonces (debut, fin) values (current_date + 5, current_date + 1)`), 'fin avant le début refusée');
+  await en(null);
+  r = await q(`select message from public.annonces order by debut`);
+  ok(r.length === 2 && !r.some((x) => x.message === 'Ancienne'), 'les visiteurs voient les annonces en cours et à venir, pas les anciennes');
+  await en(fabrice);
+  r = await q(`select count(*)::int n from public.annonces`);
+  ok(r[0].n === 3, 'Fabrice voit toutes ses annonces');
+  await en(voyageur);
+  await echoue(() => demande(15), 'demande pendant les vacances refusée par la base');
+  r = await demande(3);
+  ok(r[0]?.id, 'demande hors indisponibilité acceptée (l\'annonce d\'information ne bloque rien)');
+  await en(voyageur);
+  await q(`delete from public.annonces`);
+  await en(fabrice);
+  r = await q(`select count(*)::int n from public.annonces`);
+  ok(r[0].n === 3, 'un client ne peut pas supprimer d\'annonce');
+  await en(fabrice);
+  r = await q(`select * from public.creer_course_manuelle(null, 'Paul Durand', '06 22 33 44 55', null,
+    '{"ref":"castres-gare","libelle":"Gare de Castres","lat":43.6007,"lon":2.2329,"type":"gare"}',
+    '{"ref":"tls","libelle":"Aéroport Toulouse-Blagnac","lat":43.6293,"lon":1.3638,"type":"aeroport"}',
+    now() + interval '15 days', false, 1, 1, null, 'tesla', 90, 70, null, 'telephone', null)`).catch((e) => [{ erreur: e.message }]);
+  ok(r[0] && !r[0].erreur, `Fabrice peut quand même saisir une course pendant ses vacances${r[0]?.erreur ? ' → ' + r[0].erreur : ''}`);
 }

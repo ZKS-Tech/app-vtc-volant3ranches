@@ -121,13 +121,13 @@ règles sont vérifiées par un jeu de 21 tests exécutés sur un PostgreSQL loc
 (table `messages`, fonctions `envoyer_message` et `marquer_lus`), réponses toutes prêtes, indicateur
 « Lu ». Gratuite, sans SMS : utile aux voyageurs étrangers. Chaque nouveau message envoie une notification.
 
-**Demandes de Fabrice (mise au point du 05/11)** — à faire :
+**Demandes de Fabrice (mise au point du 05/11)** :
 
-- **Annonces et indisponibilités** : dans Gestion, Fabrice crée une annonce (texte, dates de début et de
+- ✅ **Annonces et indisponibilités** (migration 7, Gestion › Annonces et absences) : dans Gestion, Fabrice crée une annonce (texte, dates de début et de
   fin, par exemple ses vacances). Côté client, un bandeau sur l'accueil pendant la période (et un peu
   avant), qui ouvre une page de détail. Pendant une indisponibilité, les dates sont bloquées dans le
-  choix de la date et la base refuse les demandes sur ces jours (`creer_demande`). Notification
-  éventuelle aux clients qui ont une course pendant la période.
+  choix de la date (sur deux mois) et la base refuse les demandes sur ces jours. Les courses déjà
+  prévues sur la période sont signalées à Fabrice, sans annulation automatique.
 - **Acompte de 10 % pour confirmer** (décision de Fabrice) : Fabrice accepte la demande, le client paie
   l'acompte dans l'appli, et seulement alors la course passe à « Confirmée ». Sans paiement dans le
   délai, la demande expire. Le reste est payé à bord (terminal SumUp, espèces) ou dans l'appli.

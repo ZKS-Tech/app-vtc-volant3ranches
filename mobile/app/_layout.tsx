@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { LogBox } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { AnnoncesProvider } from '../src/annonces';
 import { ChauffeurProvider } from '../src/chauffeur';
 import { MessagerieProvider } from '../src/messagerie';
 import { useNotifications } from '../src/notifications';
@@ -65,6 +66,7 @@ function Navigation() {
         <Stack.Screen name="course/[id]" options={{ title: 'Votre course' }} />
         <Stack.Screen name="panneau" options={{ presentation: 'fullScreenModal', headerShown: false }} />
         <Stack.Screen name="connexion-chauffeur" options={{ presentation: 'modal', title: 'Espace chauffeur' }} />
+        <Stack.Screen name="annonce/[id]" options={{ title: 'Annonce' }} />
       </Stack.Protected>
       <Stack.Protected guard={chauffeur}>
         <Stack.Screen name="chauffeur" options={{ headerShown: false, title: 'Tableau de bord' }} />
@@ -75,6 +77,8 @@ function Navigation() {
         <Stack.Screen name="tarifs" options={{ title: 'Tarifs et jours fériés' }} />
         <Stack.Screen name="chiffre-affaires" options={{ title: "Chiffre d'affaires" }} />
         <Stack.Screen name="gestion" options={{ title: 'Gestion' }} />
+        <Stack.Screen name="annonces" options={{ title: 'Annonces' }} />
+        <Stack.Screen name="annonce-edition" options={{ title: 'Annonce' }} />
       </Stack.Protected>
       <Stack.Screen name="conversation/[id]" options={{ title: 'Messages' }} />
     </Stack>
@@ -82,9 +86,11 @@ function Navigation() {
   return (
     <>
       <StatusBar style={estSombre ? 'light' : 'dark'} />
-      <MessagerieProvider key={chauffeur ? 'chauffeur' : 'client'}>
-        {chauffeur ? <ChauffeurProvider key={demoChauffeur ? 'demo' : 'serveur'}>{pile}</ChauffeurProvider> : pile}
-      </MessagerieProvider>
+      <AnnoncesProvider key={demoChauffeur ? 'demo' : chauffeur ? 'chauffeur' : 'client'} demo={demoChauffeur}>
+        <MessagerieProvider key={chauffeur ? 'chauffeur' : 'client'}>
+          {chauffeur ? <ChauffeurProvider key={demoChauffeur ? 'demo' : 'serveur'}>{pile}</ChauffeurProvider> : pile}
+        </MessagerieProvider>
+      </AnnoncesProvider>
     </>
   );
 }

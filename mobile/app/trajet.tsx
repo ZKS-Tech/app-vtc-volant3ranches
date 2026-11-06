@@ -3,12 +3,14 @@ import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dateCourte, estTransfert, lieu, majoration, offres } from '../src/data';
+import { periode, retourLe, useAnnonces } from '../src/annonces';
 import { dansJours, useStore } from '../src/store';
 import { Couleurs, f, radius, space } from '../src/theme';
 import { useTheme } from '../src/useTheme';
 import { Bouton, Champ, Compteur, Itineraire, Note, Segment, Titre } from '../src/ui';
 
-const jours = Array.from({ length: 14 }, (_, i) => dansJours(i));
+// Deux mois de dates : une absence de Fabrice ne doit pas empêcher de réserver après son retour.
+const jours = Array.from({ length: 60 }, (_, i) => dansJours(i));
 
 const decaler = (heure: string, minutes: number) => {
   const [h, m] = heure.split(':').map(Number);
@@ -20,6 +22,7 @@ export default function Trajet() {
   const { c, type, s } = useTheme(creerStyles);
   const { brouillon: b, maj } = useStore();
   const insets = useSafeAreaInsets();
+  const { indisponibiliteLe } = useAnnonces();
   if (!b.departId || !b.arriveeId) return null;
   const depart = lieu(b.departId);
   const arrivee = lieu(b.arriveeId);
@@ -27,6 +30,7 @@ export default function Trajet() {
   const transfert = estTransfert(depart) || estTransfert(arrivee);
   const majo = majoration(b.jour, b.heure);
   const maxPassagers = Math.max(...offres.map((o) => o.passagersMax));
+  const absence = indisponibiliteLe(b.jour);
 
   return (
     <View style={{ flex: 1, backgroundColor: c.sol }}>
@@ -39,16 +43,26 @@ export default function Trajet() {
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -space.l }} contentContainerStyle={{ paddingHorizontal: space.l, gap: space.s }}>
           {jours.map((j, i) => {
             const actif = j.getTime() === b.jour.getTime();
+            const ferme = !!indisponibiliteLe(j);
             const [nomJour, num, mois] = dateCourte(j).split(' ');
             return (
-              <Pressable key={i} onPress={() => maj({ jour: j })} style={[s.jour, actif && s.jourActif]} accessibilityState={{ selected: actif }} accessibilityLabel={dateCourte(j)}>
+              <Pressable key={i} onPress={() => maj({ jour: j })} style={[s.jour, ferme && s.jourFerme, actif && s.jourActif, actif && ferme && { backgroundColor: c.pierre, borderColor: c.pierre }]}
+                accessibilityState={{ selected: actif }} accessibilityLabel={`${dateCourte(j)}${ferme ? ', Fabrice absent' : ''}`}>
                 <Text style={[type.label, actif && { color: c.surCuve2 }]}>{i === 0 ? 'auj.' : i === 1 ? 'demain' : nomJour}</Text>
-                <Text style={[s.jourNum, actif && { color: c.blanc }]}>{num}</Text>
-                <Text style={[type.label, actif && { color: c.surCuve2 }]}>{mois}</Text>
+                <Text style={[s.jourNum, ferme && s.jourNumFerme, actif && { color: c.blanc }]}>{num}</Text>
+                <Text style={[type.label, actif && { color: c.surCuve2 }]}>{ferme ? 'absent' : mois}</Text>
               </Pressable>
             );
           })}
         </ScrollView>
+
+        {absence ? (
+          <View style={{ marginTop: space.m }}>
+            <Note ton="alerte" icone="calendar-outline">
+              Fabrice est absent {periode(absence)}. Choisissez un jour à partir du {retourLe(absence)}, ou appelez-le.
+            </Note>
+          </View>
+        ) : null}
 
         <Titre>Heure de prise en charge</Titre>
         <View style={s.heure}>
@@ -102,7 +116,7 @@ export default function Trajet() {
         ) : null}
       </ScrollView>
       <View style={[s.pied, { paddingBottom: insets.bottom + space.m }]}>
-        <Bouton titre="Voir les prix" icone="arrow-forward" onPress={() => router.push('/offre')} />
+        <Bouton titre={absence ? 'Fabrice est absent ce jour-là' : 'Voir les prix'} icone={absence ? undefined : 'arrow-forward'} desactive={!!absence} onPress={() => router.push('/offre')} />
       </View>
     </View>
   );
@@ -115,6 +129,8 @@ const creerStyles = (c: Couleurs) => StyleSheet.create({
     borderWidth: 1, borderColor: c.trait,
   },
   jourActif: { backgroundColor: c.action, borderColor: c.action },
+  jourFerme: { backgroundColor: c.sol, borderStyle: 'dashed' },
+  jourNumFerme: { color: c.pierre, textDecorationLine: 'line-through' },
   jourNum: { fontFamily: f.display, fontSize: 26, color: c.encre, marginVertical: 2 },
   heure: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: c.surface,

@@ -85,6 +85,19 @@ Les téléphones sont enregistrés dans la table `appareils` (un jeton par tél�
 connecté). Pour vérifier les envois : **SQL Editor** › `select * from net._http_response order by id desc limit 10;`
 (statut 200 = accepté par Expo). Tâche planifiée : **Integrations** › **Cron**.
 
+## Annonces et absences (migration 7)
+
+**SQL Editor** › **New query** : coller [`migrations/20261110000000_annonces.sql`](migrations/20261110000000_annonces.sql),
+puis **Run**. Fabrice publie ses annonces depuis l'appli (Gestion › Annonces et absences) :
+
+- **Absence** : bandeau sur l'accueil des clients dès la publication et jusqu'au dernier jour, jours
+  barrés dans le choix de la date, et la base refuse toute demande envoyée pour ces jours-là. Les
+  courses que Fabrice saisit lui-même restent possibles, et les courses déjà prévues ne sont pas
+  annulées (l'appli les lui signale).
+- **Information** : bandeau affiché entre les deux dates, sans rien bloquer.
+
+Table `annonces` ; visible par tous pour les annonces en cours et à venir, modifiable par Fabrice seul.
+
 ## Tester la confirmation en temps réel
 
 Avec deux téléphones (ou un téléphone et le navigateur) : envoyez une demande côté client, puis
@@ -104,4 +117,4 @@ Les règles de prix et de sécurité sont vérifiées sur un PostgreSQL local, s
 cd supabase/tests && npm install && npm test
 ```
 
-Les 64 vérifications doivent afficher « OK ».
+Les 73 vérifications doivent afficher « OK ».

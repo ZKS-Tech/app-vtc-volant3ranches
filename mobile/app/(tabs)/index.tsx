@@ -6,6 +6,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Lieu, fabrice, lieu, lieux, photos } from '../../src/data';
 import { useStore } from '../../src/store';
 import { Couleurs, f, radius, space } from '../../src/theme';
+import { BandeauAnnonce } from '../../src/BandeauAnnonce';
 import { CuveIndigo } from '../../src/CuveIndigo';
 import { useTheme } from '../../src/useTheme';
 import { Bouton, CarteCourse, Titre, appelerFabrice } from '../../src/ui';
@@ -56,6 +57,9 @@ export default function Accueil() {
       </View>
 
       <View style={{ paddingHorizontal: space.l }}>
+        <View style={{ marginTop: space.l }}>
+          <BandeauAnnonce />
+        </View>
         {depart && arrivee ? (
           <Bouton titre="Choisir la date et l'heure" icone="arrow-forward" onPress={() => router.push('/trajet')} style={{ marginTop: space.l }} />
         ) : null}

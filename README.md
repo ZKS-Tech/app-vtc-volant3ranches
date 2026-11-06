@@ -249,6 +249,7 @@ publication.
 
 - ~~Messagerie client ↔ chauffeur~~ : faite (détail d'une course › « Écrire à Fabrice » ; côté Fabrice,
   onglet « Messages » de l'espace chauffeur).
+- ~~Annonces et absences~~ : faites (Gestion › Annonces et absences ; migration 7).
 - ~~Notifications push~~ : faites (voir `supabase/README.md`, migration 6). Prochaine étape : l'email
   récapitulatif (Brevo, gratuit).
 - ~~Valider la maquette avec Fabrice~~ : validée. Décisions : mode chauffeur dans l'application,
