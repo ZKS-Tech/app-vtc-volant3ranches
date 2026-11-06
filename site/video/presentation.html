@@ -41,7 +41,7 @@ html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; backgro
 .scene-tel { position: absolute; perspective: 2000px; }
 #s-app .scene-tel { left: 300px; top: 70px; }
 .legendes { position: absolute; left: 980px; top: 0; bottom: 0; width: 760px; }
-.legende { position: absolute; left: 0; top: 50%; opacity: 0; }
+.legende { position: absolute; left: 0; top: 50%; opacity: 0; transform: translateY(calc(var(--c, -50%) + var(--dy, 0px))); }
 .legende .num { font-family: var(--serif); font-style: italic; font-size: 40px; color: var(--indigo); }
 .legende h3 { margin: 8px 0 22px; font-size: 104px; line-height: .98; color: var(--texte); }
 .legende p { margin: 0; font-size: 36px; line-height: 1.35; color: var(--texte2); max-width: 24ch; }
@@ -138,13 +138,66 @@ html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; backgro
 
 /* 9. fin */
 #s-fin { background: radial-gradient(70% 80% at 30% 50%, #1A2A6B, #0B1233 60%, #050817); color: #fff; }
-#s-fin .texte { position: absolute; left: 140px; top: 50%; transform: translateY(-50%); }
+#s-fin .texte { position: absolute; left: 140px; top: 50%; transform: translateY(calc(var(--c, -50%) + var(--dy, 0px))); }
 #s-fin .logo { width: 120px; height: 120px; margin-bottom: 40px; }
 #s-fin h2 { margin: 0; font-size: 150px; }
 #s-fin p { margin: 34px 0 0; font-size: 40px; color: #DCE3F5; }
 #s-fin .contact { margin-top: 56px; display: flex; gap: 48px; align-items: center; font-size: 46px; font-weight: 800; font-stretch: 72%; }
 #s-fin .contact span:last-child { font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 40px; color: #C9D3F0; }
 #s-fin .scene-tel { left: 1300px; top: 90px; }
+
+/* ===== format vertical 9:16 ===== */
+html.vertical, html.vertical body { width: 1080px; height: 1920px; }
+html.vertical #s-intro h1 { font-size: 92px; }
+html.vertical #s-intro p { font-size: 44px; }
+html.vertical #s-intro .logo { width: 220px; height: 220px; }
+html.vertical #heros-img { object-position: 30% 40% !important; }
+html.vertical #s-heros .voile { background: linear-gradient(to top, rgba(5, 8, 23, .9), rgba(5, 8, 23, .45) 45%, rgba(5, 8, 23, .1) 75%); }
+html.vertical #s-heros .texte { left: 80px; right: 80px; bottom: 430px; }
+html.vertical #s-heros h2 { font-size: 118px; }
+html.vertical #s-heros p { font-size: 40px; }
+html.vertical #s-app .scene-tel { left: 50%; margin-left: -205px; top: 250px; }
+html.vertical #tel-app { --w: 410px; }
+html.vertical .legendes { left: 80px; right: 80px; width: auto; top: 1180px; bottom: auto; height: 380px; }
+html.vertical .legende { top: 0; left: 0; right: 0; text-align: center; --c: 0%; }
+html.vertical .legende .num { font-size: 34px; }
+html.vertical .legende h3 { font-size: 74px; margin: 4px 0 14px; }
+html.vertical .legende p { font-size: 32px; max-width: none; margin: 0 auto; }
+html.vertical .plan { left: 50%; top: 53%; width: 1180px; }
+html.vertical #s-carte .haut { left: 80px; right: 80px; top: 260px; }
+html.vertical #s-carte .haut h3 { font-size: 76px; }
+html.vertical #s-carte .haut p { font-size: 32px; }
+html.vertical #s-carte .bas { left: 80px; right: 80px; bottom: 400px; flex-direction: column; align-items: flex-start; gap: 28px; }
+html.vertical #s-carte .bas p { font-size: 38px; }
+html.vertical .compteurs { gap: 52px; }
+html.vertical .compteurs b { font-size: 76px; }
+html.vertical .credit { bottom: 340px; right: 80px; font-size: 14px; }
+html.vertical #s-carte::after { height: 48%; }
+html.vertical .etiquette { font-size: 26px; }
+html.vertical .etiquette.fort { font-size: 24px; }
+html.vertical #s-conf .texte { left: 80px; right: 80px; top: 260px; transform: none; }
+html.vertical #s-conf h3 { font-size: 88px; }
+html.vertical #s-conf .etats { margin-top: 30px; gap: 14px; }
+html.vertical #s-conf .etat { font-size: 32px; }
+html.vertical #s-conf .scene-tel { left: 50%; margin-left: -180px; top: 760px; }
+html.vertical #tel-conf { --w: 360px !important; }
+html.vertical #s-panneau .texte { left: 80px; right: 80px; width: auto; top: 280px; transform: none; }
+html.vertical #s-panneau h3 { font-size: 100px; }
+html.vertical #s-panneau p { font-size: 36px; }
+html.vertical .panneau-scene { left: 90px; top: 1020px; width: 900px; height: 600px; margin-top: 0; }
+html.vertical .face.avant strong { font-size: 160px; }
+html.vertical #volet-tesla { left: 0 !important; width: 100% !important; top: 0; bottom: 50%; }
+html.vertical #volet-van { left: 0 !important; width: 100% !important; top: 50%; bottom: 0; }
+html.vertical .volet .txt { left: 80px; bottom: 60px; }
+html.vertical #volet-van .txt { bottom: 420px; }
+html.vertical .volet h4 { font-size: 80px; }
+html.vertical #s-fin .texte { left: 80px; right: 80px; top: 270px; --c: 0%; }
+html.vertical #s-fin .logo { width: 110px; height: 110px; margin-bottom: 30px; }
+html.vertical #s-fin h2 { font-size: 118px; }
+html.vertical #s-fin p { font-size: 34px; }
+html.vertical #s-fin .contact { margin-top: 36px; flex-direction: column; align-items: flex-start; gap: 10px; }
+html.vertical #s-fin .scene-tel { left: 50%; margin-left: -140px; top: 1070px; }
+html.vertical #tel-fin { --w: 330px !important; }
 </style>
 </head>
 <body>
@@ -258,6 +311,8 @@ html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; backgro
 
 <script>
 'use strict';
+const VERTICAL = new URLSearchParams(location.search).get('format') === 'vertical';
+if (VERTICAL) document.documentElement.classList.add('vertical');
 const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
 const borne = x => Math.max(0, Math.min(1, x));
 const lisse = (a, b, x) => { const t = borne((x - a) / (b - a)); return t * t * (3 - 2 * t); };
@@ -300,7 +355,8 @@ async function preparerCarte() {
   $('#c-total').textContent = `${t.km.toLocaleString('fr-FR')} km`;
   // ciel étoilé
   const g = $('#ciel').getContext('2d'); let s = 21; const al = () => (s = (s * 16807) % 2147483647) / 2147483647;
-  for (let i = 0; i < 320; i++) { const y = al() * 1080 * .6; g.fillStyle = `rgba(235,240,255,${(.15 + al() * .7 * (1 - y / 1080)).toFixed(2)})`; g.beginPath(); g.arc(al() * 1920, y, al() ** 4 * 2 + .4, 0, 7); g.fill(); }
+  const cv = $('#ciel'), W0 = cv.width = innerWidth, H0 = cv.height = innerHeight;
+  for (let i = 0; i < 320; i++) { const y = al() * H0 * .6; g.fillStyle = `rgba(235,240,255,${(.15 + al() * .7 * (1 - y / H0)).toFixed(2)})`; g.beginPath(); g.arc(al() * W0, y, al() ** 4 * 2 + .4, 0, 7); g.fill(); }
 }
 const duree = m => m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : `${m} min`;
 
@@ -344,15 +400,15 @@ function rendre(t) {
     $$('#s-app .legende').forEach((l, j) => {
       const deb = etapes[j] - .2, fin = j < 3 ? etapes[j + 1] - .5 : 30;
       const o = Math.min(lisse(deb, deb + .7, t), 1 - lisse(fin - .5, fin, t));
-      l.style.opacity = o.toFixed(3); l.style.transform = `translateY(calc(-50% + ${mix(40, 0, sortie(deb, deb + 1, t)).toFixed(1)}px))`;
+      l.style.opacity = o.toFixed(3); l.style.setProperty('--dy', mix(40, 0, sortie(deb, deb + 1, t)).toFixed(1) + 'px');
     }); }
   // 5. la carte
   if (carte && t > 23.5 && t < 33) {
     const pente = sortie(24, 25.6, t), q = lisse(25.4, 31.4, t), c = carte;
     const pt = c.trace.getPointAtLength(c.L * q);
-    const W = 1760, k = W / c.vb[2], suivre = Math.sin(Math.PI * q) * .9;
+    const W = $('#plan').offsetWidth, k = W / c.vb[2], suivre = Math.sin(Math.PI * q) * .9;
     const cx = c.centre[0] + (pt.x - c.centre[0]) * suivre, cy = c.centre[1] + (pt.y - c.centre[1]) * suivre;
-    const tx = (c.vb[2] / 2 - cx) * k, ty = (c.vb[3] / 2 - cy) * k, z = 1 + .5 * Math.sin(Math.PI * q) * pente;
+    const tx = (c.vb[2] / 2 - cx) * k, ty = (c.vb[3] / 2 - cy) * k, z = 1 + (VERTICAL ? .28 : .5) * Math.sin(Math.PI * q) * pente;
     $('#plan').style.transform = `translate(-50%, -50%) translateZ(${(pente * -260).toFixed(1)}px) rotateX(${(pente * 46).toFixed(2)}deg) rotateZ(${(pente * -11).toFixed(2)}deg) scale(${z.toFixed(3)}) translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px)`;
     c.trace.style.strokeDashoffset = (c.L * (1 - q)).toFixed(1);
     c.comete.setAttribute('transform', `translate(${pt.x.toFixed(1)} ${pt.y.toFixed(1)})`);
@@ -385,7 +441,7 @@ function rendre(t) {
     $$('#s-vehicules .txt').forEach((x, i) => { const d = 45.6 + i * .5; x.style.opacity = lisse(d, d + .7, t); x.style.transform = `translateY(${mix(30, 0, sortie(d, d + 1, t)).toFixed(1)}px)`; }); }
   // 9. fin
   { const k = sortie(50, 51.6, t);
-    $('#s-fin .texte').style.transform = `translateY(calc(-50% + ${mix(40, 0, k).toFixed(1)}px))`;
+    $('#s-fin .texte').style.setProperty('--dy', mix(40, 0, k).toFixed(1) + 'px');
     $('#s-fin .logo').style.transform = `rotate(${mix(-90, 0, sortie(50, 51.8, t)).toFixed(2)}deg)`;
     $('#tel-fin').style.transform = `translateY(${mix(120, 0, sortie(50.4, 52.2, t)).toFixed(1)}px) rotateY(${(-14 + Math.sin(t * .6) * 3).toFixed(2)}deg) rotateZ(4deg)`;
     $('#s-fin .contact').style.opacity = lisse(51.6, 52.6, t); }
