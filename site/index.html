@@ -213,20 +213,6 @@ img { max-width: 100%; display: block; }
 .nuit .titre { color: #fff; }
 .nuit .texte { color: #E2E8F8; }
 .nuit .note { color: var(--nuit-texte2); }
-.carte { margin-top: clamp(40px, 6vw, 72px); position: relative; }
-.carte svg { width: 100%; height: auto; display: block; aspect-ratio: 16 / 10; }
-@media (max-width: 700px) { .carte svg { aspect-ratio: 4 / 5; } }
-.reseau .route { fill: none; stroke: rgba(185, 199, 234, .3); stroke-width: 1; vector-effect: non-scaling-stroke; }
-.reseau .riviere { fill: none; stroke: rgba(169, 192, 230, .22); stroke-width: 1; stroke-dasharray: 2 5; vector-effect: non-scaling-stroke; }
-.reseau .trace { fill: none; stroke: var(--feuille); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 6px rgba(201, 212, 92, .55)); }
-.reseau .etoile { fill: #fff; }
-.reseau .ville circle { fill: var(--nuit-texte2); }
-.reseau .ville text { fill: var(--nuit-texte2); font-family: var(--serif); font-style: italic; font-size: 15px; }
-.reseau .ville.fort circle { fill: var(--feuille); }
-.reseau .ville.fort text { fill: #fff; font-family: var(--sans); font-style: normal; font-weight: 700; font-size: 14px; }
-.cartouche { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 12px; border-top: 1px solid var(--nuit-ligne); padding-top: 18px; margin-top: 8px; }
-.cartouche p { margin: 0; font-family: var(--serif); font-style: italic; font-size: clamp(1.4rem, 2.6vw, 2rem); line-height: 1.1; }
-.cartouche .nb { color: var(--nuit-texte2); font-size: 15px; }
 .troncons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 .troncons span { font-size: 12px; font-weight: 700; padding: 3px 9px; border-radius: 6px; background: rgba(233, 240, 250, .12); color: #fff; }
 
@@ -498,6 +484,51 @@ img { max-width: 100%; display: block; }
   .garage.allume .neons i, .garage.allume .ombre, .garage.allume .enseigne-logo, .garage.allume .enseigne-titre { animation-duration: .01s; animation-delay: 0s; }
 }
 
+/* III. le voyage : la carte bascule en 3D, une comète parcourt l'itinéraire */
+.voyage { height: 340vh; position: relative; }
+.voyage-collant { position: sticky; top: 0; height: 100svh; min-height: 640px; overflow: hidden;
+  background: radial-gradient(120% 70% at 50% 110%, #1A2A6B 0%, #0E1640 45%, #070B22 100%); }
+.ciel { position: absolute; inset: 0; width: 100%; height: 100%; }
+.plan-scene { position: absolute; inset: 0; perspective: 2600px; perspective-origin: 50% 18%; }
+.plan { position: absolute; left: 50%; top: 60%; width: min(1560px, 112vw); transform-origin: 50% 50%; will-change: transform;
+  -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 62%, transparent 100%); mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 62%, transparent 100%); }
+.plan svg { display: block; width: 100%; height: auto; overflow: visible; }
+.reseau .route-lueur { fill: none; stroke: rgba(120, 150, 235, .14); stroke-width: 7; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.reseau .route { fill: none; stroke: rgba(196, 210, 245, .5); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+.reseau .riviere { fill: none; stroke: rgba(130, 170, 240, .45); stroke-width: 1.4; stroke-dasharray: 1 4; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.reseau .trace-fond { fill: none; stroke: rgba(201, 212, 92, .35); stroke-width: 2; stroke-dasharray: 2 6; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.reseau .trace { fill: none; stroke: var(--feuille); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; filter: url(#lueur); }
+.reseau .ville { fill: #B9C7EA; }
+.reseau .ville.fort { fill: var(--feuille); }
+.reseau .anneau-pulse { fill: none; stroke: var(--feuille); stroke-width: 1.5; vector-effect: non-scaling-stroke; transform-box: fill-box; transform-origin: center; animation: pulse 2.4s cubic-bezier(0.16, 1, 0.3, 1) infinite; }
+.reseau .anneau-pulse.retard { animation-delay: 1.2s; }
+.reseau .arrivee-onde { fill: none; stroke: #F2F8C8; stroke-width: 2; vector-effect: non-scaling-stroke; transform-box: fill-box; transform-origin: center; opacity: 0; }
+.voyage.arrive .reseau .arrivee-onde { animation: onde 1.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+@keyframes pulse { from { transform: scale(.4); opacity: .9; } to { transform: scale(3.2); opacity: 0; } }
+@keyframes onde { 0% { transform: scale(.3); opacity: 1; } 100% { transform: scale(9); opacity: 0; } }
+.comete { transition: opacity .3s; }
+.etiquettes { position: absolute; inset: 0; pointer-events: none; }
+.etiquette { position: absolute; left: 0; top: 0; transform: translate(-50%, calc(-100% - 10px)); white-space: nowrap; font-family: var(--serif); font-style: italic; font-size: 15px; color: #C9D3F0; text-shadow: 0 1px 8px rgba(5, 9, 28, .9); transition: opacity .3s; }
+.etiquette.fort { font-family: var(--sans); font-style: normal; font-weight: 700; font-size: 14px; color: #0B1233; background: var(--feuille); padding: 5px 11px; border-radius: 999px; text-shadow: none; box-shadow: 0 6px 20px -6px rgba(201, 212, 92, .7); }
+.voyage-texte { position: absolute; left: 0; right: 0; top: calc(env(safe-area-inset-top, 0px) + 84px); z-index: 2; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: 40px; align-items: end; pointer-events: none; }
+.voyage-texte .texte { color: #DCE3F5; font-size: clamp(1.05rem, 1.3vw, 1.2rem); }
+.tableau-bord { position: absolute; left: 0; right: 0; bottom: max(28px, env(safe-area-inset-bottom, 0px)); z-index: 2; margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: end; gap: 18px 40px; }
+.tableau-bord p { margin: 0; font-family: var(--serif); font-style: italic; font-size: clamp(1.3rem, 2.2vw, 1.9rem); line-height: 1.1; color: #fff; text-shadow: 0 2px 16px rgba(5, 9, 28, .8); }
+.compteurs { display: flex; gap: clamp(20px, 3vw, 48px); }
+.compteurs div { display: grid; gap: 2px; }
+.compteurs b { font-weight: 800; font-stretch: 70%; font-size: clamp(2rem, 3.6vw, 3.2rem); line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
+.compteurs span { font-size: 12px; color: var(--nuit-texte2); letter-spacing: .02em; }
+.voyage-note { position: absolute; z-index: 2; right: max(24px, env(safe-area-inset-right, 0px)); bottom: 6px; margin: 0; font-size: 11px; color: rgba(185, 199, 234, .6); }
+.voyage-collant::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 34%; z-index: 1; pointer-events: none; background: linear-gradient(to top, rgba(5, 8, 26, .92), rgba(5, 8, 26, 0)); }
+.voyage-collant::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 30%; z-index: 1; pointer-events: none; background: linear-gradient(to bottom, rgba(5, 8, 26, .75), rgba(5, 8, 26, 0)); }
+@media (max-width: 820px) {
+  .voyage-texte { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+  .voyage-texte .texte { display: none; }
+  .plan { width: 210vw; top: 54%; }
+  .compteurs b { font-size: 1.8rem; }
+  .etiquette { font-size: 13px; }
+}
+
 /* la visionneuse */
 .visionneuse { width: 100vw; height: 100vh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: rgba(5, 8, 22, .94); color: #fff; }
 .visionneuse[open] { display: grid; place-items: center; animation: apparait .45s var(--ease); }
@@ -631,29 +662,33 @@ img { max-width: 100%; display: block; }
   </section>
 
   <!-- III. Le trajet : l'affiche de 1900, qui se change en gravure puis en carte étoilée -->
-  <section class="tableau" data-photo="assets/oeuvres/picard-1900.webp" data-focus="0.5 0.64" aria-labelledby="mot-trajet">
+  <section class="tableau" data-photo="assets/oeuvres/picard-1900.webp" data-focus="0.5 0.64" data-ajuste="contenir" aria-labelledby="mot-trajet">
     <div class="scene">
-      <img class="photo" src="assets/oeuvres/picard-1900.webp" alt="Affiche de Georges Picard, 1900 : une femme en manteau de fourrure conduit une automobile rouge, phares allumés, au-dessus de Paris la nuit" style="object-position: 50% 70%">
+      <img class="photo" src="assets/oeuvres/picard-1900.webp" alt="Affiche de Georges Picard, 1900 : une femme en manteau de fourrure conduit une automobile rouge, phares allumés, au-dessus de Paris la nuit" style="object-fit: contain; padding: 7vh 0; background: #0B1233">
       <div class="voile-bas"></div>
       <h2 class="geant mot" data-role="mot" id="mot-trajet">Le trajet</h2>
       <div class="recit" data-role="recit"><p class="texte lettrine">En 1900, Georges Picard faisait voler une automobile au-dessus de Paris. Celle de Fabrice reste sur la route, mais l'application vous montre tout le chemin.</p></div>
     </div>
   </section>
 
-  <section class="nuit dechire chapitre" id="trajet" data-ton="sombre" aria-labelledby="titre-trajet" style="--bord: var(--nuit); margin-top:-18vh">
-    <div class="cadre">
-      <div class="entree">
+  <section class="nuit dechire voyage" id="trajet" data-ton="sombre" aria-labelledby="titre-trajet" style="--bord: var(--nuit); margin-top:-18vh">
+    <div class="voyage-collant">
+      <canvas class="ciel" id="ciel" aria-hidden="true"></canvas>
+      <div class="plan-scene"><div class="plan" id="plan"><svg class="reseau" id="reseau-carte" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Plan du trajet choisi"></svg></div></div>
+      <div class="etiquettes" id="etiquettes" aria-hidden="true"></div>
+      <div class="voyage-texte cadre">
         <h2 class="titre" id="titre-trajet">Le trajet, dessiné sur les vraies routes</h2>
         <p class="texte">L'application trace votre itinéraire sur un plan de la région : A68, A61, N126, le Tarn et l'Agout. Changez le départ ou l'arrivée plus haut, le tracé suit.</p>
       </div>
-      <div class="carte">
-        <svg class="reseau" id="reseau-carte" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Plan du trajet choisi"></svg>
-        <div class="cartouche">
-          <div><p id="carte-titre"></p><div class="troncons" id="carte-troncons"></div></div>
-          <span class="nb" id="carte-km"></span>
+      <div class="tableau-bord cadre">
+        <div><p id="carte-titre"></p><div class="troncons" id="carte-troncons"></div></div>
+        <div class="compteurs" aria-live="off">
+          <div><b id="cpt-km">0</b><span>km parcourus</span></div>
+          <div><b id="cpt-reste">–</b><span>restantes</span></div>
+          <div><b id="cpt-total">–</b><span>au total</span></div>
         </div>
-        <p class="note">Tracés simplifiés, positions des villes exactes.</p>
       </div>
+      <p class="voyage-note">Tracés simplifiés, positions des villes exactes, relief décoratif.</p>
     </div>
   </section>
 
@@ -916,35 +951,11 @@ img { max-width: 100%; display: block; }
     return d;
   }
   const ligne = ids => ids.map(id => [noeuds[id][0], noeuds[id][1]]);
-  const svgC = $('#reseau-carte');
-  const etroit = matchMedia('(max-width: 700px)').matches;
-  const [a1] = proj(0, 1.26), [a2] = proj(0, 2.5), [, b1] = proj(44.02, 0);
-  const vb = etroit ? [a1 + 60, b1, (a2 - a1) - 120, (a2 - a1 - 120) * 1.25] : [a1, b1 + 20, a2 - a1, (a2 - a1) / 1.6];
-  svgC.setAttribute('viewBox', vb.join(' '));
-  let graine = 7; const alea = () => (graine = (graine * 16807) % 2147483647) / 2147483647;
-  for (let i = 0; i < 90; i++) el('circle', { class: 'etoile', cx: vb[0] + alea() * vb[2], cy: vb[1] + alea() * vb[3], r: (alea() ** 3 * 1.6 + .3).toFixed(2), opacity: (.15 + alea() * .5).toFixed(2) }, svgC);
-  rivieres.forEach(r => el('path', { d: lisse(r), class: 'riviere' }, svgC));
-  routes.forEach(([, pts]) => el('path', { d: lisse(ligne(pts)), class: 'route' }, svgC));
-  const trace = el('path', { class: 'trace', d: '' }, svgC);
-  for (const id in noeuds) {
-    const [la, lo, nom] = noeuds[id], [px, py] = proj(la, lo);
-    const g = el('g', { class: 'ville', 'data-id': id }, svgC);
-    el('circle', { cx: px, cy: py, r: 3.2 }, g);
-    el('text', { x: px + 9, y: py - 8 }, g).textContent = nom;
-  }
-  function tracer(ids, anime) {
-    trace.setAttribute('d', lisse(ligne(ids)));
-    $$('.ville', svgC).forEach(g => g.classList.toggle('fort', ids[0] === g.dataset.id || ids[ids.length - 1] === g.dataset.id));
-    const L = Math.ceil(trace.getTotalLength());
-    trace.style.transition = 'none'; trace.style.strokeDasharray = L; trace.style.strokeDashoffset = anime && !reduit ? L : 0;
-    if (anime && !reduit) { trace.getBoundingClientRect(); trace.style.transition = 'stroke-dashoffset 1.8s cubic-bezier(0.16, 1, 0.3, 1)'; trace.style.strokeDashoffset = 0; }
-  }
-
   /* ---------- Estimateur ---------- */
   const selD = $('#depart'), selA = $('#arrivee');
   const opts = lieux.map(l => `<option value="${l.id}">${l.nom}</option>`).join('');
   selD.innerHTML = opts; selA.innerHTML = opts; selD.value = 'castres-gare'; selA.value = 'tls';
-  let majo = false, ar = false, carteVue = false;
+  let majo = false, ar = false;
   const eur = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' });
   const num = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
   const duree = m => m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : `${m} min`;
@@ -959,9 +970,8 @@ img { max-width: 100%; display: block; }
       return `<div class="offre"><h3>${o.nom}${majo ? '<span class="majo">Majoré</span>' : ''}</h3><span class="vehicule">${o.vehicule}</span><span class="prix">${eur.format(p.montant)}</span><span class="detail">${detail}</span></div>`;
     }).join('');
     const c = chemin(a.n, b.n);
-    tracer(c.pts.length > 1 ? c.pts : [a.n, b.n], animer && carteVue);
+    definirTrajet(c.pts.length > 1 ? c.pts : [a.n, b.n], t.km, t.minutes);
     $('#carte-titre').textContent = `${a.nom} → ${b.nom}`;
-    $('#carte-km').textContent = `${num.format(t.km)} km · ${duree(t.minutes)}`;
     $('#carte-troncons').innerHTML = c.noms.map(n => `<span>${n}</span>`).join('');
   }
   selD.addEventListener('change', () => majEstimation(true));
@@ -971,8 +981,112 @@ img { max-width: 100%; display: block; }
     set(b.dataset[attr] === '1'); $$(`[data-${attr}]`).forEach(x => x.setAttribute('aria-pressed', String(x === b))); majEstimation(false);
   }));
   bascule('majo', v => { majo = v; }); bascule('ar', v => { ar = v; });
+  /* ---------- III. le voyage ---------- */
+  const voyage = $('#trajet'), svgC = $('#reseau-carte'), plan = $('#plan'), etiq = $('#etiquettes');
+  const [a1] = proj(0, 1.2), [a2] = proj(0, 2.56), [, b1] = proj(44.06, 0), [, b2] = proj(43.12, 0);
+  const vb = [a1, b1, a2 - a1, b2 - b1];
+  svgC.setAttribute('viewBox', vb.join(' '));
+  svgC.innerHTML = `<defs>
+    <radialGradient id="halo"><stop offset="0" stop-color="#FFFBE6" stop-opacity="1"/><stop offset=".25" stop-color="#E8F29A" stop-opacity=".75"/><stop offset="1" stop-color="#C9D45C" stop-opacity="0"/></radialGradient>
+    <filter id="lueur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3.5" result="f"/><feMerge><feMergeNode in="f"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+  // relief décoratif : courbes de niveau et ombrage, calculés une fois
+  (() => {
+    const W = 760, H = Math.round(W * vb[3] / vb[2]);
+    const c = document.createElement('canvas'); c.width = W; c.height = H; const cx = c.getContext('2d'); const im = cx.createImageData(W, H);
+    const hs = (x, y) => { const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return s - Math.floor(s); };
+    const vn = (x, y) => { const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi, u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+      const a = hs(xi, yi), b = hs(xi + 1, yi), c2 = hs(xi, yi + 1), d = hs(xi + 1, yi + 1); return a + (b - a) * u + (c2 - a) * v + (a - b - c2 + d) * u * v; };
+    const fbm = (x, y) => { let s = 0, a = .5; for (let o = 0; o < 4; o++) { s += a * vn(x, y); x *= 2.03; y *= 2.03; a *= .5; } return s; };
+    const hauteur = (x, y) => { // x,y en coordonnées carte
+      const lon = x / (1000 * COS) + 1.18, lat = 44.06 - y / 1000;
+      let h = fbm(x / 140, y / 140) * .7;
+      h += .9 * Math.exp(-(((lon - 2.3) / .35) ** 2 + ((lat - 43.42) / .12) ** 2)); // Montagne Noire
+      h += .35 * Math.exp(-(((lon - 2.45) / .25) ** 2 + ((lat - 43.95) / .25) ** 2)); // Ségala, au nord-est d'Albi
+      return h; };
+    const hm = new Float32Array(W * H);
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) hm[j * W + i] = hauteur(vb[0] + i / W * vb[2], vb[1] + j / H * vb[3]);
+    for (let j = 1; j < H - 1; j++) for (let i = 1; i < W - 1; i++) {
+      const k = j * W + i, h = hm[k];
+      const dx = hm[k + 1] - hm[k - 1], dy = hm[k + W] - hm[k - W];
+      const ombre = Math.max(0, Math.min(1, .5 - (dx * 9 + dy * 6)));
+      const f = (h * 16) % 1, ligne = f < .06 || f > .94 ? 1 : 0;
+      const p = k * 4;
+      im.data[p] = 150 + 60 * ombre; im.data[p + 1] = 175 + 50 * ombre; im.data[p + 2] = 240;
+      im.data[p + 3] = Math.round(ligne * 70 + ombre * 34 + h * 18);
+    }
+    cx.putImageData(im, 0, 0);
+    const img = document.createElementNS(NS, 'image');
+    img.setAttribute('href', c.toDataURL()); img.setAttribute('x', vb[0]); img.setAttribute('y', vb[1]); img.setAttribute('width', vb[2]); img.setAttribute('height', vb[3]);
+    img.setAttribute('preserveAspectRatio', 'none'); img.setAttribute('opacity', '.9'); svgC.appendChild(img);
+  })();
+  rivieres.forEach(r => el('path', { d: lisse(r), class: 'riviere' }, svgC));
+  routes.forEach(([, pts]) => { const d = lisse(ligne(pts)); el('path', { d, class: 'route-lueur' }, svgC); el('path', { d, class: 'route' }, svgC); });
+  const traceFond = el('path', { class: 'trace-fond', d: '' }, svgC);
+  const trace = el('path', { class: 'trace', d: '' }, svgC);
+  const villes = {};
+  for (const id in noeuds) { const [la, lo] = noeuds[id], [x, y] = proj(la, lo); villes[id] = el('circle', { class: 'ville', cx: x, cy: y, r: 3.4, 'data-id': id }, svgC); }
+  const pulses = el('g', {}, svgC);
+  const onde = el('circle', { class: 'arrivee-onde', r: 6, cx: 0, cy: 0 }, svgC);
+  const comete = el('g', { class: 'comete' }, svgC);
+  el('circle', { r: 26, fill: 'url(#halo)' }, comete); el('circle', { r: 4.2, fill: '#fff' }, comete);
+  // étiquettes droites, posées au-dessus des villes
+  const etiquettes = {};
+  for (const id in noeuds) { const e = document.createElement('span'); e.className = 'etiquette'; e.textContent = noeuds[id][2]; etiq.appendChild(e); etiquettes[id] = e; }
+  // le ciel
+  const ciel = $('#ciel');
+  const dessinerCiel = () => {
+    const r = ciel.getBoundingClientRect(), d = Math.min(devicePixelRatio || 1, 2); ciel.width = r.width * d; ciel.height = r.height * d;
+    const g = ciel.getContext('2d'); let s = 21; const al = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 260; i++) { const y = al() * ciel.height * .62, a = .15 + al() * .7 * (1 - y / ciel.height);
+      g.fillStyle = `rgba(235,240,255,${a.toFixed(2)})`; g.beginPath(); g.arc(al() * ciel.width, y, (al() ** 4 * 1.8 + .35) * d, 0, 7); g.fill(); }
+  };
+  dessinerCiel(); addEventListener('resize', dessinerCiel);
+
+  let vL = 0, vKm = 0, vMin = 0, vIds = [], vCentre = [0, 0], dernierT = -1;
+  const cKm = $('#cpt-km'), cReste = $('#cpt-reste'), cTotal = $('#cpt-total');
+  function definirTrajet(ids, km, minutes) {
+    const d = lisse(ligne(ids)); trace.setAttribute('d', d); traceFond.setAttribute('d', d);
+    vL = trace.getTotalLength(); vKm = km; vMin = minutes; vIds = ids;
+    trace.style.strokeDasharray = vL; trace.style.strokeDashoffset = vL;
+    const pts = ids.map(id => proj(noeuds[id][0], noeuds[id][1]));
+    vCentre = [pts.reduce((s, p) => s + p[0], 0) / pts.length, pts.reduce((s, p) => s + p[1], 0) / pts.length];
+    for (const id in villes) { const fort = id === ids[0] || id === ids[ids.length - 1]; villes[id].classList.toggle('fort', fort); etiquettes[id].classList.toggle('fort', fort); }
+    pulses.innerHTML = '';
+    if (!reduit) [ids[0], ids[ids.length - 1]].forEach(id => { const [x, y] = proj(noeuds[id][0], noeuds[id][1]);
+      el('circle', { class: 'anneau-pulse', cx: x, cy: y, r: 7 }, pulses); el('circle', { class: 'anneau-pulse retard', cx: x, cy: y, r: 7 }, pulses); });
+    const [ax, ay] = proj(noeuds[ids[ids.length - 1]][0], noeuds[ids[ids.length - 1]][1]); onde.setAttribute('cx', ax); onde.setAttribute('cy', ay);
+    cTotal.textContent = `${num.format(km)} km`;
+    dernierT = -1; voyageDefile();
+  }
+  function voyageDefile() {
+    const h = innerHeight, r = voyage.getBoundingClientRect();
+    if (r.bottom < -50 || r.top > h + 50 || !vL) return;
+    const q = borne(-r.top / (r.height - h));
+    const pente = lisseur(0, .14, q), t = lisseur(.16, .84, q);
+    const pt = trace.getPointAtLength(vL * t);
+    const W = plan.offsetWidth, Hp = plan.offsetHeight, k = W / vb[2];
+    const suivre = Math.sin(Math.PI * t) * .9;
+    const cxm = vCentre[0] + (pt.x - vCentre[0]) * suivre, cym = vCentre[1] + (pt.y - vCentre[1]) * suivre;
+    const tx = (vb[0] + vb[2] / 2 - cxm) * k, ty = (vb[1] + vb[3] / 2 - cym) * k;
+    const z = 1 + .5 * Math.sin(Math.PI * t) * pente;
+    plan.style.transform = `translate(-50%, -50%) translateZ(${(pente * -260).toFixed(1)}px) rotateX(${(pente * 46).toFixed(2)}deg) rotateZ(${(pente * -11).toFixed(2)}deg) scale(${z.toFixed(3)}) translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px)`;
+    trace.style.strokeDashoffset = (vL * (1 - t)).toFixed(1);
+    comete.setAttribute('transform', `translate(${pt.x.toFixed(1)} ${pt.y.toFixed(1)})`);
+    comete.style.opacity = t > .002 && t < .998 ? 1 : 0;
+    voyage.classList.toggle('arrive', t > .995);
+    if (Math.abs(t - dernierT) > .001) {
+      dernierT = t;
+      cKm.textContent = num.format(Math.round(vKm * t * 10) / 10);
+      cReste.textContent = duree(Math.max(0, Math.round(vMin * (1 - t))));
+    }
+    // étiquettes : on suit la projection des villes
+    const rs = etiq.getBoundingClientRect();
+    for (const id in villes) {
+      const b = villes[id].getBoundingClientRect(), e = etiquettes[id];
+      e.style.transform = `translate(${(b.left + b.width / 2 - rs.left).toFixed(1)}px, ${(b.top - rs.top).toFixed(1)}px) translate(-50%, calc(-100% - 8px))`;
+    }
+  }
   majEstimation(false);
-  new IntersectionObserver((es, obs) => es.forEach(e => { if (e.isIntersecting) { carteVue = true; majEstimation(true); obs.disconnect(); } }), { threshold: .35 }).observe($('.carte'));
 
   /* ---------- Panneau et contact ---------- */
   const panneau = $('#panneau-carte'), nom = $('#nom');
@@ -1008,14 +1122,25 @@ float fbm(vec2 p){float v=0.0;float a=0.5;mat2 m=mat2(1.6,1.2,-1.2,1.6);for(int 
 
   /* ---------- Les tableaux : photo → gravure argentée ---------- */
   const GRAVURE = `precision mediump float;
-uniform sampler2D u_img;uniform vec2 u_res;uniform vec2 u_ir;uniform vec2 u_focus;uniform float u_p;uniform float u_t;uniform float u_px;uniform vec2 u_m;uniform float u_loupe;
+uniform sampler2D u_img;uniform vec2 u_res;uniform vec2 u_ir;uniform vec2 u_focus;uniform float u_p;uniform float u_t;uniform float u_px;uniform vec2 u_m;uniform float u_loupe;uniform float u_contient;
 ${BRUIT}
 vec2 couvre(vec2 fc){vec2 uv=fc/u_res;uv.y=1.0-uv.y;float ra=u_res.x/u_res.y;float ri=u_ir.x/u_ir.y;
 vec2 s=ra>ri?vec2(1.0,ri/ra):vec2(ra/ri,1.0);return (uv-0.5)*s+0.5+(u_focus-0.5)*(1.0-s);}
 float lum(vec2 uv){return dot(texture2D(u_img,uv).rgb,vec3(0.299,0.587,0.114));}
+vec2 sk(){float ra=u_res.x/u_res.y;float ri=u_ir.x/u_ir.y;return ra>ri?vec2(ra/ri,1.0):vec2(1.0,ri/ra);}
+vec2 contient(vec2 fc){vec2 uv=fc/u_res;uv.y=1.0-uv.y;return (uv-0.5)*sk()/0.86+0.5;}
 void main(){
-vec2 fc=gl_FragCoord.xy;vec2 uv=couvre(fc);vec2 su=fc/u_res;
-vec3 photo=texture2D(u_img,uv).rgb;float l=dot(photo,vec3(0.299,0.587,0.114));
+vec2 fc=gl_FragCoord.xy;vec2 su=fc/u_res;
+vec2 uvC=couvre(fc);vec2 uvK=contient(fc);
+float dans=step(0.0,uvK.x)*step(uvK.x,1.0)*step(0.0,uvK.y)*step(uvK.y,1.0);
+float hors=(1.0-dans)*u_contient;
+vec2 uv=mix(uvC,uvK,dans*u_contient);
+vec3 photo=texture2D(u_img,uv).rgb;
+if(hors>0.5){vec2 o=vec2(0.035,0.025);photo=(texture2D(u_img,uvC+o).rgb+texture2D(u_img,uvC-o).rgb+texture2D(u_img,uvC+vec2(o.x,-o.y)).rgb+texture2D(u_img,uvC-vec2(o.x,-o.y)).rgb)*0.25*0.28;}
+float l=dot(photo,vec3(0.299,0.587,0.114));
+vec2 tailleP=u_res*0.86/sk();vec2 e2=(abs(uvK-0.5)-0.5)*tailleP;float dehors=max(e2.x,e2.y);
+float cadreOr=(1.0-smoothstep(1.2*u_px,2.6*u_px,abs(dehors-3.0*u_px)))*u_contient;
+float ombreP=smoothstep(70.0*u_px,0.0,dehors)*step(0.0,dehors)*u_contient;
 vec2 d=1.3/u_ir;
 float tl=lum(uv+vec2(-d.x,-d.y));float tc=lum(uv+vec2(0.0,-d.y));float tr=lum(uv+vec2(d.x,-d.y));
 float ml=lum(uv+vec2(-d.x,0.0));float mr=lum(uv+vec2(d.x,0.0));
@@ -1028,7 +1153,7 @@ float c2=fract((pc.x*0.5-pc.y*0.86+onde)/6.5);
 float w=clamp(l*l*0.55,0.0,0.5);
 float taille=smoothstep(w+0.18,w,abs(c1-0.5)*2.0);
 float contre=smoothstep(0.55,0.35,abs(c2-0.5)*2.0)*smoothstep(0.35,0.75,l)*0.45;
-float trait=smoothstep(0.1,0.42,e);
+float trait=smoothstep(0.1,0.42,e)*(1.0-hors*0.7);
 vec3 fond=vec3(0.027,0.043,0.12);
 vec3 argent=vec3(0.8,0.86,1.0);
 float plat=1.0-smoothstep(0.7,0.95,l)*0.55;
@@ -1050,6 +1175,8 @@ float anneau=smoothstep(L*0.8,L*0.97,dm)*(1.0-smoothstep(L*0.97,L*1.1,dm))*step(
 col=mix(col,photo*1.04,dedans*m);
 float scin=step(0.6,hash(floor(fc/(4.0*u_px))+floor(u_t*6.0)));
 col+=vec3(0.96,0.98,0.82)*anneau*m*(0.25+0.75*scin)*0.9;
+col*=1.0-0.55*ombreP;
+col=mix(col,mix(vec3(0.84,0.7,0.42),vec3(0.95,0.9,0.7),m),cadreOr*0.9);
 float vig=smoothstep(0.35,1.0,length((su-0.5)*vec2(1.2,1.0))*1.35);
 col*=1.0-0.4*vig*m;
 gl_FragColor=vec4(col,1.0);}`;
@@ -1071,6 +1198,7 @@ gl_FragColor=vec4(col,1.0);}`;
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
       const [fx, fy] = (sec.dataset.focus || '0.5 0.5').split(' ').map(Number);
       gl.uniform2f(U('u_ir'), img.naturalWidth, img.naturalHeight); gl.uniform2f(U('u_focus'), fx, fy);
+      gl.uniform1f(U('u_contient'), sec.dataset.ajuste === 'contenir' ? 1 : 0);
       const uRes = U('u_res'), uP = U('u_p'), uT = U('u_t'), uPx = U('u_px'), uM = U('u_m'), uL = U('u_loupe');
       let dpr = 1;
       const taille = () => {
@@ -1173,6 +1301,7 @@ vec3 col=mix(eau,dense,m);col*=1.0-0.16*dot(p,p)*m;gl_FragColor=vec4(col,1.0);}`
         telA.style.setProperty('--barre', notesA[etape].dataset.barre); telA.style.setProperty('--barre-encre', notesA[etape].dataset.encre);
       }
     }
+    voyageDefile();
     const rt = teinte.getBoundingClientRect();
     const p = borne(-rt.top / (rt.height - h));
     // le téléphone de la confirmation arrive penché, puis se redresse
@@ -1215,6 +1344,7 @@ vec3 col=mix(eau,dense,m);col*=1.0-0.16*dot(p,p)*m;gl_FragColor=vec4(col,1.0);}`
   }
   addEventListener('scroll', auDefilement, { passive: true });
   addEventListener('resize', auDefilement);
+  addEventListener('resize', () => { dernierT = -1; voyageDefile(); });
   auDefilement(); niveau = niveauCible;
 
   /* le volant de l'en-tête braque quand on fait défiler la page, puis revient droit */

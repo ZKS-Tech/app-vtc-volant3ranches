@@ -14,7 +14,11 @@ dans l'esprit de « The Renaissance Edition » de Shopify (hiver 2026), avec les
   « La confirmation », comme dans l'application quand Fabrice confirme.
 - **Le prix d'abord** : estimateur avec les vrais tarifs (1,80 / 2,20 €/km, 2,60 / 3,00 €/km, minimums,
   aller-retour × 1,90, arrondi à 0,50 €), distance calculée comme dans le prototype.
-- **Le trajet** : le plan suit le départ et l'arrivée choisis dans l'estimateur.
+- **Le trajet** : la carte bascule en 3D sous un ciel étoilé, sur un relief décoratif en courbes de
+  niveau ; une comète parcourt l'itinéraire choisi dans l'estimateur au rythme du défilement, la
+  caméra la suit et zoome, les villes gardent des étiquettes droites, les compteurs (km parcourus,
+  temps restant) défilent, une onde marque l'arrivée.
+- **L'affiche de Picard** est montrée en entier, comme un tableau accroché : cadre doré, fond flou.
 - **Le panneau** : tapez un nom, le panneau se met à jour et se retourne.
 
 Les captures d'écran (`assets/ecrans/`) sont découpées dans `docs/prototype/`. Les photos et le logo
