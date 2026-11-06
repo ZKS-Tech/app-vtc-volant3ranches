@@ -31,7 +31,7 @@ export function retourLe(a: Annonce) {
 
 type Ctx = {
   annonces: Annonce[]; // toutes (Fabrice) ou en cours et à venir (clients)
-  /** Annonces à montrer aux clients aujourd'hui : indisponibilités jusqu'à leur dernier jour, infos entre leurs dates. */
+  /** Annonces à montrer aux clients aujourd'hui (absences d'abord) : indisponibilités jusqu'à leur dernier jour, infos entre leurs dates. */
   visibles: Annonce[];
   indisponibiliteLe: (jour: Date) => Annonce | undefined;
   enregistrer: (a: AnnonceSaisie) => Promise<void>;
@@ -71,7 +71,10 @@ export function AnnoncesProvider({ children, demo: demoForce }: { children: Reac
     const triees = [...annonces].sort((a, b) => a.debut.localeCompare(b.debut));
     return {
       annonces: triees,
-      visibles: triees.filter((a) => a.fin >= aujourdhui && (a.bloquer || a.debut <= aujourdhui)),
+      // Les absences passent devant les informations, puis la plus proche d'abord.
+      visibles: triees
+        .filter((a) => a.fin >= aujourdhui && (a.bloquer || a.debut <= aujourdhui))
+        .sort((a, b) => Number(b.bloquer) - Number(a.bloquer) || a.debut.localeCompare(b.debut)),
       indisponibiliteLe: (jour) => { const j = isoJour(jour); return triees.find((a) => a.bloquer && a.debut <= j && j <= a.fin); },
       enregistrer: async (a) => {
         if (demo) {
