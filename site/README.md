@@ -35,9 +35,11 @@ cartes, vignettes carrées de 640 px pour le garage).
   en CSS (cadre, îlot, boutons, barre d'état à la couleur de l'écran) ; écrans affichés en entier.
 - **Plaques d'immatriculation floutées** sur toutes les photos publiées (le flou est appliqué depuis
   les originaux ; les originaux dans `site/images/` restent intacts).
-- **Le garage** (d'après la page d'accueil des Shopify Editions) : deux étagères de pochettes ; au
-  survol, la pochette sort de l'étagère ; au clic, la photo s'ouvre en grand (flèches du clavier,
-  Échap pour fermer).
+- **Le garage** : une porte sectionnelle en métal (logo peint) se lève au défilement, la lumière
+  filtre dessous ; une fois ouverte, les néons du plafond grésillent puis s'allument, et l'enseigne
+  néon « Le garage » s'éclaire. Dedans, deux étagères de pochettes (d'après la page d'accueil des
+  Shopify Editions) : au survol, la pochette sort ; au clic, la photo s'ouvre en grand (flèches du
+  clavier, Échap pour fermer). Les photos du bas se reflètent sur le sol.
 - **Les cartes véhicules** s'inclinent sous la souris, avec un reflet.
 - Dernière page : un volant Tesla dans la nuit (photo Pexels, Holyson H), sans le présenter comme
   le véhicule de Fabrice.
