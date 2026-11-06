@@ -1,7 +1,12 @@
-import { createContext, ReactNode, useContext, useMemo, useState } from 'react';
-import { OffreId, lieu, offre, prix, trajet } from './data';
+import { activerNotifications, oublierTelephone } from './notifications';
+import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { OffreId, appliquerTarifs, lieu, offre, prix, trajet } from './data';
+import {
+  annulerCourse, chargerTarifs, connexionChauffeur, connexionInvite, creerDemande, deconnexion, ecouterMesCourses,
+  estChauffeur, mesCourses, supabase,
+} from './serveur';
 
-export type Statut = 'envoyee' | 'confirmee' | 'terminee' | 'annulee';
+export type Statut = 'envoyee' | 'confirmee' | 'refusee' | 'terminee' | 'annulee';
 
 export type Course = {
   id: string;
@@ -20,6 +25,7 @@ export type Course = {
   nom: string;
   statut: Statut;
   envoyeeLe?: Date; // heure d'envoi de la demande : sert au délai de confirmation
+  motifRefus?: string; // raison donnée par Fabrice quand il refuse
   demo?: boolean;
 };
 
@@ -99,7 +105,17 @@ type Store = {
   reinitialiser: () => void;
   courses: Course[];
   envoyer: () => Promise<Course>;
-  changerStatut: (id: string, s: Statut) => void;
+  changerStatut: (id: string, s: Statut, motif?: string) => void;
+  annuler: (id: string) => Promise<void>;
+  serveur: EtatServeur;
+  tarifsVersion: number;
+  recalculerTarifs: () => void;
+  // Espace chauffeur : rôle du compte connecté, ou démonstration sans serveur.
+  role: 'client' | 'chauffeur';
+  demoChauffeur: boolean;
+  connecterChauffeur: (email: string, motDePasse: string) => Promise<void>;
+  deconnecterChauffeur: () => Promise<void>;
+  entrerDemoChauffeur: () => void;
   simulerEchec: boolean;
   setSimulerEchec: (v: boolean) => void;
   prefs: { push: boolean; sms: boolean; email: boolean; stats: boolean };
@@ -109,6 +125,8 @@ type Store = {
 };
 
 export type Apparence = 'auto' | 'clair' | 'sombre';
+// non-configure : pas de clés Supabase, l'appli tourne en démonstration.
+export type EtatServeur = { etat: 'non-configure' | 'connexion' | 'connecte' | 'erreur'; message?: string };
 
 const Ctx = createContext<Store | null>(null);
 
@@ -118,6 +136,42 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [simulerEchec, setSimulerEchec] = useState(false);
   const [prefs, setP] = useState({ push: true, sms: true, email: true, stats: false });
   const [apparence, setApparence] = useState<Apparence>('auto');
+  const [serveur, setServeur] = useState<EtatServeur>({ etat: supabase ? 'connexion' : 'non-configure' });
+  const [tarifsVersion, setTarifsVersion] = useState(0);
+  const [role, setRole] = useState<'client' | 'chauffeur'>('client');
+  const [demoChauffeur, setDemoChauffeur] = useState(false);
+  const canal = useRef<ReturnType<typeof ecouterMesCourses>>(null);
+
+  // Côté client : les courses de ce téléphone, puis la confirmation de Fabrice en temps réel.
+  const demarrerClient = async (uid: string) => {
+    canal.current?.unsubscribe();
+    const liste = await mesCourses();
+    setCourses(liste);
+    canal.current = ecouterMesCourses(uid, (c) =>
+      setCourses((cs) => (cs.some((x) => x.id === c.id) ? cs.map((x) => (x.id === c.id ? c : x)) : [c, ...cs])),
+    );
+  };
+
+  // Connexion au démarrage : compte invité (ou session de Fabrice), tarifs à jour.
+  useEffect(() => {
+    if (!supabase) return;
+    let actif = true;
+    (async () => {
+      try {
+        const uid = await connexionInvite();
+        appliquerTarifs(await chargerTarifs());
+        const chauffeur = await estChauffeur();
+        if (!actif) return;
+        setTarifsVersion((v) => v + 1);
+        if (chauffeur) setRole('chauffeur');
+        else await demarrerClient(uid);
+        setServeur({ etat: 'connecte' });
+      } catch (e) {
+        if (actif) setServeur({ etat: 'erreur', message: e instanceof Error ? e.message : String(e) });
+      }
+    })();
+    return () => { actif = false; canal.current?.unsubscribe(); };
+  }, []);
 
   const value = useMemo<Store>(
     () => ({
@@ -125,8 +179,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       maj: (p) => setBrouillon((b) => ({ ...b, ...p })),
       reinitialiser: () => setBrouillon((b) => ({ ...brouillonVide(), nom: b.nom, telephone: b.telephone, email: b.email })),
       courses,
-      envoyer: () =>
-        new Promise<Course>((resolve, reject) => {
+      envoyer: async () => {
+        if (supabase && serveur.etat === 'connecte') {
+          const b = brouillon;
+          const t = trajet(lieu(b.departId!), lieu(b.arriveeId!));
+          const c = await creerDemande(b, avecHeure(b.jour, b.heure), t.km, t.minutes);
+          setCourses((cs) => [c, ...cs.filter((x) => x.id !== c.id)]);
+          activerNotifications(); // la demande d'autorisation arrive au moment où elle a un sens
+          return c;
+        }
+        return new Promise<Course>((resolve, reject) => {
           setTimeout(() => {
             if (simulerEchec) return reject(new Error('reseau'));
             const b = brouillon;
@@ -143,8 +205,38 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             setCourses((cs) => [c, ...cs]);
             resolve(c);
           }, 1400);
-        }),
-      changerStatut: (id, s) => setCourses((cs) => cs.map((c) => (c.id === id ? { ...c, statut: s } : c))),
+        });
+      },
+      changerStatut: (id, s, motif) => setCourses((cs) => cs.map((c) => (c.id === id ? { ...c, statut: s, motifRefus: motif } : c))),
+      annuler: async (id) => {
+        if (supabase && serveur.etat === 'connecte' && !courses.find((c) => c.id === id)?.demo) {
+          const c = await annulerCourse(id);
+          setCourses((cs) => cs.map((x) => (x.id === id ? c : x)));
+        } else {
+          setCourses((cs) => cs.map((c) => (c.id === id ? { ...c, statut: 'annulee' } : c)));
+        }
+      },
+      serveur,
+      tarifsVersion,
+      recalculerTarifs: () => setTarifsVersion((v) => v + 1),
+      role,
+      demoChauffeur,
+      connecterChauffeur: async (email, motDePasse) => {
+        await oublierTelephone();
+        await connexionChauffeur(email, motDePasse);
+        canal.current?.unsubscribe();
+        setCourses([]);
+        setRole('chauffeur');
+        activerNotifications();
+      },
+      deconnecterChauffeur: async () => {
+        if (demoChauffeur) { setDemoChauffeur(false); return; }
+        await oublierTelephone().catch(() => {});
+        const uid = await deconnexion();
+        setRole('client');
+        await demarrerClient(uid);
+      },
+      entrerDemoChauffeur: () => setDemoChauffeur(true),
       simulerEchec,
       setSimulerEchec,
       prefs,
@@ -152,7 +244,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       apparence,
       setApparence,
     }),
-    [brouillon, courses, simulerEchec, prefs, apparence],
+    [brouillon, courses, simulerEchec, prefs, apparence, serveur, tarifsVersion, role, demoChauffeur],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

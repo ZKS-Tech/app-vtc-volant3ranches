@@ -22,7 +22,7 @@ Site actuel : <https://volant3ranches-vtc.fr>
 2. Il voit tout de suite le **prix** des deux offres, calculé au kilomètre avec les tarifs du site
    (majoration nuit, week-end et jours fériés, aller-retour à -5 %, minimum de course).
 3. Il envoie une **demande** sans créer de compte. Fabrice la confirme sous 30 minutes ; le client est
-   prévenu par notification, SMS et email.
+   prévenu par notification (email récapitulatif à venir).
 4. Il retrouve ses courses, peut appeler Fabrice, annuler (frais selon les CGV) et afficher le
    **panneau à son nom** pour le hall des arrivées.
 
@@ -60,6 +60,11 @@ redéfinies pour sortir du style « crème et or » jugé trop générique.
 | `mobile/src/data.ts` | Contenu repris du site : tarifs, véhicules, prestations, FAQ, avis, CGV, contact |
 | `mobile/src/theme.ts` | Les deux palettes (clair et sombre) et la typographie |
 | `mobile/assets/photos/` | Logo et photos du site |
+| `mobile/src/serveur.ts` | Connexion à Supabase : compte invité, tarifs, demandes, temps réel |
+| `supabase/` | Base de données : structure, sécurité, tarifs et tests (voir `supabase/README.md`) |
+| `mobile/app/chauffeur/` | Espace de Fabrice : tableau de bord, demandes, messages, planning, clients (Gestion : roue dentée du tableau de bord) |
+| `mobile/src/chauffeur.tsx` | Données de l'espace chauffeur (temps réel) et jeu de démonstration |
+| `docs/architecture.md` | Architecture et ordre de développement |
 | `PRODUCT.md` | Contexte produit : clients, règles métier, contraintes, décisions ouvertes |
 | `docs/brief-reservation.md` | Brief de conception du parcours de réservation et plan de statistiques (GA4) |
 | `docs/prototype/` | Captures des écrans |
@@ -143,6 +148,67 @@ Chaque modification du code s'affiche immédiatement sur le téléphone.
 - Mettre à jour Expo Go : le projet utilise Expo SDK 58.
 - Dans Expo Go, « View error log » donne le message exact ; le terminal d'`npx expo start` aussi.
 
+### Recevoir les notifications (version de développement)
+
+Expo Go ne reçoit plus les notifications push sur Android. Pour les tester, on installe une fois sur
+le téléphone une **version de développement** : une vraie appli Volant3ranches (APK), qui se connecte
+ensuite à l'ordinateur comme Expo Go et se met à jour à chaque modification du code. Gratuit avec un
+compte Expo (offre gratuite d'EAS Build), sans compte Google Play.
+
+1. Une seule fois, relier le projet au compte Expo (le numéro du projet s'ajoute dans `app.json`,
+   à committer) :
+
+   ```bash
+   npx eas-cli login
+   ```
+
+   ```bash
+   npx eas-cli init
+   ```
+
+   Puis, toujours une seule fois, **Firebase** (gratuit), indispensable pour les notifications sur
+   Android :
+   - sur <https://console.firebase.google.com>, créer un projet « Volant3ranches » (Google Analytics :
+     on peut refuser pour l'instant) ;
+   - **Ajouter une application › Android**, nom du package `fr.volant3ranches.app`, puis télécharger
+     `google-services.json` et le placer dans `mobile/` (il peut être committé) ;
+   - **Paramètres du projet › Comptes de service › Générer une nouvelle clé privée** : un fichier
+     `…-firebase-adminsdk-….json` se télécharge. C'est une clé **secrète** : ne pas la mettre dans le
+     dépôt (elle est ignorée par Git) ;
+   - la confier à Expo : `npx eas-cli credentials` › Android › development › **Google Service Account**
+     › **Manage your Google Service Account Key for Push Notifications (FCM V1)** › Upload, et choisir
+     ce fichier.
+
+2. Construire l'APK (environ 15 minutes sur les serveurs d'Expo, file d'attente comprise) :
+
+   ```bash
+   npx eas-cli build -p android --profile development
+   ```
+
+   À la question sur les identifiants Android, accepter de **générer un nouveau keystore**. À la fin,
+   un lien et un QR code permettent de télécharger l'APK sur le téléphone ; autoriser l'installation
+   d'applications inconnues quand Android le demande.
+
+3. Lancer le serveur pour cette version (au lieu de `npm run telephone`) :
+
+   ```bash
+   npm run appli
+   ```
+
+   puis ouvrir l'appli Volant3ranches et scanner le QR code.
+
+   « Android internal error » au scan : l'adresse du tunnel contient un `_`, refusé par Android.
+   Changer `urlRandomness` dans `mobile/.expo/settings.json` (lettres et chiffres seulement) et relancer.
+
+À la première demande envoyée, l'appli demande l'autorisation d'envoyer des notifications ; côté
+Fabrice, à la connexion. L'état se voit dans Profil › Être prévenu (ou Gestion côté Fabrice).
+Il faut aussi avoir exécuté la migration 6 dans Supabase (voir `supabase/README.md`).
+
+Sur iPhone, une version installable demande un compte Apple Developer (99 €/an) ; on le fera à la
+publication.
+
+`npm run telephone` continue d'ouvrir Expo Go pour tout le reste.
+
 ### Autres façons de l'essayer
 
 - **Dans le navigateur** : `npx expo start --web` (pratique pour un aperçu rapide, mais le rendu
@@ -166,18 +232,30 @@ Chaque modification du code s'affiche immédiatement sur le téléphone.
 
 ## Limites du prototype
 
-- Seule une sélection de lieux (Tarn, Toulouse, Carcassonne) est proposée et la distance est
-  estimée ; la version finale utilisera Google pour les adresses et la distance réelle par la route.
-- Les courses de « Claire Martin » sont des exemples ; rien n'est enregistré ni envoyé.
-- Comptes, notifications, SMS et emails ne sont pas encore branchés.
+- Adresses : toutes les adresses de France (API Adresse de l'IGN), plus les raccourcis aéroport et
+  gares. Distance et durée : itinéraire réel par la route (IGN), recalculé par la base à chaque demande.
+  Sans réponse de l'IGN, aucun prix n'est affiché.
+- **Sans clé Supabase** dans `mobile/.env`, l'appli tourne en démonstration : les courses de
+  « Claire Martin » sont des exemples et rien n'est enregistré. **Avec la clé**, les tarifs viennent de
+  la base, les demandes y sont enregistrées et la confirmation arrive en temps réel
+  (voir `supabase/README.md`).
+- **Espace chauffeur** : Profil › tout en bas › Espace chauffeur. Fabrice s'y connecte avec son email
+  et son mot de passe (compte à créer : voir `supabase/README.md`). « Voir la démonstration » le montre
+  sans compte, avec des clients et des courses fictifs.
+- **Notifications** : pas dans Expo Go sur Android, ni dans le navigateur. Voir « Recevoir les
+  notifications » ci-dessus. L'email récapitulatif n'est pas encore branché.
 
 ## Prochaines étapes
 
+- ~~Messagerie client ↔ chauffeur~~ : faite (détail d'une course › « Écrire à Fabrice » ; côté Fabrice,
+  onglet « Messages » de l'espace chauffeur).
+- ~~Annonces et absences~~ : faites (Gestion › Annonces et absences ; migration 7).
+- ~~Notifications push~~ : faites (voir `supabase/README.md`, migration 6). Prochaine étape : l'email
+  récapitulatif (Brevo, gratuit).
 - ~~Valider la maquette avec Fabrice~~ : validée. Décisions : mode chauffeur dans l'application,
   30 min d'attente gratuite à l'aéroport, majoration du week-end maintenue (CGV à mettre à jour).
-- Mode chauffeur : demandes en attente, Confirmer / Refuser, notification à chaque demande.
 - Serveur de réservation et outil de confirmation pour Fabrice.
-- Adresses et distances Google, notifications push, SMS et emails.
+- SMS (plus tard, payant).
 - Statistiques **Firebase Analytics (GA4)**, avec consentement, sur le parcours décrit dans
   `docs/brief-reservation.md`.
 - Version installable sans ordinateur pour les testeurs (EAS Build, TestFlight / test interne

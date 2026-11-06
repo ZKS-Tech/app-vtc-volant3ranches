@@ -1,5 +1,7 @@
+import { router } from 'expo-router';
 import { Linking, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { contact } from '../../src/data';
+import { LigneNotifications } from '../../src/LigneNotifications';
 import { useStore } from '../../src/store';
 import { Couleurs, radius, space } from '../../src/theme';
 import { useTheme } from '../../src/useTheme';
@@ -7,7 +9,7 @@ import { Bouton, couleursSwitch, Segment, Titre } from '../../src/ui';
 
 export default function Profil() {
   const { c, type, s } = useTheme(creerStyles);
-  const { prefs, setPrefs, simulerEchec, setSimulerEchec, apparence, setApparence } = useStore();
+  const { prefs, setPrefs, simulerEchec, setSimulerEchec, apparence, setApparence, serveur } = useStore();
   return (
     <ScrollView style={{ backgroundColor: c.sol }} contentContainerStyle={{ padding: space.l, paddingBottom: space.xxl }}>
       <View style={s.invite}>
@@ -27,11 +29,15 @@ export default function Profil() {
       />
       <Text style={[type.small, { marginTop: space.s }]}>Automatique : suit le réglage du téléphone.</Text>
 
-      <Titre>Confirmations de course</Titre>
+      <Titre>Être prévenu</Titre>
       <View style={s.bloc}>
-        <Interrupteur titre="Notifications" sous="Dès que Fabrice confirme" valeur={prefs.push} onChange={(v) => setPrefs({ push: v })} />
-        <Interrupteur titre="SMS" sous="Même appli fermée" valeur={prefs.sms} onChange={(v) => setPrefs({ sms: v })} trait />
-        <Interrupteur titre="Email" sous="Récapitulatif écrit, pratique pour les notes de frais" valeur={prefs.email} onChange={(v) => setPrefs({ email: v })} trait />
+        <LigneNotifications sous="Confirmation, refus, messages de Fabrice et rappel la veille" />
+        <View style={[s.ligne, s.trait]}>
+          <View style={{ flex: 1 }}>
+            <Text style={type.body}>Email récapitulatif</Text>
+            <Text style={type.small}>Bientôt : pratique pour les notes de frais</Text>
+          </View>
+        </View>
       </View>
 
       <Titre>Confidentialité</Titre>
@@ -53,6 +59,18 @@ export default function Profil() {
 
       <Titre>Prototype</Titre>
       <View style={s.bloc}>
+        <View style={[s.ligne]}>
+          <View style={{ flex: 1 }}>
+            <Text style={type.body}>Serveur</Text>
+            <Text style={type.small}>
+              {serveur.etat === 'connecte' ? 'Connecté : tarifs et courses enregistrés dans Supabase'
+                : serveur.etat === 'connexion' ? 'Connexion en cours…'
+                : serveur.etat === 'erreur' ? `Erreur : ${serveur.message}`
+                : 'Non configuré : mode démonstration (clé Supabase absente)'}
+            </Text>
+          </View>
+          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: serveur.etat === 'connecte' ? c.feuille : serveur.etat === 'erreur' ? c.erreur : c.trait }} />
+        </View>
         <Interrupteur
           titre="Simuler un échec d'envoi"
           sous="Pour montrer à Fabrice l'écran affiché quand la demande ne part pas."
@@ -60,7 +78,8 @@ export default function Profil() {
           onChange={setSimulerEchec}
         />
       </View>
-      <Text style={[type.small, { marginTop: space.l }]}>Volant3ranches · prototype de démonstration, version 0.1</Text>
+      <Bouton titre="Espace chauffeur" variante="texte" icone="car-outline" onPress={() => router.push('/connexion-chauffeur')} style={{ alignSelf: 'flex-start', marginTop: space.xl, marginLeft: -space.s }} />
+      <Text style={[type.small, { marginTop: space.s }]}>Volant3ranches · version 0.2</Text>
     </ScrollView>
   );
 }

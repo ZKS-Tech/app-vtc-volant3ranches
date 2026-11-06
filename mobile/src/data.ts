@@ -81,7 +81,8 @@ export const offres: Offre[] = [
 
 export const offre = (id: OffreId) => offres.find((o) => o.id === id)!;
 
-export type LieuType = 'aeroport' | 'gare' | 'ville';
+// 'adresse' : une adresse précise trouvée par l'API Adresse (Géoplateforme).
+export type LieuType = 'aeroport' | 'gare' | 'ville' | 'adresse';
 export type Lieu = { id: string; nom: string; detail: string; type: LieuType; lat: number; lon: number };
 
 export const lieux: Lieu[] = [
@@ -102,12 +103,26 @@ export const lieux: Lieu[] = [
   { id: 'carcassonne', nom: 'Carcassonne, la Cité', detail: '11000 Carcassonne', type: 'ville', lat: 43.2063, lon: 2.3644 },
 ];
 
-export const lieu = (id: string) => lieux.find((l) => l.id === id)!;
-export const estTransfert = (l?: Lieu) => !!l && l.type !== 'ville';
+// Les lieux du raccourci (aéroport, gares, villes) plus tous ceux rencontrés : adresses choisies
+// dans la recherche, départs et arrivées des courses chargées depuis le serveur.
+const lieuxConnus = new Map<string, Lieu>();
+export const enregistrerLieu = (l: Lieu) => { lieuxConnus.set(l.id, l); return l; };
+export const lieu = (id: string): Lieu =>
+  lieux.find((l) => l.id === id) ?? lieuxConnus.get(id) ?? { id, nom: 'Adresse', detail: '', type: 'adresse', lat: 0, lon: 0 };
+export const estTransfert = (l?: Lieu) => !!l && (l.type === 'aeroport' || l.type === 'gare');
 
-// Prototype : distance estimée à vol d'oiseau × 1,25. L'application réelle utilisera la distance
-// par la route (Google Distance Matrix), comme le module du site.
+// Itinéraires réels (IGN) déjà calculés, par couple de positions.
+export type Itineraire = { km: number; minutes: number; coords: [number, number][] };
+const itineraires = new Map<string, Itineraire>();
+const cle = (a: Lieu, b: Lieu) => `${a.lat.toFixed(5)},${a.lon.toFixed(5)}>${b.lat.toFixed(5)},${b.lon.toFixed(5)}`;
+export const itineraireEnCache = (a: Lieu, b: Lieu) => itineraires.get(cle(a, b));
+export const memoriserItineraire = (a: Lieu, b: Lieu, it: Itineraire) => { itineraires.set(cle(a, b), it); return it; };
+
+// Distance et durée : l'itinéraire IGN s'il est connu, sinon une estimation (vol d'oiseau × 1,25)
+// qui ne sert qu'en démonstration hors ligne. Pour une vraie demande, la base recalcule toujours.
 export function trajet(a: Lieu, b: Lieu) {
+  const it = itineraireEnCache(a, b);
+  if (it) return { km: it.km, minutes: it.minutes };
   const R = 6371;
   const rad = (d: number) => (d * Math.PI) / 180;
   const dLat = rad(b.lat - a.lat);
@@ -118,6 +133,20 @@ export function trajet(a: Lieu, b: Lieu) {
   return { km, minutes };
 }
 
+// Règles de prix. Valeurs du site par défaut ; remplacées par celles de la base (table parametres)
+// dès que l'appli est connectée, pour que Fabrice puisse les changer sans nouvelle version.
+export const regles = {
+  nuitDebut: 22,
+  nuitFin: 6,
+  majorationWeekend: true,
+  coefAllerRetour: 1.9,
+  arrondi: 0.5,
+  attenteAeroportMin: 30,
+  attenteGareMin: 15,
+  attenteStandardMin: 10,
+  delaiConfirmationMin: 30,
+};
+
 export const joursFeries = [
   '2026-01-01', '2026-04-06', '2026-05-01', '2026-05-08', '2026-05-14', '2026-05-25', '2026-07-14',
   '2026-08-15', '2026-11-01', '2026-11-11', '2026-12-25', '2027-01-01', '2027-03-29', '2027-05-01',
@@ -125,28 +154,60 @@ export const joursFeries = [
   '2027-12-25',
 ];
 
+// Tarifs reçus de la base : met à jour les offres, les règles et les jours fériés en place.
+export type TarifsServeur = {
+  offres: { id: string; prix_km_jour: number; prix_km_majore: number; minimum: number; passagers_max: number; bagages_max: number }[];
+  parametres: {
+    nuit_debut: number; nuit_fin: number; majoration_weekend: boolean; coef_aller_retour: number; arrondi: number;
+    attente_aeroport_min: number; attente_gare_min: number; attente_standard_min: number; delai_confirmation_min: number;
+  } | null;
+  joursFeries: string[];
+};
+export function appliquerTarifs(t: TarifsServeur) {
+  for (const o of t.offres) {
+    const locale = offres.find((x) => x.id === o.id);
+    if (!locale) continue;
+    locale.prixKmJour = Number(o.prix_km_jour);
+    locale.prixKmMajore = Number(o.prix_km_majore);
+    locale.minimum = Number(o.minimum);
+    locale.passagersMax = o.passagers_max;
+    locale.bagagesMax = o.bagages_max;
+  }
+  const p = t.parametres;
+  if (p) {
+    Object.assign(regles, {
+      nuitDebut: p.nuit_debut, nuitFin: p.nuit_fin, majorationWeekend: p.majoration_weekend,
+      coefAllerRetour: Number(p.coef_aller_retour), arrondi: Number(p.arrondi),
+      attenteAeroportMin: p.attente_aeroport_min, attenteGareMin: p.attente_gare_min,
+      attenteStandardMin: p.attente_standard_min, delaiConfirmationMin: p.delai_confirmation_min,
+    });
+  }
+  if (t.joursFeries.length) joursFeries.splice(0, joursFeries.length, ...t.joursFeries);
+}
+
 export const isoJour = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 export function majoration(date: Date, heure: string) {
   const h = parseInt(heure.split(':')[0], 10);
   const raisons: string[] = [];
-  if (h >= 22 || h < 6) raisons.push('nuit (22h–6h)');
+  if (h >= regles.nuitDebut || h < regles.nuitFin) raisons.push(`nuit (${regles.nuitDebut}h–${regles.nuitFin}h)`);
   const j = date.getDay();
-  if (j === 6) raisons.push('samedi');
-  if (j === 0) raisons.push('dimanche');
+  if (regles.majorationWeekend && j === 6) raisons.push('samedi');
+  if (regles.majorationWeekend && j === 0) raisons.push('dimanche');
   if (joursFeries.includes(isoJour(date))) raisons.push('jour férié');
   return raisons;
 }
 
+// Même calcul que la fonction calculer_prix de la base : l'appli affiche, la base fait foi.
 export function prix(o: Offre, km: number, date: Date, heure: string, allerRetour: boolean) {
   const raisons = majoration(date, heure);
   const prixKm = raisons.length ? o.prixKmMajore : o.prixKmJour;
   let p = km * prixKm;
-  if (allerRetour) p *= 1.9;
+  if (allerRetour) p *= regles.coefAllerRetour;
   const auMinimum = p < o.minimum;
   p = Math.max(p, o.minimum);
-  p = Math.round(p * 2) / 2;
+  p = Math.round(p / regles.arrondi) * regles.arrondi;
   return { montant: p, prixKm, raisons, auMinimum };
 }
 

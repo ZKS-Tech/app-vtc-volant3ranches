@@ -12,7 +12,10 @@ export default function Courses() {
   const [onglet, setOnglet] = useState<'avenir' | 'passees'>('avenir');
   const maintenant = new Date();
   const liste = courses
-    .filter((x) => (onglet === 'avenir' ? x.date >= maintenant && x.statut !== 'terminee' : x.date < maintenant || x.statut === 'terminee'))
+    .filter((x) => {
+      const active = (x.statut === 'envoyee' || x.statut === 'confirmee') && x.date >= maintenant;
+      return onglet === 'avenir' ? active : !active;
+    })
     .sort((a, b) => (onglet === 'avenir' ? +a.date - +b.date : +b.date - +a.date));
 
   return (

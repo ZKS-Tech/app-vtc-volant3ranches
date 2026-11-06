@@ -2,7 +2,7 @@ import { useFocusEffect } from 'expo-router';
 import { ExpoWebGLRenderingContext, GLView } from 'expo-gl';
 import { Accelerometer } from 'expo-sensors';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, AppState, LayoutChangeEvent, StyleSheet, View, ViewStyle } from 'react-native';
+import { AccessibilityInfo, Animated, AppState, LayoutChangeEvent, StyleSheet, View, ViewStyle } from 'react-native';
 
 // Cuve d'indigo vivante : un bain de teinture rendu en temps réel (shader WebGL).
 // niveau 0 = eau claire traversée de volutes ; niveau 1 = la cuve, l'indigo a tout envahi.
@@ -10,7 +10,8 @@ import { AccessibilityInfo, AppState, LayoutChangeEvent, StyleSheet, View, ViewS
 
 export type CouleursCuve = { eau: string; voile: string; indigo: string; cuve: string };
 
-const FACTEUR = 3; // calcul en basse définition puis agrandi : le motif est flou par nature
+// Calcul en définition réduite puis agrandi : le motif est flou par nature, et le GPU travaille 4× moins.
+const FACTEUR = 2;
 
 const vertex = `
 attribute vec2 a_pos;
@@ -86,11 +87,19 @@ const rgb = (hex: string): [number, number, number] => {
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
 };
 
-export function CuveIndigo({ niveau, couleurs, style }: { niveau: number; couleurs: CouleursCuve; style?: ViewStyle }) {
+export function CuveIndigo({ niveau, couleurs, style, onMiHauteur }: {
+  niveau: number; couleurs: CouleursCuve; style?: ViewStyle;
+  // Appelé quand l'encre franchit la moitié de l'écran (en montant : true, en redescendant : false).
+  onMiHauteur?: (recouvert: boolean) => void;
+}) {
   const [taille, setTaille] = useState<{ w: number; h: number } | null>(null);
+  // Le bain apparaît en fondu à sa première image : pas de flash noir pendant la création du contexte.
+  const apparition = useRef(new Animated.Value(0)).current;
+  const rappel = useRef(onMiHauteur);
+  rappel.current = onMiHauteur;
   const etat = useRef({
     niveau: niveau, cible: niveau, couleurs, tilt: [0, 0], tiltCible: [0, 0],
-    actif: true, calme: false, debut: Date.now(), raf: 0 as number, dernier: 0,
+    actif: true, calme: false, debut: Date.now(), raf: 0 as number, dernier: 0, premiere: true, recouvert: niveau > 0.5,
   }).current;
   etat.cible = niveau;
   etat.couleurs = couleurs;
@@ -159,11 +168,14 @@ export function CuveIndigo({ niveau, couleurs, style }: { niveau: number; couleu
       if (!etat.actif) return;
       const enMouvement = Math.abs(etat.cible - etat.niveau) > 0.002;
       if (etat.calme && !enMouvement && etat.dernier) return; // image fixe
-      if (now - etat.dernier < 32) return; // ~30 images/s suffisent à un bain qui dérive
+      if (now - etat.dernier < 14) return; // au plus ~60 images/s, même sur un écran 120 Hz
       const dt = etat.dernier ? Math.min(0.1, (now - etat.dernier) / 1000) : 0.016;
       etat.dernier = now;
-      // montée de l'encre : approche exponentielle, ~1,5 s
-      etat.niveau = etat.calme ? etat.cible : etat.niveau + (etat.cible - etat.niveau) * (1 - Math.exp(-dt * 2.6));
+      // montée de l'encre : approche exponentielle, ~1 s
+      etat.niveau = etat.calme ? etat.cible : etat.niveau + (etat.cible - etat.niveau) * (1 - Math.exp(-dt * 3.6));
+      // Le texte bascule juste avant que l'encre n'atteigne le bas du contenu.
+      const recouvert = etat.niveau > 0.42;
+      if (recouvert !== etat.recouvert) { etat.recouvert = recouvert; rappel.current?.(recouvert); }
       etat.tilt = etat.calme ? [0, 0] : etat.tilt.map((v, i) => v + (etat.tiltCible[i] - v) * 0.08);
       const t = etat.calme ? 12 : (Date.now() - etat.debut) / 1000;
       const c = etat.couleurs;
@@ -179,6 +191,10 @@ export function CuveIndigo({ niveau, couleurs, style }: { niveau: number; couleu
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
       gl.flush();
       gl.endFrameEXP();
+      if (etat.premiere) {
+        etat.premiere = false;
+        Animated.timing(apparition, { toValue: 1, duration: 350, useNativeDriver: true }).start();
+      }
     };
     etat.raf = requestAnimationFrame(image);
   };
@@ -195,6 +211,7 @@ export function CuveIndigo({ niveau, couleurs, style }: { niveau: number; couleu
       style={[StyleSheet.absoluteFill, { overflow: 'hidden', backgroundColor: niveau > 0.5 ? couleurs.indigo : couleurs.eau }, style]}
     >
       {taille ? (
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: apparition }]}>
         <GLView
           onContextCreate={surContexte}
           style={{
@@ -206,6 +223,7 @@ export function CuveIndigo({ niveau, couleurs, style }: { niveau: number; couleu
             transform: [{ scale: FACTEUR }],
           }}
         />
+        </Animated.View>
       ) : null}
     </View>
   );

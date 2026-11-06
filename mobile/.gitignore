@@ -39,3 +39,7 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Clé privée Firebase (compte de service) : ne jamais committer
+*firebase-adminsdk*.json
+cle-fcm*.json

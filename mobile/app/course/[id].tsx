@@ -6,14 +6,16 @@ import { dateCourte, duree, estTransfert, euros, fraisAnnulation, lieu, offre, p
 import { useStore } from '../../src/store';
 import { Couleurs, f, radius, space } from '../../src/theme';
 import { DelaiConfirmation } from '../../src/DelaiConfirmation';
+import { useMessagerie } from '../../src/messagerie';
 import { useTheme } from '../../src/useTheme';
 import { Bouton, Itineraire, Ligne, Note, Teinture, Titre, appelerFabrice, teintesDe } from '../../src/ui';
 
 export default function DetailCourse() {
   const { c, type, s } = useTheme(creerStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { courses, changerStatut } = useStore();
+  const { courses, annuler: annulerCourse } = useStore();
   const [annuler, setAnnuler] = useState(false);
+  const { nonLus } = useMessagerie();
   const course = courses.find((x) => x.id === id);
   if (!course) return null;
   const t = teintesDe(c)[course.statut];
@@ -25,7 +27,7 @@ export default function DetailCourse() {
 
   return (
     <ScrollView style={{ backgroundColor: c.sol }} contentContainerStyle={{ padding: space.l, paddingBottom: space.xxl }}>
-      <View style={[s.entete, { backgroundColor: t.fond }, course.statut === 'annulee' && { borderWidth: 1, borderColor: c.trait }]}>
+      <View style={[s.entete, { backgroundColor: t.fond }, (course.statut === 'annulee' || course.statut === 'refusee') && { borderWidth: 1, borderColor: c.trait }]}>
         <Text style={[type.label, { color: t.texte2 }]}>{t.libelle}</Text>
         <Text style={[s.date, { color: t.texte }]}>
           {dateCourte(course.date)} · {course.heure.replace(':', 'h')}
@@ -33,7 +35,7 @@ export default function DetailCourse() {
         <View style={{ marginVertical: space.l }}>
           <Itineraire departId={course.departId} arriveeId={course.arriveeId} couleur={t.texte} couleur2={t.texte2} grand />
         </View>
-        {course.statut !== 'annulee' ? <Teinture statut={course.statut} surFonce={course.statut === 'confirmee'} /> : null}
+        {course.statut !== 'annulee' && course.statut !== 'refusee' ? <Teinture statut={course.statut} surFonce={course.statut === 'confirmee'} /> : null}
       </View>
 
       {course.statut === 'envoyee' ? (
@@ -41,11 +43,28 @@ export default function DetailCourse() {
           <DelaiConfirmation course={course} />
         </View>
       ) : null}
+      {course.statut === 'refusee' ? (
+        <View style={{ marginTop: space.l, gap: space.s }}>
+          <Note ton="erreur" icone="close-circle-outline">
+            Fabrice ne peut pas assurer cette course{course.motifRefus ? ` : ${course.motifRefus.toLowerCase()}` : ''}. Rien ne vous sera facturé.
+          </Note>
+          <Bouton titre="Appeler Fabrice" variante="contour" icone="call-outline" onPress={appelerFabrice} />
+        </View>
+      ) : null}
 
       {active && transfert ? (
         <Bouton titre="Afficher le panneau à mon nom" icone="id-card-outline" onPress={() => router.push({ pathname: '/panneau', params: { id: course.id } })} style={{ marginTop: space.l }} />
       ) : null}
       {active ? <Bouton titre="Appeler Fabrice" variante="contour" icone="call-outline" onPress={appelerFabrice} style={{ marginTop: space.m }} /> : null}
+      {active && !course.demo ? (
+        <Bouton
+          titre={nonLus(course.id) ? `Messages · ${nonLus(course.id)} nouveau${nonLus(course.id) > 1 ? 'x' : ''}` : 'Écrire à Fabrice'}
+          variante={nonLus(course.id) ? 'plein' : 'contour'}
+          icone="chatbubbles-outline"
+          onPress={() => router.push(`/conversation/${course.id}`)}
+          style={{ marginTop: space.m }}
+        />
+      ) : null}
 
       <Titre>Détails</Titre>
       <View style={s.bloc}>
@@ -80,7 +99,7 @@ export default function DetailCourse() {
               ) : null}
               <View style={{ flexDirection: 'row', gap: space.s, marginTop: space.s }}>
                 <Bouton titre="Garder" variante="contour" onPress={() => setAnnuler(false)} style={{ flex: 1 }} />
-                <Bouton titre="Annuler la course" onPress={() => { changerStatut(course.id, 'annulee'); setAnnuler(false); }} style={{ flex: 1.4, backgroundColor: '#B3261E' }} />
+                <Bouton titre="Annuler la course" onPress={() => { annulerCourse(course.id).catch(() => {}); setAnnuler(false); }} style={{ flex: 1.4, backgroundColor: '#B3261E' }} />
               </View>
             </View>
           ) : (

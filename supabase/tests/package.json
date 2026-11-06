@@ -1,0 +1,11 @@
+{
+  "name": "volant3ranches-tests-base",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node securite.test.mjs ../migrations/20261104000000_fondations.sql ../migrations/20261105000000_espace_chauffeur.sql ../migrations/20261106000000_itineraires.sql ../migrations/20261107000000_itineraire_ign_moteurs.sql ../migrations/20261108000000_messagerie.sql ../migrations/20261109000000_notifications.sql ../migrations/20261110000000_annonces.sql"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.15"
+  }
+}

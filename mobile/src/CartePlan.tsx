@@ -1,12 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, Easing, LayoutChangeEvent, View, ViewStyle } from 'react-native';
-import Svg, { Circle, G, Path, Rect, Text as SvgText } from 'react-native-svg';
+import { Image } from 'expo-image';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { LayoutChangeEvent, PixelRatio, Text, View, ViewStyle } from 'react-native';
+import Reanimated, {
+  Easing, cancelAnimation, useAnimatedProps, useReducedMotion, useSharedValue, withDelay, withRepeat, withTiming,
+} from 'react-native-reanimated';
+import Svg, { Circle, Path } from 'react-native-svg';
 import { lieu } from './data';
-import { Couleurs, f } from './theme';
+import { Couleurs, clair, f, sombre } from './theme';
 
-// Carte « plan » : vue du dessus simplifiée du Tarn, de Toulouse et de Carcassonne (grands axes,
-// rivières, villes). L'itinéraire est calculé sur ce réseau et se dessine le long des routes.
-// Tracés approximatifs, dessinés à la main : ce n'est pas un GPS.
+// Plan du trajet : la vraie carte de l'IGN (Plan IGN v2, tuiles gratuites sans clé) sous un voile aux
+// couleurs de l'appli, et l'itinéraire réel tracé par-dessus. Sans itinéraire réel (hors ligne), le
+// tracé suit un réseau simplifié des grands axes du Tarn, ou une ligne droite.
 
 type P = [number, number]; // [lon, lat]
 
@@ -54,23 +59,7 @@ const troncons: Troncon[] = [
   { a: 'mazamet', b: 'carcassonne', via: [[2.33, 43.38], [2.36, 43.28]], type: 'route' },
 ];
 
-const rivieres: { nom: string; points: P[] }[] = [
-  { nom: 'Garonne', points: [[1.16, 43.38], [1.3, 43.48], [1.4, 43.56], [1.44, 43.6], [1.4, 43.66], [1.36, 43.74], [1.28, 43.86], [1.2, 43.98]] },
-  { nom: 'Tarn', points: [[2.42, 43.98], [2.3, 43.94], [2.146, 43.931], [2.02, 43.9], [1.897, 43.895], [1.78, 43.84], [1.69, 43.79], [1.55, 43.86], [1.42, 43.94], [1.3, 44.02]] },
-  { nom: 'Agout', points: [[2.5, 43.64], [2.36, 43.62], [2.24, 43.6], [2.1, 43.66], [1.98, 43.69], [1.82, 43.705], [1.69, 43.775]] },
-];
-
-const villes: { id: string; nom: string; importance: 1 | 2 }[] = [
-  { id: 'toulouse', nom: 'Toulouse', importance: 1 }, { id: 'albi', nom: 'Albi', importance: 1 },
-  { id: 'castres', nom: 'Castres', importance: 1 }, { id: 'carcassonne', nom: 'Carcassonne', importance: 1 },
-  { id: 'gaillac', nom: 'Gaillac', importance: 2 }, { id: 'lavaur', nom: 'Lavaur', importance: 2 },
-  { id: 'graulhet', nom: 'Graulhet', importance: 2 }, { id: 'mazamet', nom: 'Mazamet', importance: 2 },
-  { id: 'revel', nom: 'Revel', importance: 2 }, { id: 'castelnaudary', nom: 'Castelnaudary', importance: 2 },
-  { id: 'puylaurens', nom: 'Puylaurens', importance: 2 }, { id: 'viterbe', nom: 'Viterbe', importance: 2 },
-];
-
-const COS = Math.cos((43.6 * Math.PI) / 180);
-const proj = ([lon, lat]: P): P => [lon * COS * 100, -lat * 100];
+const proj = ([lon, lat]: P): P => [lon * 72, -lat * 100]; // pour le plus court chemin seulement
 const dist = (a: P, b: P) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 const polyline = (t: Troncon): P[] => [noeuds[t.a], ...(t.via ?? []), noeuds[t.b]];
 const longueur = (pts: P[]) => pts.slice(1).reduce((s, p, i) => s + dist(proj(pts[i]), proj(p)), 0);
@@ -102,143 +91,161 @@ function itineraire(depart: string, arrivee: string): P[] {
   return morceaux.reduce<P[]>((acc, m) => [...acc, ...(acc.length ? m.slice(1) : m)], []);
 }
 
-const chemin = (pts: P[]) => pts.map((p, i) => `${i ? 'L' : 'M'}${proj(p)[0].toFixed(2)},${proj(p)[1].toFixed(2)}`).join(' ');
 
-const AnimatedPath = Animated.createAnimatedComponent(Path);
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
+// ——— Projection Web Mercator (celle des tuiles), coordonnées normalisées entre 0 et 1 ———
+const merc = ([lon, lat]: P): P => {
+  const s = Math.sin((lat * Math.PI) / 180);
+  return [(lon + 180) / 360, 0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI)];
+};
+const TUILE = (z: number, x: number, y: number) =>
+  `https://data.geopf.fr/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=GEOGRAPHICALGRIDSYSTEMS.PLANIGNV2`
+  + `&STYLE=normal&TILEMATRIXSET=PM&TILEMATRIX=${z}&TILEROW=${y}&TILECOL=${x}&FORMAT=image/png`;
 
-export function CartePlan({ departId, arriveeId, c, hauteur = 200, style }: {
+// Le trajet en bleu vif, bordé d'un halo clair : il se détache sur la carte bleu nuit.
+const TRAJET = '#3D8BFF';
+const TRAJET_HALO = '#CFE0FF';
+const RECOUVRE = { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 } as const;
+const AnimatedPath = Reanimated.createAnimatedComponent(Path);
+const AnimatedCircle = Reanimated.createAnimatedComponent(Circle);
+
+export function CartePlan({ departId, arriveeId, c, hauteur = 200, style, itineraireReel }: {
   departId: string; arriveeId: string; c: Couleurs; hauteur?: number; style?: ViewStyle;
+  // Tracé réel de l'IGN ([lon, lat]) : prioritaire sur le réseau simplifié.
+  itineraireReel?: [number, number][];
 }) {
   const [largeur, setLargeur] = useState(0);
-  const trace = useMemo(() => itineraire(departId, arriveeId), [departId, arriveeId]);
-  const L = useMemo(() => longueur(trace), [trace]);
-  const dessin = useRef(new Animated.Value(0)).current;
-  const pouls = useRef(new Animated.Value(0)).current;
+  const W = largeur || 358;
+  const H = hauteur;
 
-  useEffect(() => {
-    let boucle: Animated.CompositeAnimation | undefined;
-    dessin.setValue(0);
-    AccessibilityInfo.isReduceMotionEnabled().then((calme) => {
-      if (calme) { dessin.setValue(1); return; }
-      Animated.timing(dessin, { toValue: 1, duration: 1500, delay: 300, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start(() => {
-        boucle = Animated.loop(Animated.timing(pouls, { toValue: 1, duration: 1800, easing: Easing.out(Easing.quad), useNativeDriver: false }));
-        boucle.start();
-      });
-    }).catch(() => dessin.setValue(1));
-    return () => boucle?.stop();
-  }, [departId, arriveeId]);
+  const trace = useMemo<P[]>(() => {
+    if (itineraireReel && itineraireReel.length >= 2) return itineraireReel;
+    if (noeuds[departId] && noeuds[arriveeId]) return itineraire(departId, arriveeId);
+    const a = lieu(departId), b = lieu(arriveeId);
+    return [[a.lon, a.lat], [b.lon, b.lat]];
+  }, [departId, arriveeId, itineraireReel]);
 
-  // Cadrage : le trajet au centre, avec du contexte autour.
+  // Cadrage : le trajet au centre avec de la marge, à l'échelle de la carte.
   const cadre = useMemo(() => {
-    const ps = trace.map(proj);
-    let x0 = Math.min(...ps.map((p) => p[0])), x1 = Math.max(...ps.map((p) => p[0]));
-    let y0 = Math.min(...ps.map((p) => p[1])), y1 = Math.max(...ps.map((p) => p[1]));
+    const ms = trace.map(merc);
+    const x0 = Math.min(...ms.map((p) => p[0])), x1 = Math.max(...ms.map((p) => p[0]));
+    const y0 = Math.min(...ms.map((p) => p[1])), y1 = Math.max(...ms.map((p) => p[1]));
+    const min = 0.00012; // ≈ 5 km : une course courte garde du contexte
+    let w = Math.max((x1 - x0) * 1.5, min), h = Math.max((y1 - y0) * 1.7, min * 0.6);
+    if (w / h > W / H) h = (w * H) / W; else w = (h * W) / H;
     const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
-    const asp = (largeur || 358) / hauteur;
-    let w = Math.max((x1 - x0) * 1.45, 26), h = Math.max((y1 - y0) * 1.6, 20);
-    if (w / h > asp) h = w / asp; else w = h * asp;
-    return { x: cx - w / 2, y: cy - h / 2, w, h, k: (largeur || 358) / w };
-  }, [trace, largeur, hauteur]);
+    return { x: cx - w / 2, y: cy - h / 2, w, h };
+  }, [trace, W, H]);
 
-  const px = (n: number) => n / cadre.k; // pixels écran → unités de la carte
-  const a = proj(trace[0]), b = proj(trace[trace.length - 1]);
-  const etiquette = (p: P, nom: string, fort: boolean) => {
-    const adroite = (p[0] - cadre.x) / cadre.w < 0.62;
-    const commun = {
-      x: p[0] + (adroite ? px(10) : -px(10)),
-      y: p[1] + px(4.5),
-      fontSize: px(fort ? 13 : 11),
-      fontFamily: fort ? f.display : f.displayMedium,
-      fontWeight: fort ? '700' : '500',
-      textAnchor: adroite ? 'start' : 'end',
-    } as const;
-    // halo de la couleur du fond, puis le texte : lisible par-dessus routes et rivières
+  // Point géographique → pixel dans la carte.
+  const ecran = useCallback((p: P): P => {
+    const [x, y] = merc(p);
+    return [((x - cadre.x) / cadre.w) * W, ((y - cadre.y) / cadre.h) * H];
+  }, [cadre, W, H]);
+
+  // Tuiles IGN couvrant le cadre, au niveau de zoom adapté à la densité de l'écran.
+  const tuiles = useMemo(() => {
+    const densite = PixelRatio.get() >= 2 ? 2 : 1;
+    const z = Math.max(3, Math.min(17, Math.floor(Math.log2((W * densite) / (cadre.w * 256)))));
+    const n = 2 ** z;
+    const taille = (W / cadre.w) / n; // taille d'une tuile à l'écran
+    const liste: { cle: string; uri: string; x: number; y: number; t: number }[] = [];
+    for (let tx = Math.floor(cadre.x * n); tx <= Math.floor((cadre.x + cadre.w) * n); tx++) {
+      for (let ty = Math.floor(cadre.y * n); ty <= Math.floor((cadre.y + cadre.h) * n); ty++) {
+        liste.push({ cle: `${z}-${tx}-${ty}`, uri: TUILE(z, tx, ty), x: (tx / n - cadre.x) * (W / cadre.w), y: (ty / n - cadre.y) * (H / cadre.h), t: taille });
+      }
+    }
+    return liste;
+  }, [cadre, W, H]);
+
+  const pts = useMemo(() => trace.map(ecran), [trace, ecran]);
+  const d = useMemo(() => pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' '), [pts]);
+  const cumul = useMemo(() => pts.reduce<number[]>((acc, p, i) => [...acc, i ? acc[i - 1] + Math.hypot(p[0] - pts[i - 1][0], p[1] - pts[i - 1][1]) : 0], []), [pts]);
+  const L = cumul[cumul.length - 1] || 1;
+
+  const calme = useReducedMotion();
+  const dessin = useSharedValue(calme ? 1 : 0);
+  const pouls = useSharedValue(0);
+
+  // Le tracé se dessine à l'arrivée sur l'écran (et quand l'itinéraire réel arrive), puis l'arrivée
+  // pulse trois fois. Rien ne tourne quand l'écran est caché sous un autre.
+  const dessinePour = useRef(-1);
+  useFocusEffect(useCallback(() => {
+    if (calme) { dessin.value = 1; return; }
+    if (dessinePour.current !== L) {
+      dessinePour.current = L;
+      dessin.value = 0;
+      dessin.value = withDelay(250, withTiming(1, { duration: 1400, easing: Easing.inOut(Easing.cubic) }));
+    }
+    pouls.value = 0;
+    pouls.value = withDelay(1700, withRepeat(withTiming(1, { duration: 1600, easing: Easing.out(Easing.quad) }), 3, false));
+    return () => cancelAnimation(pouls);
+  }, [L, calme]));
+
+  const propsTrace = useAnimatedProps(() => ({ strokeDashoffset: L * (1 - dessin.value) }));
+  const propsTete = useAnimatedProps(() => {
+    const dd = dessin.value * L;
+    let i = 1;
+    while (i < cumul.length - 1 && cumul[i] < dd) i++;
+    const seg = cumul[i] - cumul[i - 1] || 1;
+    const t = Math.min(1, Math.max(0, (dd - cumul[i - 1]) / seg));
+    return {
+      cx: pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t,
+      cy: pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t,
+      opacity: dessin.value > 0.01 && dessin.value < 0.99 ? 1 : 0,
+    };
+  });
+  const propsPouls = useAnimatedProps(() => ({ r: 6 + 16 * pouls.value, opacity: 0.4 * (1 - pouls.value) }));
+  const propsArrivee = useAnimatedProps(() => ({ opacity: dessin.value > 0.97 ? 1 : 0 }));
+
+  const a = pts[0], b = pts[pts.length - 1];
+  const nomCourt = (id: string) => lieu(id).nom.replace('Aéroport ', '').replace(', Capitole', '').replace(', la Cité', '');
+  const etiquette = (p: P, nom: string) => {
+    const aDroite = p[0] < W * 0.6;
     return (
-      <G>
-        <SvgText {...commun} fill={c.surface} stroke={c.surface} strokeWidth={px(3.5)} strokeLinejoin="round">{nom}</SvgText>
-        <SvgText {...commun} fill={fort ? c.fort : c.pierre}>{nom}</SvgText>
-      </G>
+      <Text
+        numberOfLines={1}
+        style={{
+          position: 'absolute', top: p[1] - 10, width: 170,
+          ...(aDroite ? { left: p[0] + 11 } : { left: p[0] - 181, textAlign: 'right' as const }),
+          fontFamily: f.display, fontSize: 14, color: '#FFFFFF',
+          textShadowColor: clair.cuve, textShadowRadius: 6, textShadowOffset: { width: 0, height: 0 },
+        }}
+      >
+        {nom}
+      </Text>
     );
   };
-  const nomCourt = (id: string) => lieu(id).nom.replace('Aéroport ', '').replace(', Capitole', '').replace(', la Cité', '');
-  const prochesDuTrajet = (p: P) => dist(p, trace[0]) < 0.11 || dist(p, trace[trace.length - 1]) < 0.11;
 
   return (
     <View
       onLayout={(e: LayoutChangeEvent) => setLargeur(e.nativeEvent.layout.width)}
-      style={[{ height: hauteur, backgroundColor: c.surface, overflow: 'hidden' }, style]}
+      style={[{ height: H, backgroundColor: clair.cuve, overflow: 'hidden', isolation: 'isolate' }, style]}
       accessible
       accessibilityLabel={`Plan du trajet de ${lieu(departId).nom} à ${lieu(arriveeId).nom}`}
     >
       {largeur ? (
-        <Svg width={largeur} height={hauteur} viewBox={`${cadre.x} ${cadre.y} ${cadre.w} ${cadre.h}`}>
-          {rivieres.map((r) => (
-            <Path key={r.nom} d={chemin(r.points)} stroke={c.bain3} strokeWidth={px(2)} fill="none" strokeLinecap="round" strokeLinejoin="round" opacity={0.8} />
+        <>
+          {tuiles.map((t) => (
+            <Image key={t.cle} source={{ uri: t.uri }} cachePolicy="disk" transition={200}
+              style={{ position: 'absolute', left: t.x, top: t.y, width: t.t + 0.5, height: t.t + 0.5 }} />
           ))}
-          {troncons.filter((t) => t.type !== 'lien').map((t, i) => (
-            <Path
-              key={i}
-              d={chemin(polyline(t))}
-              stroke={t.type === 'autoroute' ? c.delave : c.trait}
-              strokeWidth={px(t.type === 'autoroute' ? 2.6 : 1.6)}
-              fill="none"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          ))}
-          {/* l'itinéraire */}
-          <AnimatedPath
-            d={chemin(trace)}
-            stroke={c.bain2}
-            strokeWidth={px(9)}
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeDasharray={[L, L]}
-            strokeDashoffset={dessin.interpolate({ inputRange: [0, 1], outputRange: [L, 0] })}
-          />
-          <AnimatedPath
-            d={chemin(trace)}
-            stroke={c.action}
-            strokeWidth={px(4)}
-            fill="none"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeDasharray={[L, L]}
-            strokeDashoffset={dessin.interpolate({ inputRange: [0, 1], outputRange: [L, 0] })}
-          />
-          {troncons.filter((t) => t.nom && !prochesDuTrajet(polyline(t)[Math.floor(polyline(t).length / 2)])).map((t) => {
-            const pts = polyline(t);
-            const m = proj(pts[Math.floor(pts.length / 2)]);
-            return (
-              <G key={t.nom}>
-                <Rect x={m[0] - px(14)} y={m[1] - px(8)} width={px(28)} height={px(15)} rx={px(4)} fill={c.surface} stroke={c.delave} strokeWidth={px(1)} />
-                <SvgText x={m[0]} y={m[1] + px(3.5)} fontSize={px(9.5)} fontFamily={f.display} fontWeight="700" fill={c.pierre} textAnchor="middle">{t.nom}</SvgText>
-              </G>
-            );
-          })}
-          {villes.filter((v) => !prochesDuTrajet(noeuds[v.id])).map((v) => {
-            const p = proj(noeuds[v.id]);
-            return (
-              <G key={v.id}>
-                <Circle cx={p[0]} cy={p[1]} r={px(v.importance === 1 ? 3.2 : 2.4)} fill={c.pierre} />
-                {etiquette(p, v.nom, false)}
-              </G>
-            );
-          })}
-
-          <AnimatedCircle
-            cx={b[0]} cy={b[1]}
-            r={pouls.interpolate({ inputRange: [0, 1], outputRange: [px(6), px(22)] })}
-            fill={c.action}
-            opacity={pouls.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0] })}
-          />
-          <Circle cx={a[0]} cy={a[1]} r={px(6)} fill={c.surface} stroke={c.action} strokeWidth={px(3)} />
-          <AnimatedCircle cx={b[0]} cy={b[1]} r={px(6.5)} fill={c.action} opacity={dessin.interpolate({ inputRange: [0, 0.9, 1], outputRange: [0, 0, 1] })} />
-          {etiquette(a, nomCourt(departId), true)}
-          {etiquette(b, nomCourt(arriveeId), true)}
-        </Svg>
+          {/* Carte « bleu nuit » aux couleurs de l'appli : inversée (fond sombre, routes claires),
+              teintée d'indigo, puis adoucie. Le trajet garde la vedette. */}
+          <View style={[RECOUVRE, { backgroundColor: '#FFFFFF', mixBlendMode: 'difference' }]} />
+          <View style={[RECOUVRE, { backgroundColor: clair.indigo, mixBlendMode: 'color' }]} />
+          <View style={[RECOUVRE, { backgroundColor: 'rgba(16,27,69,0.35)' }]} />
+          <Svg width={W} height={H} style={{ position: 'absolute', top: 0, left: 0 }}>
+            <AnimatedPath d={d} stroke={TRAJET_HALO} strokeWidth={9} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={[L, L]} animatedProps={propsTrace} opacity={0.9} />
+            <AnimatedPath d={d} stroke={TRAJET} strokeWidth={4.5} fill="none" strokeLinecap="round" strokeLinejoin="round" strokeDasharray={[L, L]} animatedProps={propsTrace} />
+            <AnimatedCircle r={5} fill="#FFFFFF" stroke={TRAJET} strokeWidth={3} animatedProps={propsTete} />
+            <AnimatedCircle cx={b[0]} cy={b[1]} fill={TRAJET} animatedProps={propsPouls} />
+            <Circle cx={a[0]} cy={a[1]} r={6} fill="#FFFFFF" stroke={TRAJET} strokeWidth={3} />
+            <AnimatedCircle cx={b[0]} cy={b[1]} r={6.5} fill={TRAJET} stroke="#FFFFFF" strokeWidth={2} animatedProps={propsArrivee} />
+          </Svg>
+          {etiquette(a, nomCourt(departId))}
+          {etiquette(b, nomCourt(arriveeId))}
+          <Text style={{ position: 'absolute', right: 6, bottom: 3, fontSize: 9, color: sombre.pierre }}>© IGN</Text>
+        </>
       ) : null}
     </View>
   );

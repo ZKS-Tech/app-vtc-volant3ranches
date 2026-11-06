@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
+import Reanimated, { Easing as ReEasing, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
 import {
-  ActivityIndicator, Animated, Linking, Pressable, StyleSheet, Text, TextInput, TextInputProps, View,
+  ActivityIndicator, Linking, Pressable, StyleSheet, Text, TextInput, TextInputProps, View,
   ViewStyle,
 } from 'react-native';
 import { contact, dateCourte, euros, lieu, offre } from './data';
@@ -138,6 +139,7 @@ export const teintesDe = (c: Couleurs): Record<Statut, { fond: string; texte: st
   confirmee: { fond: c.action, texte: c.blanc, texte2: c.surCuve2, libelle: 'Confirmée par Fabrice', niveau: 2 },
   terminee: { fond: c.delaveFond, texte: c.encre, texte2: c.pierre, libelle: 'Terminée', niveau: 3 },
   annulee: { fond: c.surface, texte: c.pierre, texte2: c.pierre, libelle: 'Annulée', niveau: 0 },
+  refusee: { fond: c.surface, texte: c.pierre, texte2: c.pierre, libelle: 'Refusée par Fabrice', niveau: 0 },
 });
 
 const bainsDe = (c: Couleurs) => [
@@ -147,32 +149,36 @@ const bainsDe = (c: Couleurs) => [
 ];
 
 export function Teinture({ statut, surFonce }: { statut: Statut; surFonce?: boolean }) {
-  const { c, type, s } = useTheme(creerStyles);
+  const { c, type } = useTheme();
   const niveau = teintesDe(c)[statut].niveau;
   const bains = bainsDe(c);
-  const anims = useRef(bains.map((_, i) => new Animated.Value(i < niveau ? 1 : 0))).current;
-  useEffect(() => {
-    Animated.stagger(
-      120,
-      anims.map((a, i) => Animated.timing(a, { toValue: i < niveau ? 1 : 0, duration: 650, useNativeDriver: false })),
-    ).start();
-  }, [niveau]);
   const vide = surFonce ? 'rgba(255,255,255,0.18)' : c.trait;
   return (
     <View accessibilityLabel={`Statut : ${teintesDe(c)[statut].libelle}`} style={{ flexDirection: 'row', gap: 4 }}>
       {bains.map((b, i) => (
         <View key={b.titre} style={{ flex: 1 }}>
-          <Animated.View
-            style={{
-              height: 6, borderRadius: 3,
-              backgroundColor: anims[i].interpolate({ inputRange: [0, 1], outputRange: [vide, surFonce && i === 1 ? c.blanc : b.couleur] }),
-            }}
-          />
+          <Bain rempli={i < niveau} retard={i * 140} couleur={surFonce && i === 1 ? c.blanc : b.couleur} vide={vide} />
           <Text style={[type.label, { fontSize: 12, marginTop: 6, color: surFonce ? c.surCuve2 : c.pierre }, i === niveau - 1 && { color: surFonce ? c.blanc : c.encre }]}>
             {b.titre}
           </Text>
         </View>
       ))}
+    </View>
+  );
+}
+
+// Un segment se remplit de gauche à droite, comme un tissu qui boit la teinture.
+// Animation sur le fil d'affichage (Reanimated) : fluide même quand l'appli travaille.
+function Bain({ rempli, retard, couleur, vide }: { rempli: boolean; retard: number; couleur: string; vide: string }) {
+  const calme = useReducedMotion();
+  const part = useSharedValue(rempli ? 1 : 0);
+  useEffect(() => {
+    part.value = calme ? (rempli ? 1 : 0) : withDelay(retard, withTiming(rempli ? 1 : 0, { duration: 700, easing: ReEasing.out(ReEasing.exp) }));
+  }, [rempli, calme]);
+  const remplissage = useAnimatedStyle(() => ({ transform: [{ scaleX: part.value }] }));
+  return (
+    <View style={{ height: 6, borderRadius: 3, backgroundColor: vide, overflow: 'hidden' }}>
+      <Reanimated.View style={[{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: couleur, borderRadius: 3, transformOrigin: 'left' }, remplissage]} />
     </View>
   );
 }
@@ -219,12 +225,12 @@ export function CarteCourse({ course, onPress }: { course: Course; onPress?: () 
       style={({ pressed }) => [
         s.carteCourse,
         { backgroundColor: t.fond },
-        course.statut === 'annulee' && { borderWidth: 1, borderColor: c.trait, borderStyle: 'dashed' },
+        (course.statut === 'annulee' || course.statut === 'refusee') && { borderWidth: 1, borderColor: c.trait, borderStyle: 'dashed' },
         pressed && { opacity: 0.9 },
       ]}
     >
       <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
-        <Text style={{ fontFamily: f.display, fontSize: 26, color: t.texte, textDecorationLine: course.statut === 'annulee' ? 'line-through' : 'none' }}>
+        <Text style={{ fontFamily: f.display, fontSize: 26, color: t.texte, textDecorationLine: course.statut === 'annulee' || course.statut === 'refusee' ? 'line-through' : 'none' }}>
           {dateCourte(course.date)} · {course.heure.replace(':', 'h')}
         </Text>
         <Text style={{ fontFamily: f.displayMedium, fontSize: 20, color: t.texte }}>{euros(course.montant)}</Text>
@@ -236,8 +242,11 @@ export function CarteCourse({ course, onPress }: { course: Course; onPress?: () 
         {offre(course.offreId).nom} · {offre(course.offreId).vehicule}
         {course.numero ? ` · ${course.numero}` : ''}
       </Text>
-      {course.statut === 'annulee' ? (
-        <Text style={[type.label, { color: c.pierre }]}>Annulée</Text>
+      {course.statut === 'annulee' || course.statut === 'refusee' ? (
+        <View>
+          <Text style={[type.label, { color: course.statut === 'refusee' ? c.erreur : c.pierre }]}>{teintesDe(c)[course.statut].libelle}</Text>
+          {course.statut === 'refusee' && course.motifRefus ? <Text style={[type.small, { marginTop: 2 }]}>Motif : {course.motifRefus}</Text> : null}
+        </View>
       ) : (
         <Teinture statut={course.statut} surFonce={fonce} />
       )}

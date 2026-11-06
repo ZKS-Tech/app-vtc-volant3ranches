@@ -1,0 +1,55 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { Tabs } from 'expo-router';
+import { View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Annonce } from '../../src/chauffeurUi';
+import { useChauffeur } from '../../src/chauffeur';
+import { useMessagerie } from '../../src/messagerie';
+import { useTheme } from '../../src/useTheme';
+
+const icone = (nom: React.ComponentProps<typeof Ionicons>['name']) =>
+  ({ color, size }: { color: import('react-native').ColorValue; size: number }) => <Ionicons name={nom} color={color as string} size={size} />;
+
+// Espace de Fabrice : cinq onglets, pensés pour un usage rapide entre deux courses.
+export default function OngletsChauffeur() {
+  const { c } = useTheme();
+  const { missions } = useChauffeur();
+  const aTraiter = missions.filter((m) => m.statut === 'envoyee').length;
+  const { totalNonLus } = useMessagerie();
+  const insets = useSafeAreaInsets();
+  return (
+    <View style={{ flex: 1 }}>
+    <Tabs
+      screenOptions={{
+        tabBarActiveTintColor: c.accent,
+        tabBarInactiveTintColor: c.pierre,
+        tabBarStyle: { backgroundColor: c.surface, borderTopColor: c.trait },
+        tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },
+        headerStyle: { backgroundColor: c.sol },
+        headerShadowVisible: false,
+        headerTitleStyle: { color: c.encre, fontWeight: '700', fontSize: 20 },
+        sceneStyle: { backgroundColor: c.sol },
+      }}
+    >
+      <Tabs.Screen name="index" options={{ title: 'Tableau de bord', tabBarLabel: 'Tableau', headerShown: false, tabBarIcon: icone('speedometer-outline') }} />
+      <Tabs.Screen
+        name="demandes"
+        options={{
+          title: 'Demandes', tabBarIcon: icone('notifications-outline'),
+          tabBarBadge: aTraiter || undefined, tabBarBadgeStyle: { backgroundColor: c.alerte, color: c.blanc, fontSize: 11 },
+        }}
+      />
+      <Tabs.Screen
+        name="messages"
+        options={{
+          title: 'Messages', tabBarIcon: icone('chatbubbles-outline'),
+          tabBarBadge: totalNonLus || undefined, tabBarBadgeStyle: { backgroundColor: c.alerte, color: c.blanc, fontSize: 11 },
+        }}
+      />
+      <Tabs.Screen name="planning" options={{ title: 'Planning', tabBarIcon: icone('calendar-outline') }} />
+      <Tabs.Screen name="clients" options={{ title: 'Clients', tabBarIcon: icone('people-outline') }} />
+    </Tabs>
+    <Annonce bas={insets.bottom + 64} />
+    </View>
+  );
+}

@@ -1,10 +1,11 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dateCourte, euros, lieu, offre, prix, trajet } from '../src/data';
 import { useStore } from '../src/store';
 import { Couleurs, radius, space } from '../src/theme';
+import { EcranAvecClavier } from '../src/Clavier';
 import { useTheme } from '../src/useTheme';
 import { Bouton, couleursSwitch, Champ, Ligne, Note, Titre, appelerFabrice } from '../src/ui';
 
@@ -14,6 +15,7 @@ export default function Coordonnees() {
   const insets = useSafeAreaInsets();
   const [etat, setEtat] = useState<'saisie' | 'envoi' | 'echec'>('saisie');
   const [tente, setTente] = useState(false);
+  const [raison, setRaison] = useState('');
   if (!b.departId || !b.arriveeId) return null;
 
   const depart = lieu(b.departId);
@@ -33,13 +35,14 @@ export default function Coordonnees() {
     try {
       const course = await envoyer();
       router.replace({ pathname: '/envoyee', params: { id: course.id } });
-    } catch {
+    } catch (e) {
+      setRaison(e instanceof Error ? e.message : '');
       setEtat('echec');
     }
   };
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.sol }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <EcranAvecClavier style={{ flex: 1, backgroundColor: c.sol }}>
       <ScrollView contentContainerStyle={{ padding: space.l, paddingBottom: 140 }} keyboardShouldPersistTaps="handled">
         <Text style={type.small}>Pas besoin de compte : ces informations servent à Fabrice pour vous confirmer la course.</Text>
         <View style={{ marginTop: space.l }}>
@@ -95,8 +98,9 @@ export default function Coordonnees() {
         {etat === 'echec' ? (
           <View style={{ marginTop: space.l, gap: space.s }}>
             <Note ton="erreur">
-              La demande n'est pas partie : la connexion a échoué. Rien n'a été envoyé à Fabrice. Réessayez, ou appelez-le
-              directement.
+              {raison && raison !== 'reseau' && !/fetch|network|réseau/i.test(raison)
+                ? `La demande n'est pas partie : ${raison}. Rien n'a été envoyé à Fabrice.`
+                : "La demande n'est pas partie : la connexion a échoué. Rien n'a été envoyé à Fabrice. Réessayez, ou appelez-le directement."}
             </Note>
             <Bouton titre="Appeler Fabrice" variante="contour" icone="call-outline" onPress={appelerFabrice} />
           </View>
@@ -109,7 +113,7 @@ export default function Coordonnees() {
           onPress={valider}
         />
       </View>
-    </KeyboardAvoidingView>
+    </EcranAvecClavier>
   );
 }
 
