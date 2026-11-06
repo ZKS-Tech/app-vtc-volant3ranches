@@ -20,6 +20,16 @@ dans l'esprit de « The Renaissance Edition » de Shopify (hiver 2026), avec les
 Les captures d'écran (`assets/ecrans/`) sont découpées dans `docs/prototype/`. Les photos et le logo
 viennent de `mobile/assets/photos/`. Polices : Archivo (variable, axe de largeur) et EB Garamond, auto-hébergées.
 
+## Deuxième version : `printemps.html`
+
+D'après Shopify Editions printemps 2026 (« Everywhere ») : nuit continue, grotesque fine.
+- Ouverture : la photo de la flotte rendue en particules ; le curseur étire l'image comme de la
+  peinture fraîche (champ de déformation entraîné par lui-même, qui se résorbe). Au-dessus, un anneau
+  3D de destinations qui tourne et s'incline selon la souris.
+- Têtes de chapitre : photo en flou radial dont le centre suit le curseur ; le flou se dissipe quand
+  la tête arrive au centre de l'écran.
+- Grilles de trois colonnes avec les écrans de l'application, pastille flottante du chapitre en cours.
+
 ## Œuvres du domaine public
 
 Récupérées sur Wikimedia Commons, recadrées et converties dans `assets/oeuvres/` :

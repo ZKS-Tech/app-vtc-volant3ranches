@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Volant3ranches, partout</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="L'application de réservation de Volant3ranches VTC : Toulouse-Blagnac, Albi, Castres, Carcassonne et partout en France.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap">
+<style>
+/* Mise en page : une nuit continue. Ouverture en particules (la flotte) sous un anneau de destinations
+   qui suit le curseur ; chaque chapitre s'ouvre sur une photo en flou radial centré sur la souris,
+   puis une grille de trois colonnes. Une pastille flottante indique le chapitre. Thème sombre unique. */
+@font-face { font-family: "Archivo V3R"; src: url("assets/fonts/archivo-latin-wdth-normal.woff2") format("woff2"); font-weight: 100 900; font-stretch: 62% 125%; font-display: swap; }
+:root {
+  --nuit: #04060E;
+  --nuit2: #0C1124;
+  --carte: #121933;
+  --texte: #F2F4FA;
+  --texte2: #9AA3BA;
+  --ligne: rgba(185, 199, 234, 0.16);
+  --indigo: #3954B5;
+  --bain: #A8BCF7;
+  --feuille: #C9D45C;
+  --f: "Archivo V3R", "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --large: 1240px;
+  --ease: cubic-bezier(0.16, 1, 0.3, 1);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; scrollbar-color: #2A3354 var(--nuit); background: var(--nuit); }
+body { margin: 0; background: var(--nuit); color: var(--texte); font-family: var(--f); font-size: 16px; line-height: 1.5; -webkit-font-smoothing: antialiased; overflow-x: clip; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 60; background: var(--nuit); }
+::selection { background: var(--feuille); color: #0B1233; }
+a { color: inherit; }
+img { max-width: 100%; display: block; }
+:focus-visible { outline: 2px solid var(--feuille); outline-offset: 3px; border-radius: 6px; }
+.cadre { max-width: var(--large); margin: 0 auto; padding-left: max(24px, env(safe-area-inset-left, 0px)); padding-right: max(24px, env(safe-area-inset-right, 0px)); }
+@media (max-width: 520px) { .cadre { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); } }
+
+/* typographie : une grotesque fine, en grand */
+.fin-titre { font-weight: 300; font-stretch: 100%; letter-spacing: -0.035em; line-height: .95; margin: 0; text-wrap: balance; }
+h2.fin-titre { font-size: clamp(3.2rem, 9vw, 8rem); }
+h3.fin-titre { font-size: clamp(2rem, 4vw, 3.4rem); line-height: 1.02; letter-spacing: -0.03em; }
+.chapo { color: var(--texte2); font-size: 15px; line-height: 1.5; max-width: 42ch; margin: 0; }
+.nb { font-variant-numeric: tabular-nums; }
+
+/* en-tête */
+.entete { position: fixed; z-index: 50; left: 0; right: 0; top: env(safe-area-inset-top, 0px); display: flex; align-items: center; gap: 24px; font-size: 13px;
+  padding: 12px max(20px, env(safe-area-inset-right, 0px)) 12px max(20px, env(safe-area-inset-left, 0px)); }
+.marque { display: flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 600; white-space: nowrap; }
+.marque svg { width: 22px; height: 22px; }
+.marque .ed { font-weight: 400; color: var(--texte2); }
+.entete .appel { margin-left: auto; text-decoration: none; font-weight: 600; padding: 8px 15px; border-radius: 999px; background: var(--texte); color: var(--nuit); white-space: nowrap; transition: transform .2s var(--ease); }
+.entete .appel:hover { transform: translateY(-1px); }
+@media (max-width: 520px) { .marque .ed { display: none; } }
+
+/* ouverture */
+.ouverture { position: relative; height: 100svh; min-height: 620px; overflow: hidden; }
+#particules { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.ouverture .photo-repli { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .55; filter: blur(2px) saturate(1.2); }
+.ouverture.pret .photo-repli { opacity: 0; transition: opacity 1.2s var(--ease); }
+.ouverture::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(4,6,14,.85), rgba(4,6,14,0) 38%); pointer-events: none; z-index: 1; }
+.anneau-scene { position: absolute; inset: 0; display: grid; place-items: center; perspective: 1100px; pointer-events: none; }
+.anneau { position: relative; width: 0; height: 0; transform-style: preserve-3d; will-change: transform; }
+.anneau span {
+  position: absolute; left: 0; top: 0; transform-origin: 0 0; white-space: pre; color: #fff;
+  font-weight: 300; letter-spacing: -0.02em; font-size: clamp(2.6rem, 6.4vw, 5.6rem); line-height: 1;
+  text-shadow: 0 0 30px rgba(4, 6, 14, .5);
+}
+.ouverture h1 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+.bas-ouverture {
+  position: absolute; left: 0; right: 0; bottom: 0; padding-bottom: max(28px, env(safe-area-inset-bottom, 0px));
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 24px; align-items: end; z-index: 2;
+}
+.bas-ouverture .chapo { color: #DDE3F2; max-width: 30ch; font-size: 14px; }
+.sommaire { display: grid; grid-template-columns: repeat(3, max-content); gap: 2px 36px; font-size: 13px; list-style: none; margin: 0; padding: 0; }
+.sommaire a { text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(255,255,255,.35); }
+.sommaire a:hover { text-decoration-color: #fff; }
+@media (max-width: 700px) { .bas-ouverture { grid-template-columns: minmax(0, 1fr); } .sommaire { grid-template-columns: repeat(2, max-content); } }
+
+/* têtes de chapitre en flou radial */
+.tete { position: relative; height: 92svh; min-height: 560px; overflow: hidden; background: var(--nuit2); }
+.tete img, .tete canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+.tete img { object-fit: cover; filter: blur(14px) brightness(.7); transform: scale(1.1); }
+.tete canvas { opacity: 0; transition: opacity .8s var(--ease); }
+.tete canvas.pret { opacity: 1; }
+.tete::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(4,6,14,.6), rgba(4,6,14,.15) 42%, rgba(4,6,14,0) 60%, var(--nuit)); pointer-events: none; }
+.tete .cadre { position: absolute; left: 0; right: 0; top: clamp(90px, 16vh, 160px); z-index: 2; margin: 0 auto; }
+.tete .chapo { color: #E4E9F6; margin-top: 18px; font-size: 16px; }
+
+/* grilles de trois colonnes */
+.bloc { padding-block: clamp(40px, 6vw, 80px) clamp(64px, 9vw, 120px); }
+.bloc-tete { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; align-items: end; margin-bottom: clamp(32px, 4vw, 56px); }
+@media (max-width: 760px) { .bloc-tete { grid-template-columns: minmax(0, 1fr); } }
+.grille { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(28px, 3vw, 40px) clamp(16px, 2vw, 28px); list-style: none; padding: 0; margin: 0; }
+@media (max-width: 900px) { .grille { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .grille { grid-template-columns: minmax(0, 1fr); } }
+.grille li { min-width: 0; }
+.vignette { border-radius: 14px; overflow: hidden; aspect-ratio: 4 / 3; background: radial-gradient(120% 90% at 50% 0%, #1D2750, var(--carte)); position: relative; }
+.vignette img { position: absolute; left: 50%; top: 14%; width: 46%; transform: translateX(-50%); border-radius: 12px; box-shadow: 0 30px 50px -20px rgba(0,0,0,.7); transition: transform .7s var(--ease); }
+.grille li:hover .vignette img { transform: translateX(-50%) translateY(-10px); }
+.grille h4 { margin: 16px 0 6px; font-size: 15px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: rgba(255,255,255,.3); }
+.grille p { margin: 0; color: var(--texte2); font-size: 14px; max-width: 46ch; }
+
+/* estimateur */
+.estimateur { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(24px, 5vw, 72px); background: var(--carte); border-radius: 20px; padding: clamp(20px, 3vw, 40px); }
+@media (max-width: 860px) { .estimateur { grid-template-columns: minmax(0, 1fr); } }
+.commandes { display: grid; gap: 14px; align-content: start; }
+.champ label { display: block; font-size: 12px; font-weight: 600; color: var(--texte2); margin-bottom: 6px; }
+.champ select, .champ input { width: 100%; font: inherit; font-size: 16px; color: var(--texte); background: var(--nuit2); border: 1px solid var(--ligne); border-radius: 12px; padding: 13px 14px; min-height: 50px; }
+.champ select { appearance: none; -webkit-appearance: none; padding-right: 36px; cursor: pointer;
+  background: var(--nuit2) no-repeat right 14px center / 12px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23A8BCF7' stroke-width='1.6'/%3E%3C/svg%3E"); }
+.champ select:hover, .champ input:hover { border-color: rgba(185,199,234,.4); }
+.paire { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.paire .pile { display: grid; gap: 10px; }
+.inverser { width: 46px; height: 50px; border-radius: 12px; border: 1px solid var(--ligne); background: var(--nuit2); color: var(--bain); display: grid; place-items: center; cursor: pointer; margin-top: 22px; transition: transform .3s var(--ease); }
+.inverser:hover { transform: rotate(180deg); }
+.inverser svg { width: 20px; height: 20px; }
+.segment { display: inline-flex; flex-wrap: wrap; justify-self: start; background: var(--nuit2); border-radius: 999px; padding: 4px; gap: 2px; }
+.segment button { font: inherit; font-size: 13px; font-weight: 600; border: 0; background: transparent; color: var(--texte2); padding: 8px 14px; border-radius: 999px; cursor: pointer; min-height: 38px; }
+.segment button[aria-pressed="true"] { background: var(--texte); color: var(--nuit); }
+.note { font-size: 13px; color: var(--texte2); margin: 4px 0 0; max-width: 50ch; }
+.trajet-info { margin: 0 0 6px; font-size: 13px; color: var(--texte2); font-variant-numeric: tabular-nums; }
+.offre { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 16px; padding: 20px 0; border-top: 1px solid var(--ligne); align-items: baseline; }
+.offre h4 { margin: 0; font-size: 18px; font-weight: 500; }
+.offre .modele-offre { font-size: 13px; color: var(--texte2); }
+.offre .detail { grid-column: 1 / -1; font-size: 12px; color: var(--texte2); font-variant-numeric: tabular-nums; margin-top: 4px; }
+.offre .prix { grid-row: 1 / span 2; grid-column: 2; font-weight: 300; letter-spacing: -0.04em; font-size: clamp(2.6rem, 5.4vw, 4.2rem); line-height: 1; font-variant-numeric: tabular-nums; }
+.majo { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; background: var(--feuille); color: #232A06; font-size: 11px; font-weight: 700; vertical-align: 3px; }
+
+/* carte */
+.carte { background: var(--carte); border-radius: 20px; padding: clamp(12px, 2vw, 24px); }
+.carte svg { width: 100%; height: auto; display: block; aspect-ratio: 16 / 9; }
+@media (max-width: 700px) { .carte svg { aspect-ratio: 4 / 5; } }
+.reseau .route { fill: none; stroke: rgba(185, 199, 234, .28); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.reseau .riviere { fill: none; stroke: rgba(169, 192, 230, .2); stroke-width: 1; stroke-dasharray: 2 5; vector-effect: non-scaling-stroke; }
+.reseau .trace { fill: none; stroke: var(--feuille); stroke-width: 2.4; stroke-linecap: round; vector-effect: non-scaling-stroke; filter: drop-shadow(0 0 6px rgba(201, 212, 92, .6)); }
+.reseau .ville circle { fill: var(--texte2); }
+.reseau .ville text { fill: var(--texte2); font-family: var(--f); font-size: 13px; }
+.reseau .ville.fort circle { fill: var(--feuille); }
+.reseau .ville.fort text { fill: #fff; font-weight: 700; }
+.cartouche { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; padding: 14px 6px 4px; font-size: 14px; }
+.cartouche span:last-child { color: var(--texte2); font-variant-numeric: tabular-nums; }
+
+/* confirmation : trois écrans */
+.trio { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(16px, 2vw, 28px); }
+@media (max-width: 760px) { .trio { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 72vw; overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 10px; } .trio figure { scroll-snap-align: start; } }
+.trio figure { margin: 0; }
+.trio .ecran { border-radius: 26px; overflow: hidden; aspect-ratio: 780 / 1400; box-shadow: 0 40px 70px -40px rgba(57, 84, 181, .7); }
+.trio img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.trio figcaption { margin-top: 14px; font-size: 14px; color: var(--texte2); }
+.trio figcaption b { display: block; color: var(--texte); font-weight: 600; font-size: 15px; }
+
+/* panneau */
+.panneau-bloc { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: clamp(32px, 6vw, 96px); align-items: center; margin-top: clamp(72px, 9vw, 120px); }
+@media (max-width: 860px) { .panneau-bloc { grid-template-columns: minmax(0, 1fr); } }
+.panneau-scene { perspective: 1400px; display: grid; place-items: center; }
+.panneau { position: relative; width: min(520px, 100%); aspect-ratio: 1.5; transform-style: preserve-3d; transition: transform 1.1s var(--ease); cursor: pointer; border: 0; padding: 0; background: none; font: inherit; color: inherit; }
+.panneau.retourne { transform: rotateY(180deg); }
+.face { position: absolute; inset: 0; border-radius: 8px; backface-visibility: hidden; -webkit-backface-visibility: hidden; display: grid; place-items: center; align-content: center; gap: 14px; padding: 6%; box-shadow: 0 40px 70px -30px rgba(0,0,0,.7); }
+.face.dos { background: linear-gradient(160deg, #2A418F, #1E3277 60%, #172763); }
+.face.dos img { width: 22%; }
+.face span { font-size: 12px; letter-spacing: .2em; font-weight: 700; color: #B9C7EA; }
+.face.avant { background: #fff; color: #101B45; transform: rotateY(180deg); }
+.face.avant img { width: 11%; }
+.face.avant strong { font-weight: 800; font-stretch: 66%; text-transform: uppercase; line-height: .9; text-align: center; font-size: clamp(2.4rem, 7vw, 4.8rem); overflow-wrap: anywhere; }
+.face.avant span { color: #1E3277; }
+.panneau-commandes { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 28px; align-items: end; }
+.panneau-commandes .champ { flex: 1 1 200px; }
+.bouton { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 50px; padding: 0 20px; border-radius: 999px; font: inherit; font-weight: 600; font-size: 15px; text-decoration: none; cursor: pointer; border: 1px solid transparent; transition: transform .25s var(--ease); }
+.bouton svg { width: 18px; height: 18px; }
+.bouton:hover { transform: translateY(-2px); }
+.bouton.clair { background: var(--texte); color: var(--nuit); }
+.bouton.feuille { background: var(--feuille); color: #232A06; }
+.bouton.fantome { border-color: rgba(233, 240, 250, .35); color: #fff; }
+
+/* véhicules */
+.flotte { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(16px, 2vw, 28px); }
+@media (max-width: 800px) { .flotte { grid-template-columns: minmax(0, 1fr); } }
+.vehicule { position: relative; overflow: hidden; border-radius: 20px; min-height: 520px; display: flex; flex-direction: column; justify-content: flex-end; }
+.vehicule img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; transition: transform 1.4s var(--ease); }
+.vehicule:hover img { transform: scale(1.04); }
+.vehicule::before { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(to top, rgba(4,6,14,.94), rgba(4,6,14,.4) 45%, rgba(4,6,14,0) 70%); }
+.vehicule > div { position: relative; z-index: 2; padding: clamp(20px, 3vw, 32px); }
+.vehicule .modele { margin: 8px 0 16px; color: #D7E0F3; font-size: 14px; }
+.tarifs { display: flex; flex-wrap: wrap; gap: 8px 28px; font-size: 13px; color: #D7E0F3; font-variant-numeric: tabular-nums; }
+.tarifs b { display: block; color: #fff; font-size: 22px; font-weight: 400; letter-spacing: -0.02em; }
+
+/* fin */
+.fin { padding-block: clamp(80px, 10vw, 140px) 48px; }
+.contact { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 36px; align-items: center; }
+.numero { font-size: clamp(1.8rem, 3.4vw, 2.6rem); font-weight: 300; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; user-select: all; margin-right: 8px; }
+.copie-etat { font-size: 13px; color: var(--feuille); min-height: 1.4em; margin-top: 10px; }
+.pied { margin-top: clamp(64px, 9vw, 120px); padding-top: 22px; border-top: 1px solid var(--ligne); display: flex; flex-wrap: wrap; gap: 8px 32px; justify-content: space-between; font-size: 12px; color: var(--texte2); }
+
+/* pastille flottante */
+.pastille {
+  position: fixed; z-index: 45; left: 50%; bottom: max(18px, env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 140%);
+  display: flex; align-items: center; gap: 4px; padding: 5px 5px 5px 16px; border-radius: 999px; font-size: 13px; font-weight: 600;
+  background: rgba(242, 244, 250, .92); color: var(--nuit); box-shadow: 0 12px 30px -10px rgba(0,0,0,.6);
+  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); transition: transform .6s var(--ease);
+}
+.pastille.visible { transform: translate(-50%, 0); }
+.pastille span { min-width: 9ch; }
+.pastille button { width: 32px; height: 32px; border-radius: 50%; border: 0; background: var(--nuit); color: #fff; display: grid; place-items: center; cursor: pointer; }
+.pastille button svg { width: 14px; height: 14px; }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .panneau, .vehicule img, .vignette img, .inverser, .pastille { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<header class="entete">
+  <a class="marque" href="#haut" aria-label="Volant3ranches, retour en haut">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="14" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 13c4-2 7.5-2.6 11-2.6S23 11 27 13M16 16.5v11M9 18l7-1.5 7 1.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <span>Volant3ranches <span class="ed">Édition printemps</span></span>
+  </a>
+  <a class="appel" href="tel:+33616531491">Appeler Fabrice</a>
+</header>
+
+<main id="haut">
+  <section class="ouverture" id="ouverture" aria-labelledby="titre-ouverture">
+    <img class="photo-repli" src="assets/lauragais-flotte.webp" alt="" aria-hidden="true">
+    <canvas id="particules" aria-hidden="true"></canvas>
+    <div class="anneau-scene"><div class="anneau" id="anneau" aria-hidden="true"></div></div>
+    <h1 id="titre-ouverture">Volant3ranches VTC : Toulouse-Blagnac, Albi, Castres, Carcassonne, et partout en France</h1>
+    <div class="bas-ouverture cadre" style="max-width:none">
+      <p class="chapo">L'application de réservation de Fabrice Legouez Ricoce, chauffeur privé dans le Tarn. Bientôt sur iOS et Android.</p>
+      <ul class="sommaire">
+        <li><a href="#reserver">Réserver</a></li>
+        <li><a href="#prix">Le prix</a></li>
+        <li><a href="#trajet">Le trajet</a></li>
+        <li><a href="#confirmation">La confirmation</a></li>
+        <li><a href="#vehicules">Les véhicules</a></li>
+        <li><a href="#fabrice">Fabrice</a></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Réserver -->
+  <section class="tete" data-photo="assets/tesla-route.webp" data-chapitre="Réserver" id="reserver" aria-labelledby="t-reserver">
+    <img src="assets/tesla-route.webp" alt="" aria-hidden="true">
+    <div class="cadre"><h2 class="fin-titre" id="t-reserver">Réserver</h2><p class="chapo">Six écrans, sans créer de compte. Le prix avant vos coordonnées.</p></div>
+  </section>
+  <section class="bloc" aria-label="Le parcours de réservation">
+    <div class="cadre">
+      <div class="bloc-tete"><h3 class="fin-titre">Pensée pour l'aéroport et la gare</h3><p class="chapo">Vol ou train, bagages et attente gratuite sont demandés dès le départ. Rien n'est caché en option.</p></div>
+      <ul class="grille">
+        <li><div class="vignette"><img src="assets/ecrans/accueil.webp" alt="Écran d'accueil : Où allez-vous ?" loading="lazy"></div><h4>Où allez-vous&#8239;?</h4><p>Raccourcis Toulouse-Blagnac et gares d'Albi, Castres, Carcassonne. Votre prochaine course en dessous.</p></li>
+        <li><div class="vignette"><img src="assets/ecrans/trajet.webp" alt="Écran du trajet : date et heure" loading="lazy"></div><h4>Date, heure, vol ou train</h4><p>Le tarif de jour ou majoré s'affiche dès que vous choisissez l'heure.</p></li>
+        <li><div class="vignette"><img src="assets/ecrans/vehicule.webp" alt="Choix du véhicule et prix" loading="lazy"></div><h4>Le véhicule et son prix</h4><p>Les deux offres côte à côte, avec le calcul : kilomètres × tarif.</p></li>
+        <li><div class="vignette"><img src="assets/ecrans/recap.webp" alt="Récapitulatif avant envoi" loading="lazy"></div><h4>Le récapitulatif</h4><p>Attente gratuite et conditions d'annulation écrites avant l'envoi.</p></li>
+        <li><div class="vignette"><img src="assets/ecrans/courses.webp" alt="Mes courses" loading="lazy"></div><h4>Mes courses</h4><p>Vos courses à venir et passées, avec leur état : envoyée, confirmée, terminée.</p></li>
+        <li><div class="vignette"><img src="assets/ecrans/accueil-sombre.webp" alt="Accueil en mode sombre" loading="lazy"></div><h4>Mode clair et sombre</h4><p>L'application suit le réglage du téléphone, ou celui que vous choisissez.</p></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Le prix -->
+  <section class="tete" data-photo="assets/van-avant.webp" data-chapitre="Le prix" id="prix" aria-labelledby="t-prix">
+    <img src="assets/van-avant.webp" alt="" aria-hidden="true">
+    <div class="cadre"><h2 class="fin-titre" id="t-prix">Le prix</h2><p class="chapo">Le tarif au kilomètre du site, appliqué devant vous. Paiement à bord ou sur facture.</p></div>
+  </section>
+  <section class="bloc" aria-label="Estimer une course">
+    <div class="cadre">
+      <div class="bloc-tete"><h3 class="fin-titre">Estimez votre course</h3><p class="chapo">Majoration la nuit, le week-end et les jours fériés, aller-retour à −5&#8239;%, minimum de course. Estimation de démonstration : distance à vol d'oiseau × 1,25, comme dans le prototype.</p></div>
+      <div class="estimateur">
+        <div class="commandes">
+          <div class="paire">
+            <div class="pile">
+              <div class="champ"><label for="depart">Départ</label><select id="depart"></select></div>
+              <div class="champ"><label for="arrivee">Arrivée</label><select id="arrivee"></select></div>
+            </div>
+            <button class="inverser" id="inverser" type="button" aria-label="Inverser départ et arrivée"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M6 3v13M6 16l-3-3M6 16l3-3M14 17V4M14 4l-3 3M14 4l3 3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+          </div>
+          <div class="segment" role="group" aria-label="Moment du trajet"><button type="button" data-majo="0" aria-pressed="true">En semaine, 6h–22h</button><button type="button" data-majo="1" aria-pressed="false">Nuit, week-end, férié</button></div>
+          <div class="segment" role="group" aria-label="Type de trajet"><button type="button" data-ar="0" aria-pressed="true">Aller simple</button><button type="button" data-ar="1" aria-pressed="false">Aller-retour</button></div>
+          <p class="note">L'application finale utilisera la distance réelle par la route.</p>
+        </div>
+        <div><p class="trajet-info" id="trajet-info" aria-live="polite"></p><div id="offres"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Le trajet -->
+  <section class="tete" data-photo="assets/oeuvres/picard-1900.webp" data-focus="0.5 0.64" data-chapitre="Le trajet" id="trajet" aria-labelledby="t-trajet">
+    <img src="assets/oeuvres/picard-1900.webp" alt="" aria-hidden="true" style="object-position:50% 64%">
+    <div class="cadre"><h2 class="fin-titre" id="t-trajet">Le trajet</h2><p class="chapo">Votre itinéraire tracé sur un plan de la région, sur les vraies routes.</p></div>
+  </section>
+  <section class="bloc" aria-label="Plan du trajet">
+    <div class="cadre">
+      <div class="bloc-tete"><h3 class="fin-titre">A68, A61, N126</h3><p class="chapo">Le plan suit le départ et l'arrivée choisis plus haut. Tracés simplifiés, positions des villes exactes.</p></div>
+      <div class="carte">
+        <svg class="reseau" id="reseau-carte" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Plan du trajet choisi"></svg>
+        <div class="cartouche"><span id="carte-titre"></span><span id="carte-km"></span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- La confirmation -->
+  <section class="tete" data-photo="assets/tesla-interieur-arriere.webp" data-chapitre="La confirmation" id="confirmation" aria-labelledby="t-confirmation">
+    <img src="assets/tesla-interieur-arriere.webp" alt="" aria-hidden="true">
+    <div class="cadre"><h2 class="fin-titre" id="t-confirmation">La confirmation</h2><p class="chapo">C'est Fabrice qui confirme, sous 30 minutes. L'écran prend la couleur de l'indigo.</p></div>
+  </section>
+  <section class="bloc" aria-label="Les états d'une demande">
+    <div class="cadre">
+      <div class="trio">
+        <figure><div class="ecran"><img src="assets/ecrans/delai.webp" alt="Demande envoyée, compte à rebours de 30 minutes" loading="lazy"></div><figcaption><b>Demande envoyée</b>Bleu pâle, et 30 minutes de délai. Au-delà, l'application vous invite à appeler.</figcaption></figure>
+        <figure><div class="ecran"><img src="assets/ecrans/encre.webp" alt="L'encre indigo monte sur l'écran" loading="lazy"></div><figcaption><b>Fabrice confirme</b>L'encre monte du bas de l'écran. Notification, SMS et email.</figcaption></figure>
+        <figure><div class="ecran"><img src="assets/ecrans/confirmee.webp" alt="Course confirmée, écran indigo" loading="lazy"></div><figcaption><b>Course confirmée</b>Indigo profond. Une fois terminée, la course passe au bleu délavé.</figcaption></figure>
+      </div>
+      <div class="panneau-bloc">
+        <div>
+          <h3 class="fin-titre">Un panneau à votre nom</h3>
+          <p class="chapo" style="margin-top:16px">Dans le hall des arrivées, Fabrice vous attend avec un panneau nominatif. 30 minutes d'attente gratuite à l'aéroport, 15 en gare. Touchez le panneau, il se retourne.</p>
+          <div class="panneau-commandes">
+            <div class="champ"><label for="nom">Votre nom</label><input id="nom" type="text" maxlength="28" autocomplete="name" placeholder="Claire Martin" value="Claire Martin"></div>
+            <button class="bouton clair" id="retourner" type="button">Retourner</button>
+          </div>
+        </div>
+        <div class="panneau-scene">
+          <button class="panneau retourne" id="panneau-carte" type="button" aria-label="Retourner le panneau">
+            <span class="face dos"><img src="assets/logo-blanc.png" alt=""><span>VOLANT3RANCHES VTC</span></span>
+            <span class="face avant"><img src="assets/logo.png" alt=""><strong id="panneau-nom">Claire Martin</strong><span>VOLANT3RANCHES VTC</span></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Les véhicules -->
+  <section class="tete" data-photo="assets/lauragais-flotte.webp" data-focus="0.62 0.6" data-chapitre="Les véhicules" id="vehicules" aria-labelledby="t-vehicules">
+    <img src="assets/lauragais-flotte.webp" alt="" aria-hidden="true">
+    <div class="cadre"><h2 class="fin-titre" id="t-vehicules">Les véhicules</h2><p class="chapo">Deux véhicules électriques, ceux de Fabrice. Pas de flotte simulée.</p></div>
+  </section>
+  <section class="bloc" aria-label="Les deux offres">
+    <div class="cadre flotte">
+      <article class="vehicule">
+        <img src="assets/tesla-route.webp" alt="La Tesla Model 3 Performance sur un chemin de campagne" loading="lazy">
+        <div><h3 class="fin-titre">Offre Confort</h3><p class="modele">Tesla Model 3 Performance · 3 passagers, 3 bagages</p>
+          <div class="tarifs"><span><b>1,80 €/km</b>en semaine, 6h–22h</span><span><b>2,20 €/km</b>nuit, week-end, férié</span><span><b>20 €</b>minimum</span></div></div>
+      </article>
+      <article class="vehicule">
+        <img src="assets/van-face.webp" alt="Le Van 9 places vu de face" loading="lazy" style="object-position:50% 40%">
+        <div><h3 class="fin-titre">Offre Premium</h3><p class="modele">Van 9 places · 8 passagers, 8 bagages</p>
+          <div class="tarifs"><span><b>2,60 €/km</b>en semaine, 6h–22h</span><span><b>3,00 €/km</b>nuit, week-end, férié</span><span><b>35 €</b>minimum</span></div></div>
+      </article>
+    </div>
+  </section>
+
+  <!-- Fabrice -->
+  <section class="tete" data-photo="assets/fabrice.webp" data-focus="0.5 0.3" data-chapitre="Fabrice" id="fabrice" aria-labelledby="t-fabrice">
+    <img src="assets/fabrice.webp" alt="" aria-hidden="true">
+    <div class="cadre"><h2 class="fin-titre" id="t-fabrice">Fabrice</h2><p class="chapo">« Fabrice est toujours disponible et arrangeant. Tarifs transparents, aucune mauvaise surprise. » Philippe T., avis publié sur volant3ranches-vtc.fr</p></div>
+  </section>
+  <section class="fin" aria-labelledby="t-fin">
+    <div class="cadre">
+      <h2 class="fin-titre" id="t-fin">Bientôt sur iOS et Android</h2>
+      <p class="chapo" style="margin-top:20px">Basé à Viterbe, dans le Tarn. Le prototype a été validé avec Fabrice en novembre 2026 ; en attendant, il prend vos réservations par téléphone, par email et sur son site.</p>
+      <div class="contact">
+        <span class="numero" id="numero">06 16 53 14 91</span>
+        <button class="bouton feuille" id="copier" type="button">Copier le numéro</button>
+        <a class="bouton fantome" href="https://volant3ranches-vtc.fr" target="_blank" rel="noopener">Réserver sur le site</a>
+      </div>
+      <p class="copie-etat" id="copie-etat" aria-live="polite"></p>
+      <p class="note">contact@volant3ranches-vtc.fr</p>
+      <footer class="pied">
+        <span>Volant3ranches, SASU · SIRET 932 513 443 · 11 chemin de la Baissade, 81220 Viterbe</span>
+        <span>Photos : véhicules et chauffeur réels. Affiche : Georges Picard, 1900, domaine public (Wikimedia Commons).</span>
+      </footer>
+    </div>
+  </section>
+</main>
+
+<div class="pastille" id="pastille" role="navigation" aria-label="Chapitre en cours">
+  <span id="pastille-nom">Réserver</span>
+  <button type="button" id="prec" aria-label="Chapitre précédent"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 9l4-4 4 4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+  <button type="button" id="suiv" aria-label="Chapitre suivant"><svg viewBox="0 0 14 14" aria-hidden="true"><path d="M3 5l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
+</div>
+
+<script>
+(() => {
+  'use strict';
+  const reduit = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const borne = x => Math.max(0, Math.min(1, x));
+
+  /* ---------- curseur partagé (lissé) ---------- */
+  const souris = { x: innerWidth / 2, y: innerHeight / 2, sx: innerWidth / 2, sy: innerHeight / 2, active: false };
+  addEventListener('pointermove', e => { souris.x = e.clientX; souris.y = e.clientY; souris.active = true; }, { passive: true });
+
+  /* ---------- l'anneau de destinations ---------- */
+  const anneau = $('#anneau');
+  const phrase = 'Toulouse-Blagnac · Albi · Castres · Carcassonne · Partout en France · ';
+  let rayon = 0;
+  function construireAnneau() {
+    anneau.textContent = '';
+    const mesure = document.createElement('span'); mesure.textContent = 'a'; anneau.appendChild(mesure);
+    const st = getComputedStyle(mesure); anneau.textContent = '';
+    const ctx = document.createElement('canvas').getContext('2d');
+    ctx.font = `${st.fontWeight} ${st.fontSize} ${st.fontFamily}`;
+    const esp = parseFloat(st.fontSize) * -0.02;
+    const largeurs = [...phrase].map(c => ctx.measureText(c).width + esp);
+    const tour = largeurs.reduce((a, b) => a + b, 0);
+    rayon = tour / (2 * Math.PI);
+    let acc = 0;
+    [...phrase].forEach((c, i) => {
+      const s = document.createElement('span'); s.textContent = c;
+      const a = (acc + largeurs[i] / 2) / tour * 360; acc += largeurs[i];
+      s.style.transform = `rotateY(${a}deg) translateZ(${rayon}px) translate(-50%, -50%)`;
+      anneau.appendChild(s);
+    });
+  }
+  construireAnneau(); addEventListener('resize', construireAnneau);
+  let angle = 0, tiltX = -14, tiltZ = -8;
+
+  /* ---------- ouverture : la flotte en particules, que le curseur étire comme de la peinture ---------- */
+  const ouverture = $('#ouverture'), cv = $('#particules');
+  let particulesRendu = null, dispersion = 0;
+  (() => {
+    const gl = cv.getContext('webgl', { antialias: false, premultipliedAlpha: false }); if (!gl) return;
+    const sh = (t, src) => { const o = gl.createShader(t); gl.shaderSource(o, src); gl.compileShader(o); if (!gl.getShaderParameter(o, gl.COMPILE_STATUS)) console.warn(gl.getShaderInfoLog(o)); return o; };
+    const prog = (vs, fs) => { const p = gl.createProgram(); gl.attachShader(p, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(p);
+      if (!gl.getProgramParameter(p, gl.LINK_STATUS)) { console.warn(gl.getProgramInfoLog(p)); return null; }
+      const u = {}; return { p, u: n => (u[n] ??= gl.getUniformLocation(p, n)), a: n => gl.getAttribLocation(p, n) }; };
+    const VQ = 'attribute vec2 a;void main(){gl_Position=vec4(a,0.0,1.0);}';
+    const COUVRE = `vec2 couvre(vec2 fc){vec2 uv=fc/u_res;uv.y=1.0-uv.y;float ra=u_res.x/u_res.y;float ri=u_ir.x/u_ir.y;
+vec2 s=ra>ri?vec2(1.0,ri/ra):vec2(ra/ri,1.0);return (uv-0.5)*s+0.5+(u_focus-0.5)*(1.0-s);}`;
+    // 1. le fond : la photo adoucie et assombrie
+    const pFond = prog(VQ, `precision mediump float;uniform sampler2D u_img;uniform vec2 u_res;uniform vec2 u_ir;uniform vec2 u_focus;${COUVRE}
+void main(){vec2 uv=couvre(gl_FragCoord.xy);vec2 d=3.0/u_ir;
+vec3 c=texture2D(u_img,uv).rgb*0.4+(texture2D(u_img,uv+vec2(d.x,0.0)).rgb+texture2D(u_img,uv-vec2(d.x,0.0)).rgb+texture2D(u_img,uv+vec2(0.0,d.y)).rgb+texture2D(u_img,uv-vec2(0.0,d.y)).rgb)*0.15;
+gl_FragColor=vec4(c*0.72,1.0);}`);
+    // 2. les particules
+    const pPts = prog(`attribute vec2 a_uv;attribute vec3 a_col;attribute float a_seed;
+uniform vec2 u_res;uniform vec2 u_ir;uniform vec2 u_focus;uniform float u_t;uniform float u_px;uniform float u_disp;uniform float u_size;
+varying vec3 v_col;varying float v_glit;
+void main(){float ra=u_res.x/u_res.y, ri=u_ir.x/u_ir.y;vec2 s=ra>ri?vec2(1.0,ri/ra):vec2(ra/ri,1.0);
+ vec2 uv=(a_uv-0.5-(u_focus-0.5)*(1.0-s))/s+0.5;vec2 p=uv*u_res;float t=u_t*0.6+a_seed*40.0;
+ p+=vec2(sin(t*0.7+a_seed*13.0),cos(t*0.5+a_seed*7.0))*(1.6*u_px+u_disp*(80.0+a_seed*220.0)*u_px);
+ p.y-=u_disp*a_seed*260.0*u_px;
+ gl_Position=vec4(p/u_res*2.0-1.0,0.0,1.0);gl_Position.y*=-1.0;
+ float glit=step(0.996,fract(a_seed*91.7));v_glit=glit*(0.5+0.5*sin(u_t*3.0+a_seed*60.0));
+ gl_PointSize=u_size*(0.45+a_seed*0.75)+glit*2.0*u_px;v_col=a_col;}`,
+      `precision mediump float;varying vec3 v_col;varying float v_glit;
+void main(){float d=length(gl_PointCoord-0.5);if(d>0.5)discard;float a=smoothstep(0.5,0.1,d);
+vec3 c=v_col;float l=dot(c,vec3(0.3,0.59,0.11));c=mix(vec3(l),c,1.45)*1.15;gl_FragColor=vec4(mix(c,vec3(1.0,0.96,1.0),v_glit),a*(0.7+v_glit*0.3));}`);
+    // 3. le champ de déformation (encodé autour de 0,5), entraîné par lui-même puis estompé
+    const pDep = prog(VQ, `precision mediump float;uniform sampler2D u_d;uniform vec2 u_dres;uniform vec2 u_m;uniform vec2 u_v;uniform float u_r;uniform float u_asp;
+void main(){vec2 uv=gl_FragCoord.xy/u_dres;vec2 o=texture2D(u_d,uv).xy-0.5;
+vec2 prev=texture2D(u_d,uv-o*0.06).xy-0.5;prev*=0.982;
+vec2 d=uv-u_m;d.x*=u_asp;float g=exp(-dot(d,d)/(u_r*u_r));prev+=u_v*g;
+gl_FragColor=vec4(clamp(prev+0.5,0.0,1.0),0.0,1.0);}`);
+    // 4. l'image finale, lue à travers le champ
+    const pFin = prog(VQ, `precision mediump float;uniform sampler2D u_s;uniform sampler2D u_d;uniform vec2 u_res;
+void main(){vec2 uv=gl_FragCoord.xy/u_res;vec2 o=texture2D(u_d,uv).xy-0.5;
+vec3 c=texture2D(u_s,uv-o*0.42).rgb;c+=length(o)*0.25;gl_FragColor=vec4(c,1.0);}`);
+    if (!pFond || !pPts || !pDep || !pFin) return;
+
+    const quad = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quad); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    const lierQuad = pr => { gl.bindBuffer(gl.ARRAY_BUFFER, quad); const l = pr.a('a'); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, 2, gl.FLOAT, false, 0, 0); };
+    const cible = (w, h) => { const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f); gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
+      return { t, f, w, h }; };
+
+    const img = new Image();
+    img.onload = () => {
+      const texImg = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, texImg);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
+      const W = innerWidth < 700 ? 200 : 300, H = Math.round(W * img.naturalHeight / img.naturalWidth);
+      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      const cx = c.getContext('2d'); cx.drawImage(img, 0, 0, W, H);
+      const px = cx.getImageData(0, 0, W, H).data;
+      const n = W * H, uvs = new Float32Array(n * 2), col = new Float32Array(n * 3), seed = new Float32Array(n);
+      let graine = 11; const alea = () => (graine = (graine * 16807) % 2147483647) / 2147483647;
+      for (let y = 0, i = 0; y < H; y++) for (let x = 0; x < W; x++, i++) {
+        uvs[i * 2] = (x + alea()) / W; uvs[i * 2 + 1] = (y + alea()) / H;
+        col[i * 3] = px[i * 4] / 255; col[i * 3 + 1] = px[i * 4 + 1] / 255; col[i * 3 + 2] = px[i * 4 + 2] / 255; seed[i] = alea();
+      }
+      const tampon = data => { const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW); return b; };
+      const bUv = tampon(uvs), bCol = tampon(col), bSeed = tampon(seed);
+      const lierPts = () => [[bUv, 'a_uv', 2], [bCol, 'a_col', 3], [bSeed, 'a_seed', 1]].forEach(([b, nm, k]) => { gl.bindBuffer(gl.ARRAY_BUFFER, b); const l = pPts.a(nm); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, k, gl.FLOAT, false, 0, 0); });
+      const desactiver = () => { for (let i = 0; i < 4; i++) gl.disableVertexAttribArray(i); };
+
+      let dpr = 1, scene = null, dA = null, dB = null;
+      const taille = () => {
+        dpr = Math.min(devicePixelRatio || 1, 2);
+        cv.width = Math.round(ouverture.clientWidth * dpr); cv.height = Math.round(ouverture.clientHeight * dpr);
+        scene = cible(cv.width, cv.height);
+        const dw = Math.max(64, Math.round(cv.width / 6)), dh = Math.max(64, Math.round(cv.height / 6));
+        dA = cible(dw, dh); dB = cible(dw, dh);
+        [dA, dB].forEach(d => { gl.bindFramebuffer(gl.FRAMEBUFFER, d.f); gl.viewport(0, 0, d.w, d.h); gl.clearColor(.5, .5, 0, 1); gl.clear(gl.COLOR_BUFFER_BIT); });
+      };
+      taille(); addEventListener('resize', taille);
+      let mx = -1, my = -1;
+
+      particulesRendu = now => {
+        const r = cv.getBoundingClientRect();
+        // vitesse du curseur, en coordonnées 0..1 (origine en bas)
+        const ux = (souris.x - r.left) / r.width, uy = 1 - (souris.y - r.top) / r.height;
+        let vx = 0, vy = 0;
+        if (mx >= 0 && souris.active && !reduit) { vx = Math.max(-.08, Math.min(.08, (ux - mx) * 2.2)); vy = Math.max(-.08, Math.min(.08, (uy - my) * 2.2)); }
+        mx = ux; my = uy;
+
+        // champ de déformation : A → B, puis échange
+        gl.disable(gl.BLEND); desactiver();
+        gl.useProgram(pDep.p); lierQuad(pDep);
+        gl.bindFramebuffer(gl.FRAMEBUFFER, dB.f); gl.viewport(0, 0, dB.w, dB.h);
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, dA.t); gl.uniform1i(pDep.u('u_d'), 0);
+        gl.uniform2f(pDep.u('u_dres'), dB.w, dB.h); gl.uniform2f(pDep.u('u_m'), ux, uy); gl.uniform2f(pDep.u('u_v'), vx, vy);
+        gl.uniform1f(pDep.u('u_r'), .09); gl.uniform1f(pDep.u('u_asp'), r.width / r.height);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        [dA, dB] = [dB, dA];
+
+        // scène : fond puis particules, dans une texture
+        gl.bindFramebuffer(gl.FRAMEBUFFER, scene.f); gl.viewport(0, 0, scene.w, scene.h);
+        gl.useProgram(pFond.p); desactiver(); lierQuad(pFond);
+        gl.bindTexture(gl.TEXTURE_2D, texImg); gl.uniform1i(pFond.u('u_img'), 0);
+        gl.uniform2f(pFond.u('u_res'), scene.w, scene.h); gl.uniform2f(pFond.u('u_ir'), img.naturalWidth, img.naturalHeight); gl.uniform2f(pFond.u('u_focus'), .62, .6);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        gl.useProgram(pPts.p); desactiver(); lierPts();
+        gl.uniform2f(pPts.u('u_res'), scene.w, scene.h); gl.uniform2f(pPts.u('u_ir'), img.naturalWidth, img.naturalHeight); gl.uniform2f(pPts.u('u_focus'), .62, .6);
+        gl.uniform1f(pPts.u('u_t'), reduit ? 1 : now / 1000); gl.uniform1f(pPts.u('u_px'), dpr); gl.uniform1f(pPts.u('u_disp'), dispersion);
+        gl.uniform1f(pPts.u('u_size'), Math.max(2, scene.w / W * 1.25));
+        gl.drawArrays(gl.POINTS, 0, n);
+        gl.disable(gl.BLEND);
+
+        // image finale, déformée
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null); gl.viewport(0, 0, cv.width, cv.height);
+        gl.useProgram(pFin.p); desactiver(); lierQuad(pFin);
+        gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, scene.t); gl.uniform1i(pFin.u('u_s'), 0);
+        gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D, dA.t); gl.uniform1i(pFin.u('u_d'), 1);
+        gl.uniform2f(pFin.u('u_res'), cv.width, cv.height);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+        gl.activeTexture(gl.TEXTURE0);
+      };
+      ouverture.classList.add('pret');
+    };
+    img.src = 'assets/lauragais-flotte.webp';
+  })();
+
+  /* ---------- têtes de chapitre : flou radial centré sur le curseur ---------- */
+  const FLOU = `precision mediump float;
+uniform sampler2D u_img;uniform vec2 u_res;uniform vec2 u_ir;uniform vec2 u_focus;uniform vec2 u_c;uniform float u_k;uniform float u_t;
+vec2 couvre(vec2 fc){vec2 uv=fc/u_res;uv.y=1.0-uv.y;float ra=u_res.x/u_res.y;float ri=u_ir.x/u_ir.y;
+vec2 s=ra>ri?vec2(1.0,ri/ra):vec2(ra/ri,1.0);return (uv-0.5)*s+0.5+(u_focus-0.5)*(1.0-s);}
+float h(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}
+void main(){
+ vec2 uv=couvre(gl_FragCoord.xy);vec2 c=couvre(u_c);
+ vec3 acc=vec3(0.0);float tot=0.0;float j=h(gl_FragCoord.xy+u_t);
+ for(int i=0;i<28;i++){float k=(float(i)+j)/28.0;vec2 q=mix(uv,c,k*u_k);float w=1.0-k*0.6;acc+=texture2D(u_img,q).rgb*w;tot+=w;}
+ vec3 col=acc/tot;
+ float g=h(gl_FragCoord.xy*0.5+floor(u_t*24.0));col+=(g-0.5)*0.05;
+ col*=0.62+0.38*(1.0-u_k);
+ gl_FragColor=vec4(col,1.0);}`;
+  const tetes = $$('.tete').map(sec => {
+    const t = { sec, visible: false, k: .8, rendu: null };
+    const canvas = document.createElement('canvas'); canvas.setAttribute('aria-hidden', 'true'); sec.insertBefore(canvas, $('.cadre', sec));
+    const gl = canvas.getContext('webgl', { antialias: false }); if (!gl) return t;
+    const sh = (ty, s) => { const o = gl.createShader(ty); gl.shaderSource(o, s); gl.compileShader(o); return o; };
+    const p = gl.createProgram(); gl.attachShader(p, sh(gl.VERTEX_SHADER, 'attribute vec2 a;void main(){gl_Position=vec4(a,0.0,1.0);}')); gl.attachShader(p, sh(gl.FRAGMENT_SHADER, FLOU)); gl.linkProgram(p);
+    if (!gl.getProgramParameter(p, gl.LINK_STATUS)) { console.warn(gl.getProgramInfoLog(p)); return t; }
+    gl.useProgram(p);
+    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer()); gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    const loc = gl.getAttribLocation(p, 'a'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+    const U = n => gl.getUniformLocation(p, n);
+    const img = new Image();
+    img.onload = () => {
+      gl.bindTexture(gl.TEXTURE_2D, gl.createTexture());
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
+      const [fx, fy] = (sec.dataset.focus || '0.5 0.5').split(' ').map(Number);
+      gl.uniform2f(U('u_ir'), img.naturalWidth, img.naturalHeight); gl.uniform2f(U('u_focus'), fx, fy);
+      let dpr = 1;
+      const taille = () => { dpr = Math.min(devicePixelRatio || 1, 1.5); canvas.width = Math.round(sec.clientWidth * dpr); canvas.height = Math.round(sec.clientHeight * dpr); gl.viewport(0, 0, canvas.width, canvas.height); gl.uniform2f(U('u_res'), canvas.width, canvas.height); };
+      taille(); addEventListener('resize', taille);
+      const uC = U('u_c'), uK = U('u_k'), uT = U('u_t');
+      t.rendu = now => {
+        const r = sec.getBoundingClientRect();
+        gl.uniform2f(uC, (souris.sx - r.left) * dpr, canvas.height - (souris.sy - r.top) * dpr);
+        gl.uniform1f(uK, t.k); gl.uniform1f(uT, reduit ? 0 : now / 1000);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      };
+      t.rendu(performance.now()); canvas.classList.add('pret');
+    };
+    img.src = sec.dataset.photo;
+    return t;
+  });
+
+  /* ---------- données et estimateur (repris de l'application) ---------- */
+  const lieux = [
+    { id: 'tls', nom: 'Aéroport Toulouse-Blagnac', court: 'Toulouse-Blagnac', n: 'tls', lat: 43.6293, lon: 1.3638 },
+    { id: 'matabiau', nom: 'Gare Toulouse-Matabiau', court: 'Toulouse-Matabiau', n: 'tlse', lat: 43.6114, lon: 1.4537 },
+    { id: 'albi-gare', nom: "Gare d'Albi-Ville", court: 'Albi', n: 'albi', lat: 43.9206, lon: 2.1425 },
+    { id: 'castres-gare', nom: 'Gare de Castres', court: 'Castres', n: 'castres', lat: 43.6007, lon: 2.2329 },
+    { id: 'carca-gare', nom: 'Gare de Carcassonne', court: 'Carcassonne', n: 'carcassonne', lat: 43.2181, lon: 2.3517 },
+    { id: 'toulouse', nom: 'Toulouse, Capitole', court: 'Toulouse', n: 'tlse', lat: 43.6045, lon: 1.444 },
+    { id: 'albi', nom: 'Albi, centre-ville', court: 'Albi', n: 'albi', lat: 43.9289, lon: 2.1464 },
+    { id: 'castres', nom: 'Castres, centre-ville', court: 'Castres', n: 'castres', lat: 43.606, lon: 2.241 },
+    { id: 'gaillac', nom: 'Gaillac', court: 'Gaillac', n: 'gaillac', lat: 43.9016, lon: 1.897 },
+    { id: 'lavaur', nom: 'Lavaur', court: 'Lavaur', n: 'lavaur', lat: 43.699, lon: 1.819 },
+    { id: 'viterbe', nom: 'Viterbe', court: 'Viterbe', n: 'viterbe', lat: 43.672, lon: 1.733 },
+    { id: 'graulhet', nom: 'Graulhet', court: 'Graulhet', n: 'graulhet', lat: 43.76, lon: 1.989 },
+    { id: 'mazamet', nom: 'Mazamet', court: 'Mazamet', n: 'mazamet', lat: 43.492, lon: 2.374 },
+    { id: 'revel', nom: 'Revel', court: 'Revel', n: 'revel', lat: 43.458, lon: 2.004 },
+    { id: 'carcassonne', nom: 'Carcassonne, la Cité', court: 'Carcassonne', n: 'carcassonne', lat: 43.2063, lon: 2.3644 },
+  ];
+  const offres = [
+    { nom: 'Offre Confort', vehicule: 'Tesla Model 3 Performance', jour: 1.8, majo: 2.2, min: 20 },
+    { nom: 'Offre Premium', vehicule: 'Van 9 places', jour: 2.6, majo: 3.0, min: 35 },
+  ];
+  const noeuds = {
+    tls: [43.6293, 1.3638, 'Toulouse-Blagnac'], tlse: [43.606, 1.449, 'Toulouse'], stsulpice: [43.776, 1.686, 'Saint-Sulpice'], gaillac: [43.9016, 1.897, 'Gaillac'],
+    albi: [43.926, 2.146, 'Albi'], verfeil: [43.656, 1.66, 'Verfeil'], viterbe: [43.672, 1.733, 'Viterbe'], lavaur: [43.699, 1.819, 'Lavaur'], puylaurens: [43.571, 2.013, 'Puylaurens'],
+    castres: [43.604, 2.237, 'Castres'], graulhet: [43.76, 1.989, 'Graulhet'], mazamet: [43.492, 2.374, 'Mazamet'], revel: [43.458, 2.004, 'Revel'],
+    villefranche: [43.40, 1.715, 'Villefranche-de-L.'], castelnaudary: [43.318, 1.954, 'Castelnaudary'], carcassonne: [43.212, 2.358, 'Carcassonne'],
+  };
+  const routes = [
+    ['A68', ['tlse', 'stsulpice', 'gaillac', 'albi']], ['A61', ['tlse', 'villefranche', 'castelnaudary', 'carcassonne']], ['N126', ['tlse', 'verfeil', 'puylaurens', 'castres']],
+    ['N112', ['albi', 'castres', 'mazamet']], ['D118', ['mazamet', 'carcassonne']], ['Rocade', ['tls', 'tlse']], ['D', ['verfeil', 'viterbe', 'lavaur', 'stsulpice']],
+    ['D', ['lavaur', 'graulhet', 'albi']], ['D', ['graulhet', 'castres']], ['D', ['puylaurens', 'revel', 'castelnaudary']], ['D', ['viterbe', 'puylaurens']],
+  ];
+  const rivieres = [
+    [[44.0, 2.42], [43.95, 2.3], [43.928, 2.15], [43.9, 1.9], [43.8, 1.72], [43.83, 1.55], [43.93, 1.4], [44.02, 1.27]],
+    [[43.58, 2.5], [43.62, 2.38], [43.604, 2.24], [43.63, 2.06], [43.7, 1.82], [43.776, 1.69]],
+    [[43.25, 1.18], [43.42, 1.3], [43.56, 1.42], [43.61, 1.44], [43.7, 1.37], [43.83, 1.3], [44.0, 1.2]],
+  ];
+  const rad = d => d * Math.PI / 180;
+  const haversine = (a, b) => { const dLat = rad(b.lat - a.lat), dLon = rad(b.lon - a.lon); const h = Math.sin(dLat / 2) ** 2 + Math.cos(rad(a.lat)) * Math.cos(rad(b.lat)) * Math.sin(dLon / 2) ** 2; return 2 * 6371 * Math.asin(Math.sqrt(h)); };
+  const trajet = (a, b) => { const km = Math.max(3, Math.round(haversine(a, b) * 1.25 * 10) / 10); return { km, minutes: Math.round(km / (km > 30 ? 75 : 45) * 60 + 5) }; };
+  const prix = (o, km, majo, ar) => { let p = km * (majo ? o.majo : o.jour); if (ar) p *= 1.9; const auMin = p < o.min; return { montant: Math.round(Math.max(p, o.min) * 2) / 2, auMin }; };
+  const graphe = {};
+  routes.forEach(([nom, pts]) => { for (let i = 0; i < pts.length - 1; i++) { const [a, b] = [pts[i], pts[i + 1]]; const d = haversine({ lat: noeuds[a][0], lon: noeuds[a][1] }, { lat: noeuds[b][0], lon: noeuds[b][1] }) * (nom === 'D' ? 1.25 : 1); (graphe[a] ||= []).push([b, d]); (graphe[b] ||= []).push([a, d]); } });
+  function chemin(de, a) {
+    const dist = { [de]: 0 }, prev = {}, vus = new Set();
+    for (;;) { let u = null; for (const k in dist) if (!vus.has(k) && (u === null || dist[k] < dist[u])) u = k; if (u === null || u === a) break; vus.add(u);
+      for (const [v, d] of graphe[u] || []) if (dist[v] === undefined || dist[u] + d < dist[v]) { dist[v] = dist[u] + d; prev[v] = u; } }
+    const pts = [a]; let c = a; while (prev[c]) { c = prev[c]; pts.unshift(c); } return pts;
+  }
+  const NS = 'http://www.w3.org/2000/svg';
+  const COS = Math.cos(rad(43.6)), proj = (lat, lon) => [(lon - 1.18) * 1000 * COS, (44.06 - lat) * 1000];
+  const el = (tag, attrs, parent) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent && parent.appendChild(e); return e; };
+  const lisse = points => { const p = points.map(([la, lo]) => proj(la, lo)); let d = `M${p[0][0].toFixed(1)},${p[0][1].toFixed(1)}`;
+    for (let i = 0; i < p.length - 1; i++) { const p0 = p[i - 1] || p[i], p1 = p[i], p2 = p[i + 1], p3 = p[i + 2] || p2;
+      d += ` C${(p1[0] + (p2[0] - p0[0]) / 6).toFixed(1)},${(p1[1] + (p2[1] - p0[1]) / 6).toFixed(1)} ${(p2[0] - (p3[0] - p1[0]) / 6).toFixed(1)},${(p2[1] - (p3[1] - p1[1]) / 6).toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`; } return d; };
+  const ligne = ids => ids.map(id => [noeuds[id][0], noeuds[id][1]]);
+  const svgC = $('#reseau-carte'), etroit = matchMedia('(max-width: 700px)').matches;
+  const [a1] = proj(0, 1.26), [a2] = proj(0, 2.5), [, b1] = proj(44.02, 0);
+  const vb = etroit ? [a1 + 60, b1, (a2 - a1) - 120, (a2 - a1 - 120) * 1.25] : [a1, b1 + 60, a2 - a1, (a2 - a1) * 9 / 16];
+  svgC.setAttribute('viewBox', vb.join(' '));
+  rivieres.forEach(r => el('path', { d: lisse(r), class: 'riviere' }, svgC));
+  routes.forEach(([, pts]) => el('path', { d: lisse(ligne(pts)), class: 'route' }, svgC));
+  const trace = el('path', { class: 'trace', d: '' }, svgC);
+  for (const id in noeuds) { const [la, lo, nom] = noeuds[id], [x, y] = proj(la, lo); const g = el('g', { class: 'ville', 'data-id': id }, svgC); el('circle', { cx: x, cy: y, r: 3.2 }, g); el('text', { x: x + 9, y: y - 8 }, g).textContent = nom; }
+  let carteVue = false;
+  function tracer(ids, anime) {
+    trace.setAttribute('d', lisse(ligne(ids)));
+    $$('.ville', svgC).forEach(g => g.classList.toggle('fort', ids[0] === g.dataset.id || ids[ids.length - 1] === g.dataset.id));
+    const L = Math.ceil(trace.getTotalLength()); trace.style.transition = 'none'; trace.style.strokeDasharray = L; trace.style.strokeDashoffset = anime && !reduit ? L : 0;
+    if (anime && !reduit) { trace.getBoundingClientRect(); trace.style.transition = 'stroke-dashoffset 1.8s cubic-bezier(0.16, 1, 0.3, 1)'; trace.style.strokeDashoffset = 0; }
+  }
+  const selD = $('#depart'), selA = $('#arrivee');
+  const opts = lieux.map(l => `<option value="${l.id}">${l.nom}</option>`).join(''); selD.innerHTML = opts; selA.innerHTML = opts; selD.value = 'castres-gare'; selA.value = 'tls';
+  let majo = false, ar = false;
+  const eur = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR' }), num = new Intl.NumberFormat('fr-FR', { maximumFractionDigits: 1 });
+  const duree = m => m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : `${m} min`;
+  function majEstimation(animer) {
+    const a = lieux.find(l => l.id === selD.value), b = lieux.find(l => l.id === selA.value);
+    if (a.id === b.id) { $('#trajet-info').textContent = 'Choisissez une arrivée différente du départ.'; $('#offres').innerHTML = ''; return; }
+    const t = trajet(a, b);
+    $('#trajet-info').textContent = `${a.court} → ${b.court} · ${num.format(t.km)} km · environ ${duree(t.minutes)}`;
+    $('#offres').innerHTML = offres.map(o => { const p = prix(o, t.km, majo, ar);
+      const detail = p.auMin ? `Minimum de course : ${eur.format(o.min)}` : `${num.format(t.km)} km × ${eur.format(majo ? o.majo : o.jour)}${ar ? ' × 1,90 (aller-retour)' : ''}`;
+      return `<div class="offre"><h4>${o.nom}${majo ? '<span class="majo">Majoré</span>' : ''}</h4><span class="modele-offre">${o.vehicule}</span><span class="prix">${eur.format(p.montant)}</span><span class="detail">${detail}</span></div>`; }).join('');
+    const c = chemin(a.n, b.n); tracer(c.length > 1 ? c : [a.n, b.n], animer && carteVue);
+    $('#carte-titre').textContent = `${a.nom} → ${b.nom}`; $('#carte-km').textContent = `${num.format(t.km)} km · ${duree(t.minutes)}`;
+  }
+  selD.addEventListener('change', () => majEstimation(true)); selA.addEventListener('change', () => majEstimation(true));
+  $('#inverser').addEventListener('click', () => { [selD.value, selA.value] = [selA.value, selD.value]; majEstimation(true); });
+  const bascule = (attr, set) => $$(`[data-${attr}]`).forEach(b => b.addEventListener('click', () => { set(b.dataset[attr] === '1'); $$(`[data-${attr}]`).forEach(x => x.setAttribute('aria-pressed', String(x === b))); majEstimation(false); }));
+  bascule('majo', v => { majo = v; }); bascule('ar', v => { ar = v; });
+  majEstimation(false);
+  new IntersectionObserver((es, o) => es.forEach(e => { if (e.isIntersecting) { carteVue = true; majEstimation(true); o.disconnect(); } }), { threshold: .35 }).observe($('.carte'));
+
+  /* ---------- panneau, contact ---------- */
+  const panneau = $('#panneau-carte'), nom = $('#nom');
+  const retourner = () => panneau.classList.toggle('retourne');
+  panneau.addEventListener('click', retourner); $('#retourner').addEventListener('click', retourner);
+  nom.addEventListener('input', () => { $('#panneau-nom').textContent = nom.value.trim() || 'Votre nom'; panneau.classList.add('retourne'); });
+  $('#copier').addEventListener('click', () => {
+    const etat = $('#copie-etat');
+    const repli = () => { const r = document.createRange(); r.selectNodeContents($('#numero')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); etat.textContent = 'Numéro sélectionné : copiez-le avec votre clavier.'; };
+    try { navigator.clipboard.writeText('06 16 53 14 91').then(() => { etat.textContent = 'Numéro copié.'; }, repli); } catch (e) { repli(); }
+  });
+
+  /* ---------- pastille flottante ---------- */
+  const pastille = $('#pastille'), pNom = $('#pastille-nom');
+  let courant = -1;
+  const aller = d => { const i = Math.max(0, Math.min(tetes.length - 1, courant + d)); tetes[i].sec.scrollIntoView({ behavior: reduit ? 'auto' : 'smooth' }); };
+  $('#prec').addEventListener('click', () => aller(-1)); $('#suiv').addEventListener('click', () => aller(1));
+
+  /* ---------- défilement ---------- */
+  function auDefilement() {
+    const h = innerHeight;
+    const ro = ouverture.getBoundingClientRect();
+    dispersion = borne(-ro.top / ro.height) ** 1.4;
+    let c = -1;
+    tetes.forEach((t, i) => {
+      const r = t.sec.getBoundingClientRect();
+      t.visible = r.bottom > 0 && r.top < h;
+      // le flou se dissipe quand la tête arrive au centre de l'écran, puis revient en partant
+      const centre = (r.top + r.height / 2 - h / 2) / h;
+      t.k = .12 + .7 * Math.min(1, Math.abs(centre) * 1.6);
+      if (r.top < h * .5) c = i;
+    });
+    courant = c;
+    pastille.classList.toggle('visible', c >= 0);
+    if (c >= 0) pNom.textContent = tetes[c].sec.dataset.chapitre;
+  }
+  addEventListener('scroll', auDefilement, { passive: true }); addEventListener('resize', auDefilement); auDefilement();
+
+  function boucle(now) {
+    souris.sx += (souris.x - souris.sx) * .08; souris.sy += (souris.y - souris.sy) * .08;
+    if (!document.hidden) {
+      const ro = ouverture.getBoundingClientRect();
+      if (ro.bottom > 0) {
+        if (!reduit) angle -= .06;
+        const nx = souris.sx / innerWidth - .5, ny = souris.sy / innerHeight - .5;
+        tiltX += ((-14 - ny * 28) - tiltX) * .06; tiltZ += ((-8 + nx * 22) - tiltZ) * .06;
+        anneau.style.transform = `translateY(${(-ro.top * .35).toFixed(1)}px) rotateX(${tiltX.toFixed(2)}deg) rotateZ(${tiltZ.toFixed(2)}deg) rotateY(${(angle + nx * 40).toFixed(2)}deg)`;
+        anneau.style.opacity = String(1 - dispersion * 1.4);
+        if (particulesRendu) particulesRendu(now);
+      }
+      for (const t of tetes) if (t.rendu && t.visible) t.rendu(now);
+    }
+    requestAnimationFrame(boucle);
+  }
+  requestAnimationFrame(boucle);
+})();
+</script>
+</body>
+</html>
