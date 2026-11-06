@@ -28,7 +28,13 @@ cartes, vignettes carrées de 640 px pour le garage).
 
 - **Le logo-volant** dans l'en-tête braque quand on fait défiler la page, puis revient droit.
 - **La loupe** : quand une photo est devenue gravure, le curseur révèle la vraie photo en couleur
-  dans un cercle bordé de paillettes.
+  dans un petit cercle bordé de paillettes.
+- **Le téléphone éclaté** (d'après Shopify Editions été 2025) : dans le chapitre I, le téléphone
+  arrive en couches séparées (coque, trois tranches d'écran, îlot) avec un liseré indigo, se
+  rassemble, puis fait défiler les six écrans du parcours avec une note par étape. Téléphone dessiné
+  en CSS (cadre, îlot, boutons, barre d'état à la couleur de l'écran) ; écrans affichés en entier.
+- **Plaques d'immatriculation floutées** sur toutes les photos publiées (le flou est appliqué depuis
+  les originaux ; les originaux dans `site/images/` restent intacts).
 - **Le garage** (d'après la page d'accueil des Shopify Editions) : deux étagères de pochettes ; au
   survol, la pochette sort de l'étagère ; au clic, la photo s'ouvre en grand (flèches du clavier,
   Échap pour fermer).

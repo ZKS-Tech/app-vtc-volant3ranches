@@ -174,19 +174,6 @@ img { max-width: 100%; display: block; }
 .entree { display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); gap: clamp(32px, 6vw, 88px); align-items: end; }
 @media (max-width: 860px) { .entree { grid-template-columns: minmax(0, 1fr); align-items: start; gap: 24px; } }
 
-/* pellicule du parcours */
-.pellicule { margin: clamp(48px, 7vw, 88px) 0 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: clamp(12px, 1.6vw, 22px); list-style: none; padding: 0; }
-.pellicule li { min-width: 0; }
-.pellicule a { text-decoration: none; display: grid; gap: 10px; }
-.pellicule .ecran { border-radius: clamp(12px, 1.4vw, 20px); overflow: hidden; aspect-ratio: 780 / 1060; background: var(--surface); box-shadow: 0 18px 40px -24px rgba(16, 27, 69, .55); transition: transform .5s var(--ease); }
-.pellicule .ecran img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
-.pellicule a:hover .ecran { transform: translateY(-8px) rotate(-.6deg); }
-.pellicule .etape { font-family: var(--serif); font-style: italic; color: var(--accent); font-size: 16px; margin-top: 4px; }
-.pellicule h3 { margin: 0; font-size: clamp(1.02rem, 1.3vw, 1.2rem); font-stretch: 80%; font-weight: 700; line-height: 1.1; color: var(--fort); }
-@media (max-width: 980px) {
-  .pellicule { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(180px, 42vw); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: 12px; }
-  .pellicule li { scroll-snap-align: start; }
-}
 
 /* estimateur */
 .estimateur { margin-top: clamp(40px, 6vw, 72px); display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: clamp(24px, 5vw, 72px); align-items: start; }
@@ -257,13 +244,10 @@ img { max-width: 100%; display: block; }
 .etats .pastille { width: 14px; height: 14px; border-radius: 50%; margin-top: 7px; border: 1px solid color-mix(in srgb, var(--t) 40%, transparent); }
 .etats h3 { margin: 0; font-size: clamp(1.2rem, 1.9vw, 1.5rem); font-stretch: 80%; line-height: 1.15; }
 .etats p { grid-column: 2; margin: 0; font-family: var(--serif); font-size: 17px; color: var(--t2); transition: color .6s var(--ease); }
-.telephone { position: relative; width: clamp(230px, 24vw, 320px); aspect-ratio: 780 / 1687; border-radius: clamp(34px, 4vw, 46px); padding: 10px; background: #0B0F22; box-shadow: 0 50px 80px -40px rgba(5, 10, 30, .75), inset 0 0 0 1.5px #2A3354; }
-.telephone .vitre { position: relative; width: 100%; height: 100%; border-radius: clamp(26px, 3.2vw, 36px); overflow: hidden; background: #EAF0FA; }
-.telephone img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; opacity: 0; transition: opacity .7s var(--ease); }
-.telephone img.vu { opacity: 1; }
 @media (max-width: 820px) {
   .teinte-grille { grid-template-columns: minmax(0, 1fr); }
-  .teinte .telephone { position: absolute; right: max(16px, env(safe-area-inset-right, 0px)); bottom: 24px; width: 34vw; max-width: 170px; }
+  .teinte .scene-tel { position: absolute; right: max(16px, env(safe-area-inset-right, 0px)); bottom: 24px; }
+  .teinte .tel { --w: 150px; }
   .etats { max-width: 58vw; } .etats p { display: none; }
 }
 
@@ -345,6 +329,66 @@ img { max-width: 100%; display: block; }
 .copie-etat { font-size: 14px; color: var(--feuille); min-height: 1.4em; margin-top: 10px; }
 .pied { margin-top: clamp(64px, 10vw, 140px); padding-top: 24px; border-top: 1px solid var(--nuit-ligne); display: flex; flex-wrap: wrap; gap: 8px 32px; justify-content: space-between; font-size: 13px; color: var(--nuit-texte2); }
 
+/* le téléphone : un vrai modèle, l'écran en entier, une barre d'état à la couleur de l'écran */
+.scene-tel { perspective: 1800px; perspective-origin: 50% 40%; display: grid; place-items: center; }
+.tel { --w: clamp(230px, 20vw, 300px); position: relative; width: var(--w); aspect-ratio: 1 / 2.1884; transform-style: preserve-3d; will-change: transform; }
+.atelier { --wg: clamp(250px, min(24vw, 34vh), 420px); }
+.tel-grand { --w: var(--wg); }
+.tel-corps {
+  position: absolute; inset: 0; border-radius: calc(var(--w) * .165);
+  background: linear-gradient(150deg, #4A505E 0%, #1B1E25 22%, #0C0D11 60%, #2B2F39 100%);
+  box-shadow: inset 0 0 0 calc(var(--w) * .005) rgba(255, 255, 255, .28), inset 0 0 0 calc(var(--w) * .028) #08090C,
+    0 calc(var(--w) * .2) calc(var(--w) * .3) calc(var(--w) * -.12) rgba(10, 16, 41, .55), 0 calc(var(--w) * .05) calc(var(--w) * .08) calc(var(--w) * -.04) rgba(10, 16, 41, .35);
+  transform: translateZ(calc(var(--e, 0px) * -1.4));
+}
+.tel-corps::before, .tel-corps::after { content: ""; position: absolute; width: calc(var(--w) * .014); border-radius: 2px; background: linear-gradient(90deg, #22252D, #4A505E); }
+.tel-corps::before { left: calc(var(--w) * -.012); top: 20%; height: 7%; box-shadow: 0 calc(var(--w) * .2) 0 #2A2E37; }
+.tel-corps::after { right: calc(var(--w) * -.012); top: 27%; height: 11%; }
+.tel-ecran { position: absolute; inset: calc(var(--w) * .032); border-radius: calc(var(--w) * .135); overflow: hidden; background: #000; display: flex; flex-direction: column; }
+.tel-barre { flex: none; height: calc(var(--w) * .1); display: flex; align-items: center; justify-content: space-between; padding: calc(var(--w) * .012) calc(var(--w) * .085) 0;
+  font: 600 calc(var(--w) * .044) / 1 var(--sans); letter-spacing: .01em; background: var(--barre); color: var(--barre-encre); transition: background .5s var(--ease), color .5s var(--ease); }
+.tel-icones { display: flex; gap: calc(var(--w) * .014); align-items: center; }
+.tel-icones svg { height: calc(var(--w) * .036); width: auto; fill: currentColor; }
+.tel-vue { position: relative; flex: 1; overflow: hidden; background: var(--barre); }
+.tel-vue img { display: block; width: 100%; height: auto; }
+.tel-pile { transform: translateY(calc(var(--s, 0) * var(--w) * -2.0244)); will-change: transform; }
+.tel-vue.fondu img { position: absolute; inset: 0 0 auto 0; opacity: 0; transition: opacity .7s var(--ease); }
+.tel-vue.fondu img.vu { opacity: 1; }
+.tel-ilot { position: absolute; top: calc(var(--w) * .055); left: 50%; width: calc(var(--w) * .3); height: calc(var(--w) * .085); margin-left: calc(var(--w) * -.15); border-radius: 999px; background: #000; transform: translateZ(calc(var(--e, 0px) * 1.1)); }
+.tel::after {
+  content: ""; position: absolute; inset: calc(var(--w) * .032); border-radius: calc(var(--w) * .135); pointer-events: none;
+  background: linear-gradient(115deg, rgba(255, 255, 255, .14) 0%, rgba(255, 255, 255, 0) 28%, rgba(255, 255, 255, 0) 70%, rgba(255, 255, 255, .05) 100%);
+  transform: translateZ(calc(var(--e, 0px) * 1.2));
+}
+/* les éclats : trois tranches du premier écran, qui flottent puis se rassemblent */
+.eclat {
+  position: absolute; left: calc(var(--w) * .032); width: calc(var(--w) * .936);
+  top: calc(var(--w) * (.132 + var(--y0) * 2.0244)); height: calc(var(--w) * var(--h) * 2.0244);
+  background: url("assets/ecrans/accueil.webp") 0 calc(var(--w) * var(--y0) * -2.0244) / 100% auto no-repeat;
+  transform: translateZ(calc(var(--e, 0px) * var(--z))); opacity: var(--eclats, 0); border-radius: calc(var(--w) * .02);
+  box-shadow: 0 0 0 1px rgba(168, 188, 247, calc(var(--lueur, 0) * .95)), 0 0 calc(var(--w) * .12) rgba(57, 84, 181, calc(var(--lueur, 0) * .7)), 0 calc(var(--w) * .06) calc(var(--w) * .1) rgba(10, 16, 41, calc(var(--lueur, 0) * .35));
+}
+.eclat:nth-of-type(3) { border-radius: 0 0 calc(var(--w) * .135) calc(var(--w) * .135); }
+
+/* le chapitre éclaté : sticky, le téléphone au centre, les notes de part et d'autre */
+.atelier { height: 520vh; position: relative; margin-top: clamp(24px, 4vw, 48px); }
+.atelier-collant { position: sticky; top: 0; height: 100svh; min-height: 640px; display: grid; place-items: center; }
+.notes { list-style: none; margin: 0; padding: 0; position: absolute; inset: 0; pointer-events: none; }
+.note { position: absolute; top: 50%; width: min(330px, 28vw); opacity: 0; transition: opacity .6s var(--ease), transform .8s var(--ease); }
+.note.gauche { right: calc(50% + var(--wg) / 2 + clamp(48px, 5vw, 96px)); transform: translate(-24px, -50%); text-align: right; }
+.note.droite { left: calc(50% + var(--wg) / 2 + clamp(48px, 5vw, 96px)); transform: translate(24px, -50%); }
+.note.actif { opacity: 1; transform: translate(0, -50%); }
+.note .etape { font-family: var(--serif); font-style: italic; font-size: 1.15rem; color: var(--accent); }
+.note h3 { margin: 4px 0 10px; font-family: var(--serif); font-style: italic; font-weight: 400; font-size: clamp(1.8rem, 2.6vw, 2.5rem); line-height: 1.05; color: var(--fort); font-feature-settings: "swsh" 1; }
+.note p { margin: 0; font-size: 15px; color: var(--texte2); line-height: 1.5; }
+@media (max-width: 820px) {
+  .atelier-collant { align-items: start; padding-top: 80px; }
+  .atelier { --wg: clamp(180px, 44vw, 230px); }
+  .note { top: auto; bottom: 28px; left: 16px !important; right: 16px !important; width: auto; text-align: left !important; transform: translateY(16px) !important; }
+  .note.actif { transform: none !important; }
+  .note h3 { font-size: 1.6rem; margin: 2px 0 6px; }
+}
+
 /* logo-volant */
 .marque .volant { width: 30px; height: 30px; flex: none; background: currentColor; -webkit-mask: url("assets/logo-volant.png") center / contain no-repeat; mask: url("assets/logo-volant.png") center / contain no-repeat; will-change: transform; }
 
@@ -407,7 +451,7 @@ img { max-width: 100%; display: block; }
 
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
-  .panneau, .vehicule-carte img, .pellicule .ecran, .inverser { transition: none; }
+  .panneau, .vehicule-carte img, .inverser { transition: none; }
 }
 </style>
 
@@ -453,14 +497,21 @@ img { max-width: 100%; display: block; }
         <h2 class="titre" id="titre-reserver">De « Où allez-vous ? » au panneau à votre nom</h2>
         <p class="texte">Vous voyez le prix avant de laisser vos coordonnées. Vol ou train, bagages et attente gratuite sont demandés dès le départ, pas cachés en option.</p>
       </div>
-      <ol class="pellicule">
-        <li><a href="#trajet"><span class="ecran"><img src="assets/ecrans/accueil.webp" alt="Écran d'accueil : Où allez-vous ? avec départ, arrivée et raccourcis aéroport et gares" loading="lazy"></span><span class="etape">un</span><h3>Où allez-vous ?</h3></a></li>
-        <li><a href="#prix"><span class="ecran"><img src="assets/ecrans/trajet.webp" alt="Écran du trajet : date, heure de prise en charge et type de trajet" loading="lazy"></span><span class="etape">deux</span><h3>Date et heure</h3></a></li>
-        <li><a href="#prix"><span class="ecran"><img src="assets/ecrans/vehicule.webp" alt="Choix du véhicule avec le prix de chaque offre" loading="lazy"></span><span class="etape">trois</span><h3>Le véhicule, et son prix</h3></a></li>
-        <li><a href="#vehicules"><span class="ecran"><img src="assets/ecrans/recap.webp" alt="Récapitulatif de la course avant l'envoi de la demande" loading="lazy"></span><span class="etape">quatre</span><h3>Le récapitulatif</h3></a></li>
-        <li><a href="#teinte"><span class="ecran"><img src="assets/ecrans/delai.webp" alt="Demande envoyée, en attente de Fabrice, réponse sous 30 minutes" loading="lazy"></span><span class="etape">cinq</span><h3>Demande envoyée</h3></a></li>
-        <li><a href="#panneau"><span class="ecran"><img src="assets/ecrans/confirmee.webp" alt="Course confirmée, l'écran passe à l'indigo" loading="lazy"></span><span class="etape">six</span><h3>Course confirmée</h3></a></li>
-      </ol>
+    </div>
+    <div class="atelier" id="atelier">
+      <div class="atelier-collant">
+        <ol class="notes"><li class="note gauche" data-barre="#0F1B44" data-encre="#fff"><span class="etape">Étape un</span><h3>Où allez-vous ?</h3><p>Raccourcis Toulouse-Blagnac et gares d'Albi, Castres, Carcassonne. Votre prochaine course juste en dessous.</p></li><li class="note droite" data-barre="#F3F5F9" data-encre="#121A33"><span class="etape">Étape deux</span><h3>Date, heure, vol ou train</h3><p>Le tarif de jour ou majoré s'affiche dès que vous choisissez l'heure. Votre vol ou votre train est suivi.</p></li><li class="note gauche" data-barre="#F3F5F9" data-encre="#121A33"><span class="etape">Étape trois</span><h3>Le véhicule, et son prix</h3><p>Les deux offres côte à côte, avec le calcul : kilomètres × tarif. Rien de caché.</p></li><li class="note droite" data-barre="#F3F5F9" data-encre="#121A33"><span class="etape">Étape quatre</span><h3>Le récapitulatif</h3><p>Attente gratuite et conditions d'annulation écrites avant l'envoi. Pas de compte à créer.</p></li><li class="note gauche" data-barre="#E2E9F9" data-encre="#121A33"><span class="etape">Étape cinq</span><h3>Demande envoyée</h3><p>Fabrice s'est donné 30 minutes pour confirmer ; un compte à rebours vous le montre.</p></li><li class="note droite" data-barre="#1E3279" data-encre="#fff"><span class="etape">Étape six</span><h3>Course confirmée</h3><p>L'écran passe à l'indigo. Vous êtes prévenu par notification, SMS et email.</p></li></ol>
+        <div class="scene-tel">
+          <div class="tel tel-grand" id="tel-atelier" style="--barre:#0F1B44;--barre-encre:#fff">
+            <div class="tel-corps"></div>
+            <div class="tel-ecran"><div class="tel-barre"><span>9:41</span><span class="tel-icones"><svg viewBox="0 0 18 12" aria-hidden="true"><rect x="0" y="8" width="3" height="4" rx=".8"/><rect x="5" y="5.5" width="3" height="6.5" rx=".8"/><rect x="10" y="3" width="3" height="9" rx=".8"/><rect x="15" y="0" width="3" height="12" rx=".8"/></svg><svg viewBox="0 0 16 12" aria-hidden="true"><path d="M8 11.5l2.4-3a3.6 3.6 0 0 0-4.8 0zM3.1 6.3a7.2 7.2 0 0 1 9.8 0l1.5-1.8a9.7 9.7 0 0 0-12.8 0zM.2 2.6a11.6 11.6 0 0 1 15.6 0" fill="currentColor"/></svg><svg viewBox="0 0 27 12" aria-hidden="true"><rect x=".5" y=".5" width="23" height="11" rx="3.2" fill="none" stroke="currentColor" opacity=".5"/><rect x="2.2" y="2.2" width="17" height="7.6" rx="1.8"/><path d="M25 4v4a2 2 0 0 0 0-4z" opacity=".5"/></svg></span></div><div class="tel-vue"><div class="tel-pile"><img src="assets/ecrans/accueil.webp" alt="Où allez-vous ?" loading="lazy"><img src="assets/ecrans/trajet.webp" alt="Date, heure, vol ou train" loading="lazy"><img src="assets/ecrans/vehicule.webp" alt="Le véhicule, et son prix" loading="lazy"><img src="assets/ecrans/recap.webp" alt="Le récapitulatif" loading="lazy"><img src="assets/ecrans/delai.webp" alt="Demande envoyée" loading="lazy"><img src="assets/ecrans/confirmee.webp" alt="Course confirmée" loading="lazy"></div></div></div>
+            <div class="eclat" style="--z:1;--y0:0;--h:.25"></div>
+            <div class="eclat" style="--z:2;--y0:.25;--h:.37"></div>
+            <div class="eclat" style="--z:3;--y0:.62;--h:.38"></div>
+            <div class="tel-ilot"></div>
+          </div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -548,11 +599,15 @@ img { max-width: 100%; display: block; }
             <li><span class="pastille" style="background:#1E3277"></span><h3>Course confirmée</h3><p>Indigo profond. Une fois la course terminée, elle passe au bleu délavé.</p></li>
           </ol>
         </div>
-        <div class="telephone" aria-hidden="true">
-          <div class="vitre">
-            <img src="assets/ecrans/delai.webp" alt="" class="vu">
-            <img src="assets/ecrans/encre.webp" alt="">
-            <img src="assets/ecrans/confirmee.webp" alt="">
+        <div class="scene-tel" aria-hidden="true">
+          <div class="tel" id="tel-teinte" style="--barre:#E2E9F9;--barre-encre:#121A33">
+            <div class="tel-corps"></div>
+            <div class="tel-ecran"><div class="tel-barre"><span>9:41</span><span class="tel-icones"><svg viewBox="0 0 18 12" aria-hidden="true"><rect x="0" y="8" width="3" height="4" rx=".8"/><rect x="5" y="5.5" width="3" height="6.5" rx=".8"/><rect x="10" y="3" width="3" height="9" rx=".8"/><rect x="15" y="0" width="3" height="12" rx=".8"/></svg><svg viewBox="0 0 16 12" aria-hidden="true"><path d="M8 11.5l2.4-3a3.6 3.6 0 0 0-4.8 0zM3.1 6.3a7.2 7.2 0 0 1 9.8 0l1.5-1.8a9.7 9.7 0 0 0-12.8 0zM.2 2.6a11.6 11.6 0 0 1 15.6 0" fill="currentColor"/></svg><svg viewBox="0 0 27 12" aria-hidden="true"><rect x=".5" y=".5" width="23" height="11" rx="3.2" fill="none" stroke="currentColor" opacity=".5"/><rect x="2.2" y="2.2" width="17" height="7.6" rx="1.8"/><path d="M25 4v4a2 2 0 0 0 0-4z" opacity=".5"/></svg></span></div><div class="tel-vue fondu">
+              <img src="assets/ecrans/delai.webp" alt="" class="vu">
+              <img src="assets/ecrans/encre.webp" alt="">
+              <img src="assets/ecrans/confirmee.webp" alt="">
+            </div></div>
+            <div class="tel-ilot"></div>
           </div>
         </div>
       </div>
@@ -945,7 +1000,7 @@ gl_FragColor=vec4(col,1.0);}`;
       t.rendu = now => {
         const r = scene.getBoundingClientRect();
         const dedans = souris.ok && souris.x > r.left && souris.x < r.right && souris.y > r.top && souris.y < r.bottom;
-        const cible = dedans && t.p > .3 && !reduit ? Math.min(r.width, r.height) * .2 : 0;
+        const cible = dedans && t.p > .3 && !reduit ? Math.min(r.width, r.height) * .075 : 0;
         t.loupe = (t.loupe || 0) + (cible - (t.loupe || 0)) * .12;
         gl.uniform2f(uM, (souris.sx - r.left) * dpr, (r.height - (souris.sy - r.top)) * dpr);
         gl.uniform1f(uL, t.loupe * dpr);
@@ -991,11 +1046,13 @@ vec3 col=mix(eau,dense,m);col*=1.0-0.16*dot(p,p)*m;gl_FragColor=vec4(col,1.0);}`
   /* ---------- Défilement ---------- */
   const entete = $('#entete'), index = $('#index'), teinte = $('#teinte');
   const sections = $$('main > section');
-  const etats = $$('#etats li'), ecrans = $$('.teinte .telephone img');
+  const etats = $$('#etats li'), ecrans = $$('#tel-teinte .tel-vue img');
   const liens = $$('#index a');
   const chapitres = liens.map(a => { const c = document.getElementById(a.getAttribute('href').slice(1)); const avant = c.previousElementSibling; return avant && avant.classList.contains('tableau') ? avant : c; });
   const premier = $('.tableau');
   const lautrec = $('#lautrec');
+  const atelier = $('#atelier'), telA = $('#tel-atelier'), vueA = $('#tel-atelier .tel-vue'), notesA = $$('#atelier .note'), telT = $('#tel-teinte');
+  let etapeA = -1;
 
   function auDefilement() {
     const h = innerHeight;
@@ -1011,14 +1068,41 @@ vec3 col=mix(eau,dense,m);col*=1.0-0.16*dot(p,p)*m;gl_FragColor=vec4(col,1.0);}`
     }
     const rl = lautrec.getBoundingClientRect();
     lautrec.style.setProperty('--r', reduit ? 1 : lisseur(0, .75, (h - rl.top) / (h * .9)).toFixed(3));
+    // le chapitre éclaté
+    const ra = atelier.getBoundingClientRect();
+    if (ra.bottom > -h && ra.top < h * 2) {
+      const qa = borne(-ra.top / (ra.height - h));
+      const a = reduit ? 1 : lisseur(0, .2, qa);
+      const w = telA.offsetWidth;
+      telA.style.setProperty('--e', ((1 - a) * w * .34).toFixed(1) + 'px');
+      telA.style.setProperty('--lueur', (1 - a).toFixed(3));
+      telA.style.setProperty('--eclats', (1 - lisseur(.94, 1, a)).toFixed(3));
+      vueA.style.opacity = lisseur(.9, 1, a).toFixed(3);
+      const k = 1 - a;
+      telA.style.transform = `translateY(${(k * 40).toFixed(1)}px) rotateX(${(k * 56).toFixed(2)}deg) rotateY(${(k * -14).toFixed(2)}deg) rotateZ(${(k * -30).toFixed(2)}deg) scale(${(.86 + .14 * a).toFixed(3)})`;
+      const b = borne((qa - .24) / .7) * 5, i = Math.floor(b), f = b - i;
+      const sv = Math.min(5, i + lisseur(.5, 1, f));
+      telA.style.setProperty('--s', sv.toFixed(4));
+      const etape = Math.min(5, Math.round(sv));
+      notesA.forEach((n, j) => n.classList.toggle('actif', a > .85 && j === etape));
+      if (etape !== etapeA) {
+        etapeA = etape;
+        telA.style.setProperty('--barre', notesA[etape].dataset.barre); telA.style.setProperty('--barre-encre', notesA[etape].dataset.encre);
+      }
+    }
     const rt = teinte.getBoundingClientRect();
     const p = borne(-rt.top / (rt.height - h));
+    // le téléphone de la confirmation arrive penché, puis se redresse
+    const pente = reduit ? 0 : 1 - lisseur(0, .22, p);
+    telT.style.transform = `rotateX(${(pente * 16).toFixed(2)}deg) rotateY(${(pente * -26).toFixed(2)}deg) rotateZ(${(pente * 5).toFixed(2)}deg) translateY(${(pente * 30).toFixed(1)}px)`;
+
     cuveVisible = rt.bottom > 0 && rt.top < h;
     cuve.style.visibility = cuveVisible ? 'visible' : 'hidden';
     niveauCible = rt.top < h * .5 ? borne((p - .15) / .45) : 0;
     const i = p < .3 ? 0 : p < .62 ? 1 : 2;
     etats.forEach((li, k) => li.classList.toggle('actif', k === i));
     ecrans.forEach((im, k) => im.classList.toggle('vu', k === i));
+    telT.style.setProperty('--barre', ['#E2E9F9', '#181A45', '#1E3279'][i]); telT.style.setProperty('--barre-encre', i ? '#fff' : '#121A33');
     teinte.dataset.encre = rt.top < h * .5 && p > .5 ? '1' : '0';
     const tonA = y => {
       for (const s of sections) { const r = s.getBoundingClientRect(); if (r.top <= y && r.bottom > y) {
