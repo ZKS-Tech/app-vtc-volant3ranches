@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Volant3ranches, vidéo de présentation</title>
+<style>
+/* Composition de la vidéo : 1920 × 1080, pilotée image par image par rendre(t). Aucune animation CSS. */
+@font-face { font-family: "Archivo V3R"; src: url("../assets/fonts/archivo-latin-wdth-normal.woff2") format("woff2"); font-weight: 100 900; font-stretch: 62% 125%; }
+@font-face { font-family: "Garamond V3R"; src: url("../assets/fonts/eb-garamond-latin-wght-normal.woff2") format("woff2"); font-weight: 400 800; font-style: normal; }
+@font-face { font-family: "Garamond V3R"; src: url("../assets/fonts/eb-garamond-latin-wght-italic.woff2") format("woff2"); font-weight: 400 800; font-style: italic; }
+:root { --nuit: #0B1233; --cuve: #101B45; --indigo: #1E3277; --papier: #E3E8F0; --feuille: #C9D45C; --texte: #0E1740; --texte2: #4E566B;
+  --sans: "Archivo V3R", Arial, sans-serif; --serif: "Garamond V3R", Garamond, serif; }
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: var(--nuit); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+.scene { position: absolute; inset: 0; opacity: 0; overflow: hidden; }
+.plein { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.serif { font-family: var(--serif); font-style: italic; font-weight: 400; font-feature-settings: "swsh" 1; }
+.geant { font-family: var(--sans); font-weight: 800; font-stretch: 70%; letter-spacing: -0.02em; line-height: .9; }
+.ligne { overflow: hidden; display: block; }
+.ligne > span { display: block; }
+.feuille { color: var(--feuille); }
+.logo { background: currentColor; -webkit-mask: url("../assets/logo-volant.png") center / contain no-repeat; mask: url("../assets/logo-volant.png") center / contain no-repeat; }
+
+/* 1. ouverture */
+#s-intro { background: radial-gradient(70% 70% at 50% 45%, #1A2A6B, #0B1233 60%, #050817); color: #fff; display: grid; place-items: center; }
+#s-intro .bloc { display: grid; justify-items: center; gap: 34px; text-align: center; }
+#s-intro .logo { width: 240px; height: 240px; }
+#s-intro h1 { margin: 0; font-size: 120px; }
+#s-intro p { margin: 0; font-size: 46px; color: #C9D3F0; }
+
+/* 2. héros */
+#s-heros { color: #fff; }
+#s-heros .voile { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(5, 8, 23, .82), rgba(5, 8, 23, .35) 55%, rgba(5, 8, 23, .1)); }
+#s-heros .texte { position: absolute; left: 140px; bottom: 170px; }
+#s-heros h2 { margin: 0; font-size: 168px; }
+#s-heros p { margin: 30px 0 0; font-size: 44px; color: #E2E8F8; max-width: 26ch; line-height: 1.25; }
+
+/* 3. l'application */
+#s-app { background: var(--papier); }
+#s-app .grain, #s-fin .grain { position: absolute; inset: 0; opacity: .5; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .1 0 0 0 0 .15 0 0 0 0 .35 0 0 0 .5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.5'/%3E%3C/svg%3E"); }
+.scene-tel { position: absolute; perspective: 2000px; }
+#s-app .scene-tel { left: 300px; top: 70px; }
+.legendes { position: absolute; left: 980px; top: 0; bottom: 0; width: 760px; }
+.legende { position: absolute; left: 0; top: 50%; opacity: 0; }
+.legende .num { font-family: var(--serif); font-style: italic; font-size: 40px; color: var(--indigo); }
+.legende h3 { margin: 8px 0 22px; font-size: 104px; line-height: .98; color: var(--texte); }
+.legende p { margin: 0; font-size: 36px; line-height: 1.35; color: var(--texte2); max-width: 24ch; }
+
+/* le téléphone */
+.tel { --w: 430px; position: relative; width: var(--w); aspect-ratio: 1 / 2.1884; transform-style: preserve-3d; }
+.tel-corps { position: absolute; inset: 0; border-radius: calc(var(--w) * .165); background: linear-gradient(150deg, #4A505E 0%, #1B1E25 22%, #0C0D11 60%, #2B2F39 100%);
+  box-shadow: inset 0 0 0 calc(var(--w) * .005) rgba(255, 255, 255, .28), inset 0 0 0 calc(var(--w) * .028) #08090C, 0 90px 120px -50px rgba(10, 16, 41, .6), 0 30px 50px -30px rgba(10, 16, 41, .45);
+  transform: translateZ(calc(var(--e, 0px) * -1.4)); }
+.tel-corps::before, .tel-corps::after { content: ""; position: absolute; width: calc(var(--w) * .014); border-radius: 2px; background: linear-gradient(90deg, #22252D, #4A505E); }
+.tel-corps::before { left: calc(var(--w) * -.012); top: 20%; height: 7%; box-shadow: 0 calc(var(--w) * .2) 0 #2A2E37; }
+.tel-corps::after { right: calc(var(--w) * -.012); top: 27%; height: 11%; }
+.tel-ecran { position: absolute; inset: calc(var(--w) * .032); border-radius: calc(var(--w) * .135); overflow: hidden; background: #000; display: flex; flex-direction: column; }
+.tel-barre { flex: none; height: calc(var(--w) * .1); display: flex; align-items: center; justify-content: space-between; padding: calc(var(--w) * .012) calc(var(--w) * .085) 0;
+  font: 600 calc(var(--w) * .044) / 1 var(--sans); background: var(--barre, #0F1B44); color: var(--barre-encre, #fff); }
+.tel-icones { display: flex; gap: calc(var(--w) * .014); align-items: center; }
+.tel-icones svg { height: calc(var(--w) * .036); width: auto; fill: currentColor; }
+.tel-vue { position: relative; flex: 1; overflow: hidden; background: var(--barre, #0F1B44); }
+.tel-vue img { display: block; width: 100%; height: auto; }
+.tel-pile { transform: translateY(calc(var(--s, 0) * var(--w) * -2.0244)); }
+.tel-vue.fondu img { position: absolute; inset: 0 0 auto 0; }
+.tel-ilot { position: absolute; top: calc(var(--w) * .055); left: 50%; width: calc(var(--w) * .3); height: calc(var(--w) * .085); margin-left: calc(var(--w) * -.15); border-radius: 999px; background: #000; transform: translateZ(calc(var(--e, 0px) * 1.1)); }
+.tel::after { content: ""; position: absolute; inset: calc(var(--w) * .032); border-radius: calc(var(--w) * .135); pointer-events: none;
+  background: linear-gradient(115deg, rgba(255, 255, 255, .14) 0%, rgba(255, 255, 255, 0) 28%, rgba(255, 255, 255, 0) 70%, rgba(255, 255, 255, .05) 100%); transform: translateZ(calc(var(--e, 0px) * 1.2)); }
+.eclat { position: absolute; left: calc(var(--w) * .032); width: calc(var(--w) * .936); top: calc(var(--w) * (.132 + var(--y0) * 2.0244)); height: calc(var(--w) * var(--h) * 2.0244);
+  background: url("../assets/ecrans/accueil.webp") 0 calc(var(--w) * var(--y0) * -2.0244) / 100% auto no-repeat; transform: translateZ(calc(var(--e, 0px) * var(--z))); opacity: var(--eclats, 0);
+  border-radius: calc(var(--w) * .02); box-shadow: 0 0 0 1.5px rgba(168, 188, 247, calc(var(--lueur, 0) * .95)), 0 0 60px rgba(57, 84, 181, calc(var(--lueur, 0) * .7)); }
+
+/* 5. la carte */
+#s-carte { background: radial-gradient(120% 70% at 50% 110%, #1A2A6B 0%, #0E1640 45%, #070B22 100%); }
+#ciel { position: absolute; inset: 0; }
+.plan-scene { position: absolute; inset: 0; perspective: 2600px; perspective-origin: 50% 18%; }
+.plan { position: absolute; left: 46%; top: 60%; width: 1760px; transform-origin: 50% 50%;
+  -webkit-mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 62%, transparent 100%); mask-image: radial-gradient(ellipse 50% 50% at 50% 50%, #000 62%, transparent 100%); }
+.plan svg { display: block; width: 100%; height: auto; overflow: visible; }
+.route { fill: none; stroke: rgba(200, 214, 250, .16); stroke-width: 1.1; vector-effect: non-scaling-stroke; }
+.trace { fill: none; stroke: var(--feuille); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; filter: url(#lueur); }
+.trace-fond { fill: none; stroke: rgba(201, 212, 92, .4); stroke-width: 1.8; stroke-dasharray: 2 6; }
+.ville { fill: #B9C7EA; stroke: rgba(5, 9, 28, .8); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.ville.fort { fill: var(--feuille); }
+.etiquettes { position: absolute; inset: 0; }
+.etiquette { position: absolute; left: 0; top: 0; white-space: nowrap; font-family: var(--serif); font-style: italic; font-size: 24px; color: #C9D3F0; text-shadow: 0 1px 10px rgba(5, 9, 28, .9); }
+.etiquette.fort { font-family: var(--sans); font-style: normal; font-weight: 700; font-size: 22px; color: #0B1233; background: var(--feuille); padding: 7px 16px; border-radius: 999px; text-shadow: none; }
+#s-carte .haut { position: absolute; left: 140px; top: 90px; color: #fff; }
+#s-carte .haut h3 { margin: 0; font-size: 96px; line-height: 1; }
+#s-carte .haut p { margin: 18px 0 0; font-size: 34px; color: #DCE3F5; }
+#s-carte .bas { position: absolute; left: 140px; right: 140px; bottom: 70px; display: flex; justify-content: space-between; align-items: end; color: #fff; }
+#s-carte .bas p { margin: 0; font-size: 44px; }
+.compteurs { display: flex; gap: 64px; }
+.compteurs div { display: grid; gap: 4px; }
+.compteurs b { font-weight: 800; font-stretch: 70%; font-size: 84px; line-height: 1; font-variant-numeric: tabular-nums; }
+.compteurs span { font-size: 22px; color: #B9C7EA; }
+#s-carte::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 36%; background: linear-gradient(to top, rgba(5, 8, 26, .92), rgba(5, 8, 26, 0)); }
+#s-carte::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 32%; z-index: 1; background: linear-gradient(to bottom, rgba(5, 8, 26, .8), rgba(5, 8, 26, 0)); }
+#s-carte .haut, #s-carte .bas { z-index: 2; }
+.credit { position: absolute; right: 30px; bottom: 18px; z-index: 2; font-size: 15px; color: rgba(185, 199, 234, .6); }
+
+/* 6. la confirmation */
+#s-conf { background: #EAF0FA; }
+#encre { position: absolute; inset: 0; background: linear-gradient(#1E3277, #101B45); }
+#s-conf .scene-tel { left: 1240px; top: 70px; }
+#s-conf .texte { position: absolute; left: 140px; top: 50%; transform: translateY(-50%); }
+#s-conf h3 { margin: 0; font-size: 116px; line-height: .98; }
+#s-conf .etats { margin: 46px 0 0; display: grid; gap: 22px; }
+#s-conf .etat { display: flex; align-items: center; gap: 22px; font-size: 40px; font-weight: 600; }
+#s-conf .etat i { width: 26px; height: 26px; border-radius: 50%; display: block; border: 1px solid rgba(255, 255, 255, .5); }
+
+/* 7. le panneau */
+#s-panneau { background: radial-gradient(80% 80% at 70% 50%, #1E3277, #101B45 70%); color: #fff; }
+#s-panneau .texte { position: absolute; left: 140px; top: 50%; transform: translateY(-50%); width: 760px; }
+#s-panneau h3 { margin: 0; font-size: 112px; line-height: .98; }
+#s-panneau p { margin: 28px 0 0; font-size: 38px; color: #DCE3F5; line-height: 1.3; }
+.panneau-scene { position: absolute; left: 980px; top: 50%; width: 820px; height: 547px; margin-top: -273px; perspective: 2200px; }
+.panneau { position: absolute; inset: 0; transform-style: preserve-3d; }
+.face { position: absolute; inset: 0; border-radius: 12px; backface-visibility: hidden; display: grid; place-items: center; align-content: center; gap: 22px; box-shadow: 0 60px 100px -40px rgba(0, 0, 0, .7); }
+.face.dos { background: linear-gradient(160deg, #2A418F, #1E3277 60%, #172763); color: #fff; }
+.face.dos .logo { width: 180px; height: 180px; }
+.face span { font-size: 20px; letter-spacing: .2em; font-weight: 700; }
+.face.dos span { color: #B9C7EA; }
+.face.avant { background: #fff; color: #101B45; transform: rotateY(180deg); }
+.face.avant .logo { width: 90px; height: 90px; }
+.face.avant strong { font-weight: 800; font-stretch: 66%; font-size: 150px; line-height: .9; text-transform: uppercase; text-align: center; }
+.face.avant span { color: #1E3277; }
+
+/* 8. les véhicules */
+#s-vehicules { background: #050817; }
+.volet { position: absolute; top: 0; bottom: 0; overflow: hidden; }
+.volet img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.volet::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(5, 8, 23, .9), rgba(5, 8, 23, .2) 45%, rgba(5, 8, 23, 0) 70%); }
+.volet .txt { position: absolute; left: 70px; bottom: 80px; z-index: 1; color: #fff; }
+.volet h4 { margin: 0; font-size: 88px; line-height: 1; }
+.volet p { margin: 14px 0 0; font-size: 30px; color: #DCE3F5; }
+.volet b { display: inline-block; margin-top: 18px; font-size: 44px; font-weight: 800; font-stretch: 72%; }
+
+/* 9. fin */
+#s-fin { background: radial-gradient(70% 80% at 30% 50%, #1A2A6B, #0B1233 60%, #050817); color: #fff; }
+#s-fin .texte { position: absolute; left: 140px; top: 50%; transform: translateY(-50%); }
+#s-fin .logo { width: 120px; height: 120px; margin-bottom: 40px; }
+#s-fin h2 { margin: 0; font-size: 150px; }
+#s-fin p { margin: 34px 0 0; font-size: 40px; color: #DCE3F5; }
+#s-fin .contact { margin-top: 56px; display: flex; gap: 48px; align-items: center; font-size: 46px; font-weight: 800; font-stretch: 72%; }
+#s-fin .contact span:last-child { font-family: var(--serif); font-style: italic; font-weight: 400; font-size: 40px; color: #C9D3F0; }
+#s-fin .scene-tel { left: 1300px; top: 90px; }
+</style>
+</head>
+<body>
+
+<!-- 1. ouverture -->
+<section class="scene" id="s-intro">
+  <div class="bloc">
+    <div class="logo" id="intro-logo"></div>
+    <h1 class="geant"><span class="ligne"><span id="intro-t1">Volant3ranches VTC</span></span></h1>
+    <p class="serif"><span class="ligne"><span id="intro-t2">L'application de réservation</span></span></p>
+  </div>
+</section>
+
+<!-- 2. héros -->
+<section class="scene" id="s-heros">
+  <img class="plein" id="heros-img" src="../assets/photos/van-eglise.webp" alt="" style="object-position: 50% 2%">
+  <div class="voile"></div>
+  <div class="texte">
+    <h2 class="geant"><span class="ligne"><span id="heros-t1">Un chauffeur,</span></span><span class="ligne"><span id="heros-t2">pas une <span class="feuille">plateforme.</span></span></span></h2>
+    <p class="serif" id="heros-t3">Fabrice, ses deux véhicules électriques, et une application pour le réserver.</p>
+  </div>
+</section>
+
+<!-- 3-4. l'application -->
+<section class="scene" id="s-app">
+  <div class="grain"></div>
+  <div class="scene-tel">
+    <div class="tel" id="tel-app">
+      <div class="tel-corps"></div>
+      <div class="tel-ecran"><div class="tel-barre">__BARRE__</div><div class="tel-vue" id="vue-app"><div class="tel-pile">
+        <img src="../assets/ecrans/accueil.webp" alt=""><img src="../assets/ecrans/trajet.webp" alt=""><img src="../assets/ecrans/vehicule.webp" alt=""><img src="../assets/ecrans/recap.webp" alt="">
+      </div></div></div>
+      <div class="eclat" style="--z:1;--y0:0;--h:.25"></div>
+      <div class="eclat" style="--z:2;--y0:.25;--h:.37"></div>
+      <div class="eclat" style="--z:3;--y0:.62;--h:.38"></div>
+      <div class="tel-ilot"></div>
+    </div>
+  </div>
+  <div class="legendes">
+    <div class="legende"><span class="num">Étape un</span><h3 class="serif">Où allez-vous&#8239;?</h3><p>Toulouse-Blagnac, les gares d'Albi, Castres et Carcassonne : en un geste.</p></div>
+    <div class="legende"><span class="num">Étape deux</span><h3 class="serif">Date, heure, vol ou train</h3><p>Votre vol ou votre train est suivi. Le tarif de jour ou majoré s'affiche tout de suite.</p></div>
+    <div class="legende"><span class="num">Étape trois</span><h3 class="serif">Le prix d'abord</h3><p>Les deux offres côte à côte, calculées au kilomètre. Aucun frais caché.</p></div>
+    <div class="legende"><span class="num">Étape quatre</span><h3 class="serif">Sans créer de compte</h3><p>Attente gratuite et annulation écrites avant l'envoi. Une demande, et c'est tout.</p></div>
+  </div>
+</section>
+
+<!-- 5. la carte -->
+<section class="scene" id="s-carte">
+  <canvas id="ciel" width="1920" height="1080"></canvas>
+  <div class="plan-scene"><div class="plan" id="plan"><svg id="carte" preserveAspectRatio="xMidYMid meet"></svg></div></div>
+  <div class="etiquettes" id="etiquettes"></div>
+  <div class="haut"><h3 class="serif">Le trajet, sur les vraies routes</h3><p class="serif">Itinéraire, distance et durée réels.</p></div>
+  <div class="bas">
+    <p class="serif">Gare de Castres → Aéroport Toulouse-Blagnac</p>
+    <div class="compteurs"><div><b id="c-km">0</b><span>km parcourus</span></div><div><b id="c-reste">–</b><span>restantes</span></div><div><b id="c-total">–</b><span>au total</span></div></div>
+  </div>
+  <span class="credit">Itinéraire et relief : IGN, Géoplateforme (Licence Ouverte)</span>
+</section>
+
+<!-- 6. la confirmation -->
+<section class="scene" id="s-conf">
+  <div id="encre"></div>
+  <div class="texte" id="conf-texte">
+    <h3 class="serif">Fabrice confirme,<br>sous 30 minutes</h3>
+    <div class="etats">
+      <div class="etat"><i style="background:#D3E0F4"></i>Demande envoyée</div>
+      <div class="etat"><i style="background:#5F7FC0"></i>L'encre monte</div>
+      <div class="etat"><i style="background:#C9D45C"></i>Course confirmée : notification, SMS et email</div>
+    </div>
+  </div>
+  <div class="scene-tel">
+    <div class="tel" id="tel-conf" style="--w:400px">
+      <div class="tel-corps"></div>
+      <div class="tel-ecran"><div class="tel-barre">__BARRE__</div><div class="tel-vue fondu" id="vue-conf">
+        <img src="../assets/ecrans/delai.webp" alt=""><img src="../assets/ecrans/encre.webp" alt=""><img src="../assets/ecrans/confirmee.webp" alt="">
+      </div></div>
+      <div class="tel-ilot"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. le panneau -->
+<section class="scene" id="s-panneau">
+  <div class="texte"><h3 class="serif">Un panneau<br>à votre nom</h3><p>Dans le hall des arrivées, Fabrice vous attend. 30 minutes d'attente gratuite à l'aéroport.</p></div>
+  <div class="panneau-scene"><div class="panneau" id="panneau">
+    <div class="face dos"><div class="logo"></div><span>VOLANT3RANCHES VTC</span></div>
+    <div class="face avant"><div class="logo"></div><strong>Claire Martin</strong><span>VOLANT3RANCHES VTC</span></div>
+  </div></div>
+</section>
+
+<!-- 8. les véhicules -->
+<section class="scene" id="s-vehicules">
+  <div class="volet" id="volet-tesla" style="left:0;width:50%"><img src="../assets/photos/tesla-trois-quarts.webp" alt="" style="object-position:62% 55%"><div class="txt"><h4 class="serif">Offre Confort</h4><p>Tesla Model 3 Performance · 3 passagers</p><b>1,80 €/km</b></div></div>
+  <div class="volet" id="volet-van" style="left:50%;width:50%"><img src="../assets/photos/van-avant-4k.webp" alt="" style="object-position:60% 55%"><div class="txt"><h4 class="serif">Offre Premium</h4><p>Van 9 places · 8 passagers</p><b>2,60 €/km</b></div></div>
+</section>
+
+<!-- 9. fin -->
+<section class="scene" id="s-fin">
+  <div class="texte">
+    <div class="logo"></div>
+    <h2 class="geant">Bientôt sur iOS<br>et <span class="feuille">Android.</span></h2>
+    <p class="serif">Volant3ranches VTC · Fabrice Legouez Ricoce · Viterbe, Tarn</p>
+    <div class="contact"><span>06 16 53 14 91</span><span>volant3ranches-vtc.fr</span></div>
+  </div>
+  <div class="scene-tel"><div class="tel" id="tel-fin" style="--w:400px;--barre:#1E3279">
+    <div class="tel-corps"></div>
+    <div class="tel-ecran"><div class="tel-barre">__BARRE__</div><div class="tel-vue"><img src="../assets/ecrans/confirmee.webp" alt=""></div></div>
+    <div class="tel-ilot"></div>
+  </div></div>
+</section>
+
+<script>
+'use strict';
+const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
+const borne = x => Math.max(0, Math.min(1, x));
+const lisse = (a, b, x) => { const t = borne((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+const sortie = (a, b, x) => { const t = borne((x - a) / (b - a)); return 1 - Math.pow(1 - t, 3); }; // ease-out
+const mix = (a, b, k) => a + (b - a) * k;
+
+// barre d'état des téléphones
+const BARRE = '<span>9:41</span><span class="tel-icones"><svg viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx=".8"/><rect x="5" y="5.5" width="3" height="6.5" rx=".8"/><rect x="10" y="3" width="3" height="9" rx=".8"/><rect x="15" y="0" width="3" height="12" rx=".8"/></svg><svg viewBox="0 0 16 12"><path d="M8 11.5l2.4-3a3.6 3.6 0 0 0-4.8 0zM3.1 6.3a7.2 7.2 0 0 1 9.8 0l1.5-1.8a9.7 9.7 0 0 0-12.8 0zM.2 2.6a11.6 11.6 0 0 1 15.6 0"/></svg><svg viewBox="0 0 27 12"><rect x=".5" y=".5" width="23" height="11" rx="3.2" fill="none" stroke="currentColor" opacity=".5"/><rect x="2.2" y="2.2" width="17" height="7.6" rx="1.8"/><path d="M25 4v4a2 2 0 0 0 0-4z" opacity=".5"/></svg></span>';
+$$('.tel-barre').forEach(b => { b.innerHTML = BARRE; });
+
+/* ---------- la carte : données IGN ---------- */
+let carte = null;
+async function preparerCarte() {
+  const D = await (await fetch('../outils/carte.json')).json();
+  const rad = d => d * Math.PI / 180, merc = lat => Math.log(Math.tan(Math.PI / 4 + rad(lat) / 2)) * 180 / Math.PI;
+  const proj = (lat, lon) => [(lon - 1.2) * 1000, (merc(44.06) - merc(lat)) * 1000];
+  const decoder = t => { const p = []; let i = 0, la = 0, lo = 0; while (i < t.length) { for (const k of [0, 1]) { let r = 0, s = 0, b; do { b = t.charCodeAt(i++) - 63; r |= (b & 31) << s; s += 5; } while (b >= 32); const v = r & 1 ? ~(r >> 1) : r >> 1; if (k) lo += v; else la += v; } p.push([la / 1e5, lo / 1e5]); } return p; };
+  const poly = pts => pts.map((p, i) => { const [x, y] = proj(p[0], p[1]); return (i ? 'L' : 'M') + x.toFixed(1) + ',' + y.toFixed(1); }).join('');
+  const NS = 'http://www.w3.org/2000/svg', svg = $('#carte');
+  const el = (tag, at, par) => { const e = document.createElementNS(NS, tag); for (const k in at) e.setAttribute(k, at[k]); (par || svg).appendChild(e); return e; };
+  const [x1] = proj(44, 2.56), [, y1] = proj(43.12, 1.2);
+  svg.setAttribute('viewBox', `0 0 ${x1} ${y1}`);
+  svg.innerHTML = `<defs><radialGradient id="halo"><stop offset="0" stop-color="#FFFBE6"/><stop offset=".25" stop-color="#E8F29A" stop-opacity=".75"/><stop offset="1" stop-color="#C9D45C" stop-opacity="0"/></radialGradient>
+    <filter id="lueur" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="3.5" result="f"/><feMerge><feMergeNode in="f"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+  el('image', { href: '../assets/photos/relief-ign.webp', x: 0, y: 0, width: x1, height: y1, preserveAspectRatio: 'none' });
+  for (const k in D.trajets) el('path', { d: poly(decoder(D.trajets[k].p)), class: 'route' });
+  const t = D.trajets['tls|castres-gare'], pts = decoder(t.p).reverse();
+  el('path', { d: poly(pts), class: 'trace-fond' });
+  const trace = el('path', { d: poly(pts), class: 'trace' });
+  const L = trace.getTotalLength(); trace.style.strokeDasharray = `${L} ${L}`;
+  const etiq = $('#etiquettes'), villes = [];
+  const lieuProche = (la, lo) => [[43.6007, 2.2329], [43.6293, 1.3638]].some(([a, b]) => Math.hypot(a - la, (b - lo) * .72) < .055);
+  for (const id in D.villes) { const [la, lo, nom] = D.villes[id]; if (lieuProche(la, lo)) continue; const [x, y] = proj(la, lo);
+    const c = el('circle', { class: 'ville', cx: x, cy: y, r: 3.4 }); const e = document.createElement('span'); e.className = 'etiquette'; e.textContent = nom; etiq.appendChild(e); villes.push([c, e]); }
+  for (const [nom, la, lo] of [['Gare de Castres', 43.6007, 2.2329], ['Aéroport Toulouse-Blagnac', 43.6293, 1.3638]]) {
+    const [x, y] = proj(la, lo); const c = el('circle', { class: 'ville fort', cx: x, cy: y, r: 6 }); const e = document.createElement('span'); e.className = 'etiquette fort'; e.textContent = nom; etiq.appendChild(e); villes.push([c, e]); }
+  const comete = el('g', {}); el('circle', { r: 26, fill: 'url(#halo)' }, comete); el('circle', { r: 4.5, fill: '#fff' }, comete);
+  const pp = pts.map(p => proj(p[0], p[1])), xs = pp.map(p => p[0]), ys = pp.map(p => p[1]);
+  carte = { trace, L, comete, villes, km: t.km, min: t.min, vb: [0, 0, x1, y1], centre: [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2] };
+  $('#c-total').textContent = `${t.km.toLocaleString('fr-FR')} km`;
+  // ciel étoilé
+  const g = $('#ciel').getContext('2d'); let s = 21; const al = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  for (let i = 0; i < 320; i++) { const y = al() * 1080 * .6; g.fillStyle = `rgba(235,240,255,${(.15 + al() * .7 * (1 - y / 1080)).toFixed(2)})`; g.beginPath(); g.arc(al() * 1920, y, al() ** 4 * 2 + .4, 0, 7); g.fill(); }
+}
+const duree = m => m >= 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : `${m} min`;
+
+/* ---------- la chronologie ---------- */
+const SCENES = [ // id, début, fin (secondes)
+  ['#s-intro', 0, 4.6], ['#s-heros', 4, 10.2], ['#s-app', 9.6, 24.4], ['#s-carte', 23.8, 32.6],
+  ['#s-conf', 32, 39.4], ['#s-panneau', 38.8, 44.4], ['#s-vehicules', 43.8, 50.2], ['#s-fin', 49.6, 56]];
+const DUREE = 56;
+const fondu = (t, a, b) => Math.min(lisse(a, a + .6, t), 1 - lisse(b - .6, b, t)) * (a === 0 ? 1 : 1) ;
+
+function rendre(t) {
+  for (const [id, a, b] of SCENES) {
+    const e = $(id), o = a === 0 ? 1 - lisse(b - .6, b, t) : b >= DUREE ? lisse(a, a + .6, t) : fondu(t, a, b);
+    e.style.opacity = o.toFixed(3); e.style.visibility = o > 0 ? 'visible' : 'hidden';
+  }
+  // 1. ouverture
+  { const k = sortie(.2, 2, t);
+    $('#intro-logo').style.transform = `rotate(${mix(-140, 0, k).toFixed(2)}deg) scale(${mix(.6, 1, k).toFixed(3)})`;
+    $('#intro-logo').style.opacity = lisse(.1, .9, t);
+    $('#intro-t1').style.transform = `translateY(${mix(110, 0, sortie(1, 2.2, t)).toFixed(1)}%)`;
+    $('#intro-t2').style.transform = `translateY(${mix(110, 0, sortie(1.5, 2.7, t)).toFixed(1)}%)`;
+    $('#s-intro .bloc').style.transform = `scale(${mix(1, 1.04, borne(t / 4.6)).toFixed(4)})`; }
+  // 2. héros : lent travelling
+  { const k = borne((t - 4) / 6.2);
+    $('#heros-img').style.transform = `scale(${mix(1.14, 1.02, k).toFixed(4)}) translateX(${mix(-30, 10, k).toFixed(1)}px)`;
+    $('#heros-t1').style.transform = `translateY(${mix(110, 0, sortie(4.6, 5.8, t)).toFixed(1)}%)`;
+    $('#heros-t2').style.transform = `translateY(${mix(110, 0, sortie(5, 6.2, t)).toFixed(1)}%)`;
+    $('#heros-t3').style.opacity = lisse(6, 7, t); $('#heros-t3').style.transform = `translateY(${mix(24, 0, sortie(6, 7.2, t)).toFixed(1)}px)`; }
+  // 3-4. l'application : le téléphone se rassemble, puis défile
+  { const tel = $('#tel-app'), a = sortie(10, 12.6, t), w = 430, k = 1 - a;
+    tel.style.setProperty('--e', (k * w * .36).toFixed(1) + 'px');
+    tel.style.setProperty('--lueur', k.toFixed(3));
+    tel.style.setProperty('--eclats', (1 - lisse(12.3, 12.7, t)).toFixed(3));
+    $('#vue-app').style.opacity = lisse(12.3, 12.7, t);
+    tel.style.transform = `translateY(${(k * 60).toFixed(1)}px) rotateX(${(k * 56).toFixed(2)}deg) rotateY(${(k * -16 + Math.sin(t * .6) * 2).toFixed(2)}deg) rotateZ(${(k * -30).toFixed(2)}deg) scale(${(.84 + .16 * a).toFixed(3)})`;
+    const etapes = [13, 16.6, 19.6, 22.2]; let s = 0;
+    for (let i = 1; i < etapes.length; i++) s += sortie(etapes[i] - .9, etapes[i], t);
+    tel.style.setProperty('--s', s.toFixed(4));
+    const barres = [['#0F1B44', '#fff'], ['#F3F5F9', '#121A33'], ['#F3F5F9', '#121A33'], ['#F3F5F9', '#121A33']];
+    const i = Math.min(3, Math.round(s)); tel.style.setProperty('--barre', barres[i][0]); tel.style.setProperty('--barre-encre', barres[i][1]);
+    $$('#s-app .legende').forEach((l, j) => {
+      const deb = etapes[j] - .2, fin = j < 3 ? etapes[j + 1] - .5 : 30;
+      const o = Math.min(lisse(deb, deb + .7, t), 1 - lisse(fin - .5, fin, t));
+      l.style.opacity = o.toFixed(3); l.style.transform = `translateY(calc(-50% + ${mix(40, 0, sortie(deb, deb + 1, t)).toFixed(1)}px))`;
+    }); }
+  // 5. la carte
+  if (carte && t > 23.5 && t < 33) {
+    const pente = sortie(24, 25.6, t), q = lisse(25.4, 31.4, t), c = carte;
+    const pt = c.trace.getPointAtLength(c.L * q);
+    const W = 1760, k = W / c.vb[2], suivre = Math.sin(Math.PI * q) * .9;
+    const cx = c.centre[0] + (pt.x - c.centre[0]) * suivre, cy = c.centre[1] + (pt.y - c.centre[1]) * suivre;
+    const tx = (c.vb[2] / 2 - cx) * k, ty = (c.vb[3] / 2 - cy) * k, z = 1 + .5 * Math.sin(Math.PI * q) * pente;
+    $('#plan').style.transform = `translate(-50%, -50%) translateZ(${(pente * -260).toFixed(1)}px) rotateX(${(pente * 46).toFixed(2)}deg) rotateZ(${(pente * -11).toFixed(2)}deg) scale(${z.toFixed(3)}) translate(${tx.toFixed(1)}px, ${ty.toFixed(1)}px)`;
+    c.trace.style.strokeDashoffset = (c.L * (1 - q)).toFixed(1);
+    c.comete.setAttribute('transform', `translate(${pt.x.toFixed(1)} ${pt.y.toFixed(1)})`);
+    c.comete.style.opacity = q > .002 && q < .998 ? 1 : 0;
+    $('#c-km').textContent = (Math.round(c.km * q * 10) / 10).toLocaleString('fr-FR');
+    $('#c-reste').textContent = duree(Math.round(c.min * (1 - q)));
+    const rs = $('#etiquettes').getBoundingClientRect();
+    for (const [ci, e] of c.villes) { const b = ci.getBoundingClientRect(); e.style.transform = `translate(${(b.left + b.width / 2 - rs.left).toFixed(1)}px, ${(b.top - rs.top).toFixed(1)}px) translate(-50%, calc(-100% - 10px))`; }
+  }
+  // 6. la confirmation : l'encre monte, l'écran se teinte
+  { const n = sortie(34.6, 36.6, t);
+    const pts = []; for (let i = 0; i <= 48; i++) { const x = i / 48 * 100, y = mix(108, -8, n) + Math.sin(i * .55 + t * 2.2) * 2.2 * (1 - Math.abs(n - .5) * 1.2); pts.push(`${x.toFixed(2)}% ${y.toFixed(2)}%`); }
+    $('#encre').style.clipPath = `polygon(${pts.join(',')}, 100% 100%, 0% 100%)`;
+    const encre = n > .55; $('#conf-texte').style.color = encre ? '#fff' : '#0E1740';
+    const imgs = $$('#vue-conf img'), etat = t < 34.4 ? 0 : t < 36.2 ? 1 : 2;
+    imgs.forEach((im, i) => { im.style.opacity = i === etat ? 1 : i === etat - 1 ? 1 - lisse(etat === 1 ? 34.4 : 36.2, (etat === 1 ? 34.4 : 36.2) + .5, t) : 0; im.style.zIndex = i === etat ? 2 : 1; });
+    const tel = $('#tel-conf'); tel.style.setProperty('--barre', ['#E2E9F9', '#181A45', '#1E3279'][etat]); tel.style.setProperty('--barre-encre', etat ? '#fff' : '#121A33');
+    const pente = 1 - sortie(32, 33.6, t);
+    tel.style.transform = `rotateX(${(pente * 16).toFixed(2)}deg) rotateY(${(pente * -28 + Math.sin(t * .7) * 2).toFixed(2)}deg) rotateZ(${(pente * 5).toFixed(2)}deg) translateY(${(pente * 40).toFixed(1)}px)`;
+    $$('#s-conf .etat').forEach((e, i) => { e.style.opacity = (.3 + .7 * (i === etat ? 1 : 0)).toFixed(2); }); }
+  // 7. le panneau se retourne
+  { const r = sortie(40.4, 41.8, t);
+    $('#panneau').style.transform = `rotateY(${mix(0, 180, r).toFixed(2)}deg) rotateX(${(Math.sin(t * .9) * 3).toFixed(2)}deg) translateZ(0)`; }
+  // 8. les véhicules : deux volets qui s'ouvrent
+  { const k = borne((t - 43.8) / 6.4);
+    $('#volet-tesla').style.clipPath = `inset(0 ${mix(100, 0, sortie(44, 45.4, t)).toFixed(2)}% 0 0)`;
+    $('#volet-van').style.clipPath = `inset(0 0 0 ${mix(100, 0, sortie(44.5, 45.9, t)).toFixed(2)}%)`;
+    $('#volet-tesla img').style.transform = `scale(${mix(1.12, 1.02, k).toFixed(4)})`;
+    $('#volet-van img').style.transform = `scale(${mix(1.02, 1.12, k).toFixed(4)})`;
+    $$('#s-vehicules .txt').forEach((x, i) => { const d = 45.6 + i * .5; x.style.opacity = lisse(d, d + .7, t); x.style.transform = `translateY(${mix(30, 0, sortie(d, d + 1, t)).toFixed(1)}px)`; }); }
+  // 9. fin
+  { const k = sortie(50, 51.6, t);
+    $('#s-fin .texte').style.transform = `translateY(calc(-50% + ${mix(40, 0, k).toFixed(1)}px))`;
+    $('#s-fin .logo').style.transform = `rotate(${mix(-90, 0, sortie(50, 51.8, t)).toFixed(2)}deg)`;
+    $('#tel-fin').style.transform = `translateY(${mix(120, 0, sortie(50.4, 52.2, t)).toFixed(1)}px) rotateY(${(-14 + Math.sin(t * .6) * 3).toFixed(2)}deg) rotateZ(4deg)`;
+    $('#s-fin .contact').style.opacity = lisse(51.6, 52.6, t); }
+}
+
+window.pret = (async () => {
+  await document.fonts.ready;
+  await Promise.all([...document.images].map(i => i.decode().catch(() => {})));
+  await preparerCarte();
+  const im = new Image(); im.src = '../assets/photos/relief-ign.webp'; await im.decode();
+  rendre(0);
+  return { duree: DUREE };
+})();
+</script>
+</body>
+</html>
