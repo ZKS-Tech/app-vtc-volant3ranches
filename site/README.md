@@ -14,8 +14,8 @@ dans l'esprit de « The Renaissance Edition » de Shopify (hiver 2026), avec les
   « La confirmation », comme dans l'application quand Fabrice confirme.
 - **Le prix d'abord** : estimateur avec les vrais tarifs (1,80 / 2,20 €/km, 2,60 / 3,00 €/km, minimums,
   aller-retour × 1,90, arrondi à 0,50 €), distance calculée comme dans le prototype.
-- **Le trajet** : la carte bascule en 3D sous un ciel étoilé, sur un relief décoratif en courbes de
-  niveau ; une comète parcourt l'itinéraire choisi dans l'estimateur au rythme du défilement, la
+- **Le trajet** : la carte bascule en 3D sous un ciel étoilé, sur le vrai relief (estompage IGN) ;
+  villes à leur position exacte, itinéraires réels par la route (IGN) ; une comète parcourt l'itinéraire choisi dans l'estimateur au rythme du défilement, la
   caméra la suit et zoome, les villes gardent des étiquettes droites, les compteurs (km parcourus,
   temps restant) défilent, une onde marque l'arrivée.
 - **L'affiche de Picard** est montrée en entier, comme un tableau accroché : cadre doré, fond flou.
@@ -59,6 +59,18 @@ Récupérées sur Wikimedia Commons, recadrées et converties dans `assets/oeuvr
   dessine au défilement dans le chapitre des véhicules.
 
 Les crédits figurent en pied de page.
+
+## Données de la carte
+
+`outils/preparer_carte.py` interroge les services de l'IGN (Géoplateforme, Licence Ouverte) :
+géocodage des villes, itinéraires réels entre les 15 lieux de l'estimateur (distance, durée, tracé
+simplifié, numéros de routes) et estompage du relief, teinté pour la nuit. Le résultat est inséré
+dans la page (`<script id="donnees-carte">`) et dans `assets/photos/relief-ign.webp`. L'estimateur
+utilise ces distances réelles par la route.
+
+```bash
+cd site && python3 outils/preparer_carte.py
+```
 
 ## Voir le site
 
