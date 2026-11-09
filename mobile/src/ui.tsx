@@ -136,11 +136,17 @@ export function Segment<T extends string>({ options, valeur, onChange }: {
 // Chaque statut est un bain de teinture plus ou moins foncé.
 export const teintesDe = (c: Couleurs): Record<Statut, { fond: string; texte: string; texte2: string; libelle: string; niveau: number }> => ({
   envoyee: { fond: c.bain1, texte: c.fort, texte2: c.accent, libelle: 'Demande envoyée', niveau: 1 },
+  acompte_attendu: { fond: c.bain2, texte: c.fort, texte2: c.accent, libelle: 'Acompte à régler', niveau: 1 },
   confirmee: { fond: c.action, texte: c.blanc, texte2: c.surCuve2, libelle: 'Confirmée par Fabrice', niveau: 2 },
   terminee: { fond: c.delaveFond, texte: c.encre, texte2: c.pierre, libelle: 'Terminée', niveau: 3 },
   annulee: { fond: c.surface, texte: c.pierre, texte2: c.pierre, libelle: 'Annulée', niveau: 0 },
   refusee: { fond: c.surface, texte: c.pierre, texte2: c.pierre, libelle: 'Refusée par Fabrice', niveau: 0 },
+  expiree: { fond: c.surface, texte: c.pierre, texte2: c.pierre, libelle: 'Non confirmée : acompte non réglé', niveau: 0 },
 });
+
+// Course qui n'aura pas lieu (affichée barrée, sans barre de teinture).
+export const estFermee = (s: Statut) => s === 'annulee' || s === 'refusee' || s === 'expiree';
+export const heureCourte = (d: Date) => `${d.getHours()}h${String(d.getMinutes()).padStart(2, '0')}`;
 
 const bainsDe = (c: Couleurs) => [
   { titre: 'Envoyée', couleur: c.bain3 },
@@ -225,12 +231,12 @@ export function CarteCourse({ course, onPress }: { course: Course; onPress?: () 
       style={({ pressed }) => [
         s.carteCourse,
         { backgroundColor: t.fond },
-        (course.statut === 'annulee' || course.statut === 'refusee') && { borderWidth: 1, borderColor: c.trait, borderStyle: 'dashed' },
+        estFermee(course.statut) && { borderWidth: 1, borderColor: c.trait, borderStyle: 'dashed' },
         pressed && { opacity: 0.9 },
       ]}
     >
       <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
-        <Text style={{ fontFamily: f.display, fontSize: 26, color: t.texte, textDecorationLine: course.statut === 'annulee' || course.statut === 'refusee' ? 'line-through' : 'none' }}>
+        <Text style={{ fontFamily: f.display, fontSize: 26, color: t.texte, textDecorationLine: estFermee(course.statut) ? 'line-through' : 'none' }}>
           {dateCourte(course.date)} · {course.heure.replace(':', 'h')}
         </Text>
         <Text style={{ fontFamily: f.displayMedium, fontSize: 20, color: t.texte }}>{euros(course.montant)}</Text>
@@ -242,7 +248,12 @@ export function CarteCourse({ course, onPress }: { course: Course; onPress?: () 
         {offre(course.offreId).nom} · {offre(course.offreId).vehicule}
         {course.numero ? ` · ${course.numero}` : ''}
       </Text>
-      {course.statut === 'annulee' || course.statut === 'refusee' ? (
+      {course.statut === 'acompte_attendu' && course.acompteMontant ? (
+        <Text style={[type.small, { color: c.fort, fontWeight: '700', marginBottom: space.s }]}>
+          Acompte de {euros(course.acompteMontant)} à régler{course.acompteLimite ? ` avant ${heureCourte(course.acompteLimite)}` : ''} pour confirmer
+        </Text>
+      ) : null}
+      {estFermee(course.statut) ? (
         <View>
           <Text style={[type.label, { color: course.statut === 'refusee' ? c.erreur : c.pierre }]}>{teintesDe(c)[course.statut].libelle}</Text>
           {course.statut === 'refusee' && course.motifRefus ? <Text style={[type.small, { marginTop: 2 }]}>Motif : {course.motifRefus}</Text> : null}

@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Mission, Source, useChauffeur } from './chauffeur';
-import { dateCourte, euros, offre, regles } from './data';
+import { dateCourte, euros, montantAcompte, offre, regles } from './data';
 import { Couleurs, f, radius, space } from './theme';
 import { Bouton, IconName, teintesDe } from './ui';
 import { useTheme } from './useTheme';
@@ -76,6 +76,7 @@ export function DemandeCarte({ m }: { m: Mission }) {
   const ecoule = (maintenant.getTime() - new Date(m.envoyee_le).getTime()) / 60000;
   const part = Math.min(1, ecoule / regles.delaiConfirmationMin);
   const depasse = ecoule >= regles.delaiConfirmationMin;
+  const acompte = m.client_id ? montantAcompte(m.montant) : 0;
   const agir = async (accepter: boolean, motif?: string) => {
     setEnvoi(accepter ? 'oui' : 'non'); setErreur('');
     try { await repondre(m.id, accepter, motif); } catch (e) { setErreur(e instanceof Error ? e.message : String(e)); setEnvoi(null); }
@@ -117,9 +118,14 @@ export function DemandeCarte({ m }: { m: Mission }) {
       ) : (
         <View style={{ flexDirection: 'row', gap: space.s }}>
           <Bouton titre="Refuser" variante="contour" onPress={() => setRefus(true)} desactive={!!envoi} style={{ flex: 1 }} />
-          <Bouton titre="Confirmer" icone="checkmark" onPress={() => agir(true)} chargement={envoi === 'oui'} style={{ flex: 1.6 }} />
+          <Bouton titre={acompte ? 'Accepter' : 'Confirmer'} icone="checkmark" onPress={() => agir(true)} chargement={envoi === 'oui'} style={{ flex: 1.6 }} />
         </View>
       )}
+      {acompte && !refus ? (
+        <Text style={[type.small, { marginTop: space.s }]}>
+          Le client aura {regles.acompteDelaiMin >= 60 ? `${regles.acompteDelaiMin / 60} h` : `${regles.acompteDelaiMin} min`} pour régler l'acompte de {euros(acompte)} ; la course sera confirmée à réception.
+        </Text>
+      ) : null}
     </View>
   );
 }
@@ -128,7 +134,8 @@ export function DemandeCarte({ m }: { m: Mission }) {
 export function LigneMission({ m, avecDate }: { m: Mission; avecDate?: boolean }) {
   const { c, type, s } = useTheme(creerStyles);
   const t = teintesDe(c)[m.statut];
-  const barre = m.statut === 'annulee' || m.statut === 'refusee';
+  const barre = m.statut === 'annulee' || m.statut === 'refusee' || m.statut === 'expiree';
+  const court: Partial<Record<Mission['statut'], string>> = { acompte_attendu: 'Acompte attendu', expiree: 'Expirée' };
   return (
     <Pressable onPress={() => router.push(`/mission/${m.id}`)} style={({ pressed }) => [s.ligne, pressed && { backgroundColor: c.bain1 }]} accessibilityRole="button">
       <View style={{ width: avecDate ? 78 : 56 }}>
@@ -141,8 +148,8 @@ export function LigneMission({ m, avecDate }: { m: Mission; avecDate?: boolean }
       </View>
       <View style={{ alignItems: 'flex-end', gap: 4 }}>
         <Text style={[type.body, { fontWeight: '700' }, barre && { color: c.pierre }]}>{euros(m.statut === 'annulee' ? Number(m.frais_annulation ?? 0) : m.montant)}</Text>
-        <View style={[s.pastille, { backgroundColor: m.statut === 'confirmee' ? c.action : m.statut === 'envoyee' ? c.bain2 : c.delaveFond }]}>
-          <Text style={[s.pastilleTexte, { color: m.statut === 'confirmee' ? c.blanc : m.statut === 'envoyee' ? c.fort : c.pierre }]}>{t.libelle.replace(' par Fabrice', '')}</Text>
+        <View style={[s.pastille, { backgroundColor: m.statut === 'confirmee' ? c.action : m.statut === 'envoyee' ? c.bain2 : m.statut === 'acompte_attendu' ? c.alerteFond : c.delaveFond }]}>
+          <Text style={[s.pastilleTexte, { color: m.statut === 'confirmee' ? c.blanc : m.statut === 'envoyee' ? c.fort : m.statut === 'acompte_attendu' ? c.alerte : c.pierre }]}>{court[m.statut] ?? t.libelle.replace(' par Fabrice', '')}</Text>
         </View>
       </View>
     </Pressable>

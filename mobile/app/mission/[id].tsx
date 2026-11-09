@@ -8,6 +8,7 @@ import { dateCourte, duree, euros, fraisAnnulation, offre } from '../../src/data
 import { Couleurs, f, radius, sansContourWeb, space } from '../../src/theme';
 import { Bouton, Ligne, Note, Teinture, Titre, teintesDe } from '../../src/ui';
 import { useMessagerie } from '../../src/messagerie';
+import { AcompteChauffeur } from '../../src/AcompteChauffeur';
 import { useTheme } from '../../src/useTheme';
 
 // Une course vue par Fabrice : le client, le trajet, les actions selon le statut.
@@ -92,7 +93,7 @@ export default function Mission() {
 
   return (
     <ScrollView style={{ backgroundColor: c.sol }} contentContainerStyle={{ padding: space.l, paddingBottom: space.xxl, gap: space.l }} keyboardShouldPersistTaps="handled">
-      <View style={[s.entete, { backgroundColor: t.fond }, (m.statut === 'annulee' || m.statut === 'refusee') && { borderWidth: 1, borderColor: c.trait }]}>
+      <View style={[s.entete, { backgroundColor: t.fond }, (m.statut === 'annulee' || m.statut === 'refusee' || m.statut === 'expiree') && { borderWidth: 1, borderColor: c.trait }]}>
         <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
           <Text style={[type.label, { color: t.texte2 }]}>{t.libelle.replace('par Fabrice', '')}</Text>
           {m.statut === 'confirmee' ? <Text style={[type.label, { color: t.texte2 }]}>{dansCombien(m.date, maintenant)}</Text> : null}
@@ -114,6 +115,7 @@ export default function Mission() {
         </View>
       ) : null}
       {erreur ? <Note ton="erreur">{erreur}</Note> : null}
+      <AcompteChauffeur m={m} />
 
       <Details />
 
@@ -130,11 +132,12 @@ export default function Mission() {
         {!noteSauvee ? <Bouton titre="Enregistrer la note" variante="texte" onPress={() => faire('note', async () => { await noter(m.id, note); setNoteSauvee(true); })} chargement={action === 'note'} style={{ alignSelf: 'flex-start', marginBottom: space.s }} /> : null}
       </View>
 
-      {m.statut === 'confirmee' ? (
+      {m.statut === 'confirmee' || m.statut === 'acompte_attendu' ? (
         annulation ? (
           <View style={[s.bloc, { padding: space.l, gap: space.m }]}>
             <Text style={type.h3}>Annuler la course</Text>
             <Text style={type.small}>Selon les CGV : {conseil.texte} ({euros(m.montant * conseil.taux)})</Text>
+            {m.acompte_paye_le ? <Text style={type.small}>L'acompte de {euros(Number(m.acompte_montant ?? 0))} sera remboursé au client.</Text> : null}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.s }}>
               <Text style={type.body}>Frais facturés</Text>
               <TextInput value={frais} onChangeText={setFrais} keyboardType="decimal-pad" placeholder={String(m.montant * conseil.taux).replace('.', ',')} placeholderTextColor={c.placeholder} style={[s.montant]} />

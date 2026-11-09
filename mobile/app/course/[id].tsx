@@ -6,9 +6,10 @@ import { dateCourte, duree, estTransfert, euros, fraisAnnulation, lieu, offre, p
 import { useStore } from '../../src/store';
 import { Couleurs, f, radius, space } from '../../src/theme';
 import { DelaiConfirmation } from '../../src/DelaiConfirmation';
+import { BlocAcompte, ResteAPayer } from '../../src/Acompte';
 import { useMessagerie } from '../../src/messagerie';
 import { useTheme } from '../../src/useTheme';
-import { Bouton, Itineraire, Ligne, Note, Teinture, Titre, appelerFabrice, teintesDe } from '../../src/ui';
+import { Bouton, Itineraire, Ligne, Note, Teinture, Titre, appelerFabrice, estFermee, teintesDe } from '../../src/ui';
 
 export default function DetailCourse() {
   const { c, type, s } = useTheme(creerStyles);
@@ -21,13 +22,15 @@ export default function DetailCourse() {
   const t = teintesDe(c)[course.statut];
   const o = offre(course.offreId);
   const depart = lieu(course.departId);
-  const active = course.statut === 'envoyee' || course.statut === 'confirmee';
-  const frais = fraisAnnulation(course.date);
+  const active = course.statut === 'envoyee' || course.statut === 'acompte_attendu' || course.statut === 'confirmee';
+  // Seule une course confirmée entraîne des frais (une demande en attente s'annule toujours sans frais).
+  const frais = course.statut === 'confirmee' ? fraisAnnulation(course.date) : { taux: 0, texte: 'Votre demande n’est pas encore confirmée : annulation sans frais.' };
+  const plusDe24h = course.date.getTime() - Date.now() > 24 * 3600000;
   const transfert = estTransfert(depart);
 
   return (
     <ScrollView style={{ backgroundColor: c.sol }} contentContainerStyle={{ padding: space.l, paddingBottom: space.xxl }}>
-      <View style={[s.entete, { backgroundColor: t.fond }, (course.statut === 'annulee' || course.statut === 'refusee') && { borderWidth: 1, borderColor: c.trait }]}>
+      <View style={[s.entete, { backgroundColor: t.fond }, estFermee(course.statut) && { borderWidth: 1, borderColor: c.trait }]}>
         <Text style={[type.label, { color: t.texte2 }]}>{t.libelle}</Text>
         <Text style={[s.date, { color: t.texte }]}>
           {dateCourte(course.date)} · {course.heure.replace(':', 'h')}
@@ -35,12 +38,24 @@ export default function DetailCourse() {
         <View style={{ marginVertical: space.l }}>
           <Itineraire departId={course.departId} arriveeId={course.arriveeId} couleur={t.texte} couleur2={t.texte2} grand />
         </View>
-        {course.statut !== 'annulee' && course.statut !== 'refusee' ? <Teinture statut={course.statut} surFonce={course.statut === 'confirmee'} /> : null}
+        {!estFermee(course.statut) ? <Teinture statut={course.statut} surFonce={course.statut === 'confirmee'} /> : null}
       </View>
 
       {course.statut === 'envoyee' ? (
         <View style={{ marginTop: space.l }}>
           <DelaiConfirmation course={course} />
+        </View>
+      ) : null}
+      {course.statut === 'acompte_attendu' ? (
+        <View style={{ marginTop: space.l }}>
+          <BlocAcompte course={course} />
+        </View>
+      ) : null}
+      {course.acomptePaye && active ? <View style={{ marginTop: space.l }}><ResteAPayer course={course} /></View> : null}
+      {course.statut === 'expiree' ? (
+        <View style={{ marginTop: space.l, gap: space.s }}>
+          <Note ton="alerte" icone="time-outline">L'acompte n'a pas été réglé à temps : cette course n'est pas réservée. Rien ne vous a été facturé.</Note>
+          <Bouton titre="Appeler Fabrice" variante="contour" icone="call-outline" onPress={appelerFabrice} />
         </View>
       ) : null}
       {course.statut === 'refusee' ? (
@@ -73,7 +88,8 @@ export default function DetailCourse() {
         {course.numero ? <Ligne libelle="Vol / train" valeur={`${course.numero} (suivi)`} /> : null}
         <Ligne libelle="Distance" valeur={`${course.km.toLocaleString('fr-FR')} km · ${duree(course.minutes)}`} />
         <Ligne libelle="Prix" valeur={euros(course.montant)} fort />
-        <Ligne libelle="Paiement" valeur="À bord ou sur facture" />
+        {course.acompteMontant ? <Ligne libelle={course.acomptePaye ? 'Acompte réglé' : 'Acompte'} valeur={euros(course.acompteMontant)} /> : null}
+        <Ligne libelle="Paiement" valeur={course.acompteMontant ? `Reste ${euros(Math.max(0, course.montant - course.acompteMontant))} à bord` : 'À bord ou sur facture'} />
       </View>
 
       <Titre>Votre chauffeur</Titre>
@@ -92,6 +108,13 @@ export default function DetailCourse() {
             <View style={s.annuler}>
               <Text style={type.h3}>Annuler cette course ?</Text>
               <Text style={[type.small, { marginVertical: space.s }]}>{frais.texte}</Text>
+              {course.acomptePaye && course.acompteMontant ? (
+                <Text style={[type.small, { marginBottom: space.s }]}>
+                  {plusDe24h
+                    ? `L’acompte de ${euros(course.acompteMontant)} vous sera remboursé sur votre carte.`
+                    : `L’acompte de ${euros(course.acompteMontant)} est conservé : l’annulation intervient moins de 24 h avant la course (CGV).`}
+                </Text>
+              ) : null}
               {frais.taux > 0 ? (
                 <Text style={[type.body, { fontWeight: '700', color: c.erreur, marginBottom: space.s }]}>
                   Frais : {euros(course.montant * frais.taux)}

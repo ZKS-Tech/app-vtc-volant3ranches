@@ -16,7 +16,7 @@ export default function Planning() {
   const { c, type, s } = useTheme(creerStyles);
   const { missions, viderSaisie } = useChauffeur();
   const [jour, setJour] = useState(() => dansJours(0));
-  const actives = missions.filter((m) => m.statut === 'confirmee' || m.statut === 'envoyee' || m.statut === 'terminee');
+  const actives = missions.filter((m) => m.statut === 'confirmee' || m.statut === 'envoyee' || m.statut === 'acompte_attendu' || m.statut === 'terminee');
   const duJour = missions.filter((m) => memeJour(m.date, jour)).sort((a, b) => +a.date - +b.date);
   const total = duJour.filter((m) => m.statut === 'confirmee' || m.statut === 'terminee').reduce((t, m) => t + m.montant, 0);
 

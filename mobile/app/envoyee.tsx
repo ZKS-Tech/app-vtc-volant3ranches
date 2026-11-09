@@ -9,6 +9,7 @@ import { useStore } from '../src/store';
 import { Couleurs, f, radius, space } from '../src/theme';
 import { CartePlan } from '../src/CartePlan';
 import { DelaiConfirmation } from '../src/DelaiConfirmation';
+import { BlocAcompte } from '../src/Acompte';
 import { useTheme } from '../src/useTheme';
 import { Bouton, Itineraire, Teinture, appelerFabrice } from '../src/ui';
 
@@ -20,6 +21,9 @@ export default function Envoyee() {
   const course = courses.find((x) => x.id === id);
   const confirmee = course?.statut === 'confirmee';
   const refusee = course?.statut === 'refusee';
+  const acompte = course?.statut === 'acompte_attendu';
+  const expiree = course?.statut === 'expiree';
+  const ferme = refusee || expiree;
   // Le texte change de couleur quand l'encre a recouvert la moitié de l'écran (signal de la cuve).
   // Filet de sécurité si le rendu 3D n'est pas disponible : bascule après 1,6 s.
   const [fonce, setFonce] = useState(confirmee);
@@ -42,22 +46,26 @@ export default function Envoyee() {
     <View style={{ flex: 1, backgroundColor: c.bain1 }}>
       <CuveIndigo niveau={confirmee ? 1 : 0} couleurs={{ eau: c.bain1, voile: c.bain3, indigo: c.action, cuve: c.cuve }} onMiHauteur={setFonce} />
       <ScrollView contentContainerStyle={{ padding: space.l, paddingTop: insets.top + space.xxl, paddingBottom: insets.bottom + space.xl }}>
-        {refusee ? (
+        {ferme ? (
           <View style={[s.pastille, { backgroundColor: c.erreurFond }]}>
-            <Text style={[type.label, { color: c.erreur }]}>Refusée par Fabrice</Text>
+            <Text style={[type.label, { color: c.erreur }]}>{refusee ? 'Refusée par Fabrice' : 'Acompte non réglé'}</Text>
           </View>
         ) : (
           <Teinture statut={course.statut} surFonce={fonce} />
         )}
         <Text accessibilityRole="header" accessibilityLiveRegion="polite" style={[s.titre, { color: texte }]}>
-          {refusee ? 'Demande refusée' : fonce ? 'Course confirmée' : 'Demande envoyée'}
+          {refusee ? 'Demande refusée' : expiree ? 'Demande expirée' : fonce ? 'Course confirmée' : acompte ? 'Fabrice peut vous conduire' : 'Demande envoyée'}
         </Text>
         <Text style={[type.body, { color: texte, fontSize: 18, lineHeight: 25 }]}>
           {refusee
             ? `Fabrice ne peut pas assurer cette course du ${dateCourte(course.date)} à ${course.heure.replace(':', 'h')}. Rien ne vous sera facturé.`
+            : expiree
+            ? "L'acompte n'a pas été réglé à temps : la course n'est pas réservée et rien ne vous a été facturé."
             : fonce
-            ? `Fabrice sera là ${dateCourte(course.date)} à ${course.heure.replace(':', 'h')}. Vous avez reçu la confirmation par notification, SMS et email.`
-            : 'Fabrice vous confirme votre course sous 30 minutes, par notification, SMS et email.'}
+            ? `Fabrice sera là ${dateCourte(course.date)} à ${course.heure.replace(':', 'h')}. Vous recevrez un rappel la veille.`
+            : acompte
+            ? 'Il a accepté votre demande. Réglez l’acompte pour confirmer la réservation.'
+            : 'Fabrice vous répond sous 30 minutes. Vous serez prévenu par notification.'}
         </Text>
         {refusee ? (
           <View style={[s.motif, { backgroundColor: c.surface }]}>
@@ -69,9 +77,14 @@ export default function Envoyee() {
           </View>
         ) : null}
 
-        {!confirmee && !refusee ? (
+        {course.statut === 'envoyee' ? (
           <Reanimated.View exiting={FadeOut.duration(250)} style={{ marginTop: space.xl }}>
             <DelaiConfirmation course={course} />
+          </Reanimated.View>
+        ) : null}
+        {acompte ? (
+          <Reanimated.View exiting={FadeOut.duration(250)} style={{ marginTop: space.xl }}>
+            <BlocAcompte course={course} />
           </Reanimated.View>
         ) : null}
         {/* le reste glisse à sa place quand l'anneau disparaît */}
@@ -97,8 +110,8 @@ export default function Envoyee() {
         </View>
 
         <View style={{ gap: space.m, marginTop: space.xl }}>
-          {refusee ? (
-            <Bouton titre="Choisir un autre horaire" icone="time-outline" onPress={() => router.dismissTo('/trajet')} />
+          {ferme ? (
+            <Bouton titre={refusee ? 'Choisir un autre horaire' : 'Refaire une demande'} icone="time-outline" onPress={() => router.dismissTo('/trajet')} />
           ) : (
             <Bouton titre="Voir mes courses" variante={fonce ? 'clair' : 'plein'} onPress={() => terminer('/courses')} />
           )}
@@ -107,7 +120,7 @@ export default function Envoyee() {
         </View>
         </Reanimated.View>
 
-        {!fonce && !refusee ? (
+        {!fonce && !ferme ? (
           <View style={s.compte}>
             <Text style={type.h3}>Retrouver vos courses sur tous vos appareils</Text>
             <Text style={[type.small, { marginTop: 4, marginBottom: space.m }]}>
@@ -120,15 +133,15 @@ export default function Envoyee() {
         {serveur.etat !== 'connecte' ? (
         <View style={s.demo}>
           <Text style={[type.label, { color: texte2, marginBottom: space.s }]}>Prototype</Text>
-          <Bouton
-            titre={fonce || refusee ? 'Revenir à « demande envoyée »' : 'Simuler la confirmation de Fabrice'}
-            variante="texte"
-            surFonce={fonce}
-            onPress={() => changerStatut(course.id, confirmee || refusee ? 'envoyee' : 'confirmee')}
-          />
-          {!confirmee && !refusee ? (
-            <Bouton titre="Simuler un refus de Fabrice" variante="texte" onPress={() => changerStatut(course.id, 'refusee', 'Indisponible à cet horaire')} />
-          ) : null}
+          {course.statut === 'envoyee' ? (
+            <>
+              <Bouton titre="Simuler l'acceptation de Fabrice (acompte)" variante="texte"
+                onPress={() => changerStatut(course.id, 'acompte_attendu', undefined, { acompteMontant: Math.max(1, Math.round(course.montant * 10) / 100), acompteLimite: new Date(Date.now() + 3600000) })} />
+              <Bouton titre="Simuler un refus de Fabrice" variante="texte" onPress={() => changerStatut(course.id, 'refusee', 'Indisponible à cet horaire')} />
+            </>
+          ) : (
+            <Bouton titre="Revenir à « demande envoyée »" variante="texte" surFonce={fonce} onPress={() => changerStatut(course.id, 'envoyee', undefined, { acomptePaye: false })} />
+          )}
         </View>
         ) : null}
       </ScrollView>

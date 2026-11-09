@@ -1,8 +1,9 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { Lieu, OffreId, appliquerTarifs, joursFeries, lieu, lieux, offre, prix, regles, trajet } from './data';
+import { Lieu, OffreId, appliquerTarifs, euros, joursFeries, lieu, lieux, montantAcompte, offre, prix, regles, trajet } from './data';
 import {
   Fiche, LigneCourse, ajouterFerie, chargerEspaceChauffeur, chargerTarifs, ecouterEspaceChauffeur, enregistrerFiche,
   majTable, normaliserTelephone, retirerFerie, rpcChauffeur,
+  lienAcompte as lienAcompteServeur, rembourserAcompte,
 } from './serveur';
 import { dansJours, useStore } from './store';
 
@@ -54,6 +55,9 @@ type Ctx = {
   repondre: (id: string, accepter: boolean, motif?: string) => Promise<void>;
   terminer: (id: string) => Promise<void>;
   annuler: (id: string, frais: number) => Promise<void>;
+  /** Lien de paiement de l'acompte à envoyer au client (null en démonstration). */
+  lienAcompte: (id: string) => Promise<string | null>;
+  rembourser: (id: string) => Promise<number>;
   noter: (id: string, note: string) => Promise<void>;
   sauverFiche: (f: Partial<Fiche> & { nom: string }) => Promise<Fiche>;
   saisie: Saisie;
@@ -120,9 +124,24 @@ export function ChauffeurProvider({ children }: { children: ReactNode }) {
     annoncer,
     repondre: async (id, accepter, motif) => {
       const nom = missions.find((m) => m.id === id)?.nom ?? 'le client';
-      if (demo) local(id, accepter ? { statut: 'confirmee', confirmee_le: maintenant() } : { statut: 'refusee', refusee_le: maintenant(), motif_refus: motif ?? null });
-      else fusionMission(versMission(await rpcChauffeur('repondre_demande', { p_course: id, p_accepter: accepter, p_motif: motif ?? null })));
-      annoncer(accepter
+      const m0 = missions.find((m) => m.id === id);
+      let statut: Mission['statut'];
+      if (demo) {
+        const acompte = m0?.client_id ? montantAcompte(m0.montant) : 0;
+        statut = !accepter ? 'refusee' : acompte ? 'acompte_attendu' : 'confirmee';
+        local(id, !accepter
+          ? { statut, refusee_le: maintenant(), motif_refus: motif ?? null }
+          : acompte
+          ? { statut, acompte_montant: acompte, acompte_limite: new Date(Date.now() + regles.acompteDelaiMin * 60000).toISOString() }
+          : { statut, confirmee_le: maintenant() });
+      } else {
+        const m = versMission(await rpcChauffeur('repondre_demande', { p_course: id, p_accepter: accepter, p_motif: motif ?? null }));
+        statut = m.statut;
+        fusionMission(m);
+      }
+      annoncer(statut === 'acompte_attendu'
+        ? `Demande acceptée : ${nom} doit régler l'acompte pour confirmer. Vous serez prévenu.`
+        : statut === 'confirmee'
         ? `Course confirmée : ${nom} voit la confirmation dans l'appli.`
         : `Demande refusée : ${nom} voit le motif « ${motif ?? 'non précisé'} » dans l'appli.`);
     },
@@ -132,7 +151,23 @@ export function ChauffeurProvider({ children }: { children: ReactNode }) {
     },
     annuler: async (id, frais) => {
       if (demo) return local(id, { statut: 'annulee', annulee_le: maintenant(), frais_annulation: frais });
-      fusionMission(versMission(await rpcChauffeur('annuler_course_chauffeur', { p_course: id, p_frais: frais })));
+      const m = versMission(await rpcChauffeur('annuler_course_chauffeur', { p_course: id, p_frais: frais }));
+      fusionMission(m);
+      // Annulation par Fabrice : l'acompte est rendu en entier.
+      if (m.acompte_paye_le) {
+        const r = await rembourserAcompte(id).catch((e) => { annoncer(`Remboursement à refaire : ${e instanceof Error ? e.message : e}`); return null; });
+        if (r?.rembourse) annoncer(`Acompte de ${euros(r.rembourse)} remboursé à ${m.nom}.`);
+      }
+    },
+    lienAcompte: async (id) => {
+      if (demo) return null;
+      const r = await lienAcompteServeur(id);
+      if (r.deja_paye) throw new Error('L’acompte de cette course est déjà réglé.');
+      return r.url ?? null;
+    },
+    rembourser: async (id) => {
+      if (demo) return 0;
+      return (await rembourserAcompte(id)).rembourse;
     },
     noter: async (id, note) => {
       if (demo) return local(id, { note_chauffeur: note.trim() || null });
@@ -205,6 +240,8 @@ export function ChauffeurProvider({ children }: { children: ReactNode }) {
         attenteAeroportMin: v.attente_aeroport_min ?? regles.attenteAeroportMin,
         attenteGareMin: v.attente_gare_min ?? regles.attenteGareMin,
         attenteStandardMin: v.attente_standard_min ?? regles.attenteStandardMin,
+        acomptePourcent: v.acompte_pourcent ?? regles.acomptePourcent,
+        acompteDelaiMin: v.acompte_delai_min ?? regles.acompteDelaiMin,
       });
       recalculerTarifs();
     },

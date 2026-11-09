@@ -40,7 +40,7 @@ export default function Messages() {
     const avecConversation = new Set(conversations.map((cv) => cv.courseId));
     const maintenant = Date.now();
     const aEcrire = missions
-      .filter((m) => m.client_id && !avecConversation.has(m.id) && (m.statut === 'confirmee' || m.statut === 'envoyee') && m.date.getTime() > maintenant - 3600000)
+      .filter((m) => m.client_id && !avecConversation.has(m.id) && (m.statut === 'confirmee' || m.statut === 'envoyee' || m.statut === 'acompte_attendu') && m.date.getTime() > maintenant - 3600000)
       .filter(correspond)
       .sort((a, b) => +a.date - +b.date)
       .slice(0, 15)

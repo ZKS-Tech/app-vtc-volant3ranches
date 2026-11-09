@@ -145,6 +145,8 @@ export const regles = {
   attenteGareMin: 15,
   attenteStandardMin: 10,
   delaiConfirmationMin: 30,
+  acomptePourcent: 10, // acompte demandé à l'acceptation (0 = aucun)
+  acompteDelaiMin: 60, // délai pour le régler
 };
 
 export const joursFeries = [
@@ -160,6 +162,7 @@ export type TarifsServeur = {
   parametres: {
     nuit_debut: number; nuit_fin: number; majoration_weekend: boolean; coef_aller_retour: number; arrondi: number;
     attente_aeroport_min: number; attente_gare_min: number; attente_standard_min: number; delai_confirmation_min: number;
+    acompte_pourcent?: number; acompte_delai_min?: number;
   } | null;
   joursFeries: string[];
 };
@@ -181,6 +184,9 @@ export function appliquerTarifs(t: TarifsServeur) {
       attenteAeroportMin: p.attente_aeroport_min, attenteGareMin: p.attente_gare_min,
       attenteStandardMin: p.attente_standard_min, delaiConfirmationMin: p.delai_confirmation_min,
     });
+    // Sans la migration 8, la base ne connaît pas l'acompte : aucun n'est demandé.
+    regles.acomptePourcent = p.acompte_pourcent ?? 0;
+    if (p.acompte_delai_min) regles.acompteDelaiMin = p.acompte_delai_min;
   }
   if (t.joursFeries.length) joursFeries.splice(0, joursFeries.length, ...t.joursFeries);
 }
@@ -325,3 +331,7 @@ export function fraisAnnulation(depart: Date, maintenant = new Date()) {
   if (heures > 12) return { taux: 0.5, texte: 'Annulation entre 24 h et 12 h : 50 % du montant.' };
   return { taux: 1, texte: 'Moins de 12 h avant la course : 100 % du montant.' };
 }
+
+// Montant de l'acompte pour un prix (même calcul que la fonction montant_acompte de la base).
+export const montantAcompte = (prixCourse: number) =>
+  regles.acomptePourcent > 0 ? Math.max(1, Math.round(prixCourse * regles.acomptePourcent) / 100) : 0;

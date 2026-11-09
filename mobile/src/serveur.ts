@@ -58,6 +58,7 @@ export type LigneCourse = {
   commentaire: string | null; note_chauffeur: string | null;
   statut: Statut; envoyee_le: string; confirmee_le: string | null; refusee_le: string | null; motif_refus: string | null;
   annulee_le: string | null; frais_annulation: number | null; terminee_le: string | null;
+  acompte_montant?: number | null; acompte_limite?: string | null; acompte_paye_le?: string | null; expiree_le?: string | null;
 };
 
 export type Fiche = {
@@ -98,6 +99,9 @@ export function versCourse(l: LigneCourse): Course | null {
     statut: l.statut as Statut,
     envoyeeLe: new Date(l.envoyee_le),
     motifRefus: l.motif_refus ?? undefined,
+    acompteMontant: l.acompte_montant != null ? Number(l.acompte_montant) : undefined,
+    acompteLimite: l.acompte_limite ? new Date(l.acompte_limite) : undefined,
+    acomptePaye: !!l.acompte_paye_le,
   };
 }
 
@@ -322,4 +326,35 @@ export function ecouterAnnonces(surChangement: () => void): RealtimeChannel | nu
     .channel('annonces')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'annonces' }, surChangement)
     .subscribe();
+}
+
+// ——— Acompte (migration 8 et fonctions serveur SumUp) ———
+export type Paiement = {
+  id: string; course_id: string; montant: number; statut: 'en_attente' | 'paye' | 'echoue' | 'expire' | 'rembourse';
+  lien: string | null; cree_le: string; paye_le: string | null; remboursement_du: number; rembourse: number; rembourse_le: string | null;
+};
+
+async function fonction<T>(nom: string, corps: Record<string, unknown>): Promise<T> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const { data, error } = await supabase.functions.invoke(nom, { body: corps });
+  if (error) {
+    // Le message utile est dans le corps de la réponse ({ erreur }).
+    const ctx = (error as { context?: Response }).context;
+    const detail = ctx && typeof ctx.json === 'function' ? await ctx.json().catch(() => null) : null;
+    throw new Error(detail?.erreur ?? 'Paiement indisponible pour le moment. Réessayez ou appelez Fabrice.');
+  }
+  if (data?.erreur) throw new Error(data.erreur);
+  return data as T;
+}
+
+// Page de paiement SumUp de l'acompte (créée ou réutilisée par le serveur).
+export const lienAcompte = (courseId: string) =>
+  fonction<{ url?: string; montant: number; limite: string | null; deja_paye?: boolean }>('acompte', { course_id: courseId });
+
+// Rembourse ce que la base a décidé après une annulation (rien si l'acompte est conservé).
+export const rembourserAcompte = (courseId: string) => fonction<{ rembourse: number }>('acompte-rembourser', { course_id: courseId });
+
+export async function paiementsDe(courseId: string): Promise<Paiement[]> {
+  if (!supabase) return [];
+  return verifier(await supabase.from('paiements').select('*').eq('course_id', courseId).order('cree_le')) as Paiement[];
 }

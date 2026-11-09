@@ -17,7 +17,9 @@
 -- (supabase/functions, clé de service) appellent les fonctions de cette migration qui les modifient.
 
 -- ——— Réglage : pourcentage d'acompte (0 = pas d'acompte) ———
-alter table public.parametres add column acompte_pourcent int not null default 10 check (acompte_pourcent between 0 and 100);
+-- 0 % à l'installation : rien ne change pour les clients tant que SumUp n'est pas configuré.
+-- Fabrice passe à 10 % dans l'appli (Gestion › Tarifs › Acompte) une fois les fonctions déployées.
+alter table public.parametres add column acompte_pourcent int not null default 0 check (acompte_pourcent between 0 and 100);
 alter table public.parametres add column acompte_delai_min int not null default 60 check (acompte_delai_min between 10 and 1440);
 
 -- ——— Suivi de l'acompte sur la course ———

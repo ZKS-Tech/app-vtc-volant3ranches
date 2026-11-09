@@ -2,11 +2,11 @@ import { activerNotifications, oublierTelephone } from './notifications';
 import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { OffreId, appliquerTarifs, lieu, offre, prix, trajet } from './data';
 import {
-  annulerCourse, chargerTarifs, connexionChauffeur, connexionInvite, creerDemande, deconnexion, ecouterMesCourses,
+  annulerCourse, chargerTarifs, lienAcompte, rembourserAcompte, connexionChauffeur, connexionInvite, creerDemande, deconnexion, ecouterMesCourses,
   estChauffeur, mesCourses, supabase,
 } from './serveur';
 
-export type Statut = 'envoyee' | 'confirmee' | 'refusee' | 'terminee' | 'annulee';
+export type Statut = 'envoyee' | 'acompte_attendu' | 'confirmee' | 'refusee' | 'expiree' | 'terminee' | 'annulee';
 
 export type Course = {
   id: string;
@@ -26,6 +26,9 @@ export type Course = {
   statut: Statut;
   envoyeeLe?: Date; // heure d'envoi de la demande : sert au délai de confirmation
   motifRefus?: string; // raison donnée par Fabrice quand il refuse
+  acompteMontant?: number; // acompte demandé quand Fabrice accepte (10 % par défaut)
+  acompteLimite?: Date; // à régler avant cette heure, sinon la demande expire
+  acomptePaye?: boolean;
   demo?: boolean;
 };
 
@@ -105,7 +108,9 @@ type Store = {
   reinitialiser: () => void;
   courses: Course[];
   envoyer: () => Promise<Course>;
-  changerStatut: (id: string, s: Statut, motif?: string) => void;
+  changerStatut: (id: string, s: Statut, motif?: string, extra?: Partial<Course>) => void;
+  /** Adresse de la page de paiement de l'acompte (null en démonstration : payé aussitôt). */
+  payerAcompte: (id: string) => Promise<string | null>;
   annuler: (id: string) => Promise<void>;
   serveur: EtatServeur;
   tarifsVersion: number;
@@ -207,11 +212,23 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           }, 1400);
         });
       },
-      changerStatut: (id, s, motif) => setCourses((cs) => cs.map((c) => (c.id === id ? { ...c, statut: s, motifRefus: motif } : c))),
+      changerStatut: (id, s, motif, extra) => setCourses((cs) => cs.map((c) => (c.id === id ? { ...c, statut: s, motifRefus: motif, ...extra } : c))),
+      payerAcompte: async (id) => {
+        if (supabase && serveur.etat === 'connecte' && !courses.find((c) => c.id === id)?.demo) {
+          const r = await lienAcompte(id);
+          if (r.deja_paye) return null;
+          return r.url ?? null;
+        }
+        // Démonstration : paiement accepté aussitôt.
+        setCourses((cs) => cs.map((c) => (c.id === id ? { ...c, statut: 'confirmee', acomptePaye: true } : c)));
+        return null;
+      },
       annuler: async (id) => {
         if (supabase && serveur.etat === 'connecte' && !courses.find((c) => c.id === id)?.demo) {
           const c = await annulerCourse(id);
           setCourses((cs) => cs.map((x) => (x.id === id ? c : x)));
+          // Acompte remboursé si les CGV le prévoient (le serveur décide, rien sinon).
+          if (c.acomptePaye) rembourserAcompte(id).catch((e) => console.warn('Remboursement :', e instanceof Error ? e.message : e));
         } else {
           setCourses((cs) => cs.map((c) => (c.id === id ? { ...c, statut: 'annulee' } : c)));
         }

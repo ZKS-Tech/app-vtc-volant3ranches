@@ -128,7 +128,7 @@ règles sont vérifiées par un jeu de 21 tests exécutés sur un PostgreSQL loc
   avant), qui ouvre une page de détail. Pendant une indisponibilité, les dates sont bloquées dans le
   choix de la date (sur deux mois) et la base refuse les demandes sur ces jours. Les courses déjà
   prévues sur la période sont signalées à Fabrice, sans annulation automatique.
-- **Acompte de 10 % pour confirmer** (décision de Fabrice) : Fabrice accepte la demande, le client paie
+- ✅ **Acompte de 10 % pour confirmer** (décision de Fabrice ; migration 8, fonctions `acompte`, `sumup-webhook`, `acompte-rembourser`) : Fabrice accepte la demande, le client paie
   l'acompte dans l'appli, et seulement alors la course passe à « Confirmée ». Sans paiement dans le
   délai, la demande expire. Le reste est payé à bord (terminal SumUp, espèces) ou dans l'appli.
   Prestataire envisagé : **SumUp** (déjà utilisé par Fabrice), paiement en ligne via une fonction

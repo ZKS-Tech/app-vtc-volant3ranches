@@ -98,6 +98,60 @@ puis **Run**. Fabrice publie ses annonces depuis l'appli (Gestion › Annonces e
 
 Table `annonces` ; visible par tous pour les annonces en cours et à venir, modifiable par Fabrice seul.
 
+## Acompte de 10 % avec SumUp (migration 8 et fonctions serveur)
+
+Quand Fabrice accepte une demande, le client doit régler un acompte (10 % par défaut, 1 h pour payer)
+sur la page de paiement sécurisée de SumUp ; la course n'est confirmée qu'à réception. Sans paiement
+dans le délai, la demande expire. Annulation : acompte remboursé si le client annule plus de 24 h
+avant ou si Fabrice annule, conservé sinon (CGV). Pour une course saisie par Fabrice, il peut envoyer
+un lien de paiement (partage ou email). Réglages : espace chauffeur › Gestion › Tarifs › Acompte
+(0 % = pas d'acompte).
+
+### 1. Base de données (deux fichiers, dans cet ordre)
+
+**SQL Editor** › **New query** : coller [`migrations/20261111000000_acompte_statuts.sql`](migrations/20261111000000_acompte_statuts.sql),
+**Run**. Puis une **nouvelle** requête avec [`migrations/20261111000001_acompte.sql`](migrations/20261111000001_acompte.sql),
+**Run**. (PostgreSQL refuse d'utiliser un nouveau statut dans la même exécution que sa création.)
+
+L'acompte est à **0 %** après la migration : rien ne change pour les clients tant que SumUp n'est pas
+prêt. Une fois les étapes 2 et 3 faites, le passer à 10 % dans l'appli (Gestion › Tarifs › Acompte).
+
+### 2. Clés SumUp (dans l'espace SumUp de Fabrice)
+
+- **Clé API secrète** : rubrique développeurs / clés API de l'espace SumUp (elle commence par
+  `sup_sk_`). Elle donne accès aux paiements : **ne jamais l'envoyer par message ni la mettre dans le
+  code**, la coller uniquement dans Supabase (ci-dessous).
+- **Code marchand** : visible dans le profil SumUp (commence souvent par `M`).
+- Vérifier que les **paiements en ligne** sont activés sur le compte.
+
+Dans Supabase : **Edge Functions** › **Secrets** (ou Project Settings › Edge Functions) › ajouter
+`SUMUP_API_KEY` et `SUMUP_MERCHANT_CODE`.
+
+### 3. Fonctions serveur (trois, depuis le tableau de bord)
+
+**Edge Functions** › **Deploy a new function** › **Via Editor**, pour chacune : nom **exact**, coller
+le contenu du fichier, **Deploy**, puis dans ses réglages **désactiver « Verify JWT »** (les fonctions
+vérifient elles-mêmes la session ; SumUp n'envoie pas de jeton).
+
+| Nom | Fichier | Rôle |
+|---|---|---|
+| `acompte` | [`functions/acompte/index.ts`](functions/acompte/index.ts) | crée la page de paiement SumUp |
+| `sumup-webhook` | [`functions/sumup-webhook/index.ts`](functions/sumup-webhook/index.ts) | reçoit l'avis de SumUp, vérifie le paiement, confirme la course |
+| `acompte-rembourser` | [`functions/acompte-rembourser/index.ts`](functions/acompte-rembourser/index.ts) | rembourse selon les CGV après une annulation |
+
+Avec la CLI Supabase, c'est équivalent : `supabase functions deploy` (les réglages sont dans `config.toml`).
+
+### 4. Premier essai
+
+Réserver une course courte depuis l'appli, l'accepter côté Fabrice, payer l'acompte avec une vraie
+carte (1 € minimum), vérifier que la course passe à « Confirmée », puis l'annuler côté client
+(plus de 24 h avant) : l'acompte doit être remboursé. Contrôles : **Table Editor** › `paiements`, et
+**Edge Functions** › `sumup-webhook` › **Logs**.
+
+Sécurité : le message de SumUp n'est pas signé, la fonction relit donc toujours le paiement chez SumUp
+avant de confirmer ; un client ne peut ni se déclarer payé, ni confirmer sa course, ni déclencher un
+remboursement non prévu par les CGV (vérifié par les tests).
+
 ## Tester la confirmation en temps réel
 
 Avec deux téléphones (ou un téléphone et le navigateur) : envoyez une demande côté client, puis
@@ -117,4 +171,10 @@ Les règles de prix et de sécurité sont vérifiées sur un PostgreSQL local, s
 cd supabase/tests && npm install && npm test
 ```
 
-Les 73 vérifications doivent afficher « OK ».
+Les 97 vérifications doivent afficher « OK ».
+
+Fonctions serveur (SumUp et la base simulés, aucun appel réel) :
+
+```bash
+cd supabase/functions && npx deno test --allow-env --allow-net --allow-read tests/
+```

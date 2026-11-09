@@ -26,7 +26,8 @@ Site actuel : <https://volant3ranches-vtc.fr>
 4. Il retrouve ses courses, peut appeler Fabrice, annuler (frais selon les CGV) et afficher le
    **panneau à son nom** pour le hall des arrivées.
 
-Pas de paiement en ligne : paiement à bord ou sur facture.
+Quand Fabrice accepte, le client règle un acompte de 10 % en ligne (SumUp) pour confirmer ; le reste se
+paie à bord (carte ou espèces).
 
 ## Identité visuelle
 
@@ -249,6 +250,8 @@ publication.
 
 - ~~Messagerie client ↔ chauffeur~~ : faite (détail d'une course › « Écrire à Fabrice » ; côté Fabrice,
   onglet « Messages » de l'espace chauffeur).
+- ~~Acompte de 10 % (SumUp)~~ : fait (migration 8 et fonctions serveur ; mise en place dans `supabase/README.md`).
+  CGV du site à mettre à jour (acompte, remboursement).
 - ~~Annonces et absences~~ : faites (Gestion › Annonces et absences ; migration 7).
 - ~~Notifications push~~ : faites (voir `supabase/README.md`, migration 6). Prochaine étape : l'email
   récapitulatif (Brevo, gratuit).
