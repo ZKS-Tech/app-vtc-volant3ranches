@@ -11,11 +11,13 @@ import { Bouton, couleursSwitch, Champ, Ligne, Note, Titre, appelerFabrice } fro
 
 export default function Coordonnees() {
   const { c, type, s } = useTheme(creerStyles);
-  const { brouillon: b, maj, envoyer } = useStore();
+  const { brouillon: b, maj, envoyer, compte } = useStore();
   const insets = useSafeAreaInsets();
   const [etat, setEtat] = useState<'saisie' | 'envoi' | 'echec'>('saisie');
   const [tente, setTente] = useState(false);
   const [raison, setRaison] = useState('');
+  // Coordonnées déjà connues (compte ou réservation précédente) : résumé, modifiable.
+  const [modifier, setModifier] = useState(() => !(b.nom.trim().length > 1 && b.telephone.replace(/\D/g, '').length >= 10 && /.+@.+\..+/.test(b.email)));
   if (!b.departId || !b.arriveeId) return null;
 
   const depart = lieu(b.departId);
@@ -44,8 +46,12 @@ export default function Coordonnees() {
   return (
     <EcranAvecClavier style={{ flex: 1, backgroundColor: c.sol }}>
       <ScrollView contentContainerStyle={{ padding: space.l, paddingBottom: 140 }} keyboardShouldPersistTaps="handled">
-        <Text style={type.small}>Pas besoin de compte : ces informations servent à Fabrice pour vous confirmer la course.</Text>
+        <Text style={type.small}>
+          {compte ? 'Vos coordonnées viennent de votre compte.' : 'Pas besoin de compte : ces informations servent à Fabrice pour vous confirmer la course.'}
+        </Text>
         <View style={{ marginTop: space.l }}>
+          {modifier ? (
+            <>
           <Champ libelle="Nom et prénom" placeholder="Claire Martin" autoComplete="name" textContentType="name" value={b.nom} onChangeText={(v) => maj({ nom: v })} />
           <Champ
             libelle="Téléphone"
@@ -67,6 +73,17 @@ export default function Coordonnees() {
             onChangeText={(v) => maj({ email: v })}
             aide={tente && !mailOk ? 'Indiquez une adresse email valide pour recevoir le récapitulatif.' : undefined}
           />
+            </>
+          ) : (
+            <View style={s.resume}>
+              <View style={{ flex: 1 }}>
+                <Text style={type.label}>Réservé au nom de</Text>
+                <Text style={[type.body, { fontWeight: '700', marginTop: 2 }]}>{b.nom}</Text>
+                <Text style={type.small}>{b.telephone} · {b.email}</Text>
+              </View>
+              <Bouton titre="Modifier" variante="texte" onPress={() => setModifier(true)} />
+            </View>
+          )}
           <Champ libelle="Commentaire (facultatif)" placeholder="Siège enfant, arrêt intermédiaire…" value={b.commentaire} onChangeText={(v) => maj({ commentaire: v })} multiline />
         </View>
 
@@ -118,6 +135,7 @@ export default function Coordonnees() {
 }
 
 const creerStyles = (c: Couleurs) => StyleSheet.create({
+  resume: { flexDirection: 'row', alignItems: 'center', gap: space.m, backgroundColor: c.surface, borderRadius: radius.l, padding: space.l, marginBottom: space.l },
   bloc: { backgroundColor: c.surface, borderRadius: radius.l, paddingHorizontal: space.l },
   cgv: { flexDirection: 'row', alignItems: 'center', gap: space.m, marginTop: space.xl, minHeight: 48 },
   pied: {

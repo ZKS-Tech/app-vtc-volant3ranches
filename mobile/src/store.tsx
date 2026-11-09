@@ -2,7 +2,8 @@ import { activerNotifications, oublierTelephone } from './notifications';
 import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { OffreId, appliquerTarifs, lieu, offre, prix, trajet } from './data';
 import {
-  annulerCourse, chargerTarifs, lienAcompte, payerAcompteTest, rembourserTout, connexionChauffeur, connexionInvite, creerDemande, deconnexion, ecouterMesCourses,
+  annulerCourse, chargerTarifs, lienAcompte, payerAcompteTest, rembourserTout,
+  Profil, connecterClient as connecterClientServeur, creerCompte as creerCompteServeur, majProfil as majProfilServeur, monProfil, sessionActuelle, connexionChauffeur, connexionInvite, creerDemande, deconnexion, ecouterMesCourses,
   estChauffeur, mesCourses, supabase,
 } from './serveur';
 
@@ -129,6 +130,14 @@ type Store = {
   setPrefs: (p: Partial<Store['prefs']>) => void;
   apparence: Apparence;
   setApparence: (a: Apparence) => void;
+  // Compte client : null = invité (compte anonyme du téléphone).
+  compte: (Profil & { email: string | null }) | null;
+  creerCompte: (p: { nom: string; telephone: string; email: string; motDePasse: string }) => Promise<'ok' | 'confirmation'>;
+  connecterClient: (email: string, motDePasse: string) => Promise<number>;
+  deconnecterClient: () => Promise<void>;
+  majProfil: (nom: string, telephone: string) => Promise<void>;
+  /** Change à chaque changement de compte (sert à réenregistrer le téléphone pour les notifications). */
+  cleSession: string;
 };
 
 export type Apparence = 'auto' | 'clair' | 'sombre';
@@ -147,6 +156,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [tarifsVersion, setTarifsVersion] = useState(0);
   const [role, setRole] = useState<'client' | 'chauffeur'>('client');
   const [demoChauffeur, setDemoChauffeur] = useState(false);
+  const [compte, setCompte] = useState<Store['compte']>(null);
+  const [cleSession, setCleSession] = useState('');
   const canal = useRef<ReturnType<typeof ecouterMesCourses>>(null);
 
   // Côté client : les courses de ce téléphone, puis la confirmation de Fabrice en temps réel.
@@ -157,6 +168,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     canal.current = ecouterMesCourses(uid, (c) =>
       setCourses((cs) => (cs.some((x) => x.id === c.id) ? cs.map((x) => (x.id === c.id ? c : x)) : [c, ...cs])),
     );
+  };
+
+  // Profil du compte (ou de l'invité) : préremplit les coordonnées de réservation.
+  const chargerProfil = async () => {
+    const [sess, p] = await Promise.all([sessionActuelle(), monProfil()]);
+    setCleSession(sess?.uid ?? '');
+    setCompte(sess && !sess.anonyme ? { nom: p?.nom ?? null, telephone: p?.telephone ?? null, email: sess.email ?? p?.email ?? null } : null);
+    if (p) setBrouillon((b) => ({ ...b, nom: b.nom || p.nom || '', telephone: b.telephone || p.telephone || '', email: b.email || p.email || sess?.email || '' }));
   };
 
   // Connexion au démarrage : compte invité (ou session de Fabrice), tarifs à jour.
@@ -171,7 +190,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         if (!actif) return;
         setTarifsVersion((v) => v + 1);
         if (chauffeur) setRole('chauffeur');
-        else await demarrerClient(uid);
+        else { await demarrerClient(uid); await chargerProfil().catch(() => {}); }
         setServeur({ etat: 'connecte' });
       } catch (e) {
         if (actif) setServeur({ etat: 'erreur', message: e instanceof Error ? e.message : String(e) });
@@ -260,8 +279,40 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         const uid = await deconnexion();
         setRole('client');
         await demarrerClient(uid);
+        await chargerProfil().catch(() => {});
       },
       entrerDemoChauffeur: () => setDemoChauffeur(true),
+      compte,
+      cleSession,
+      creerCompte: async (p) => {
+        const r = await creerCompteServeur(p);
+        setBrouillon((b) => ({ ...b, nom: p.nom, telephone: p.telephone, email: p.email }));
+        await chargerProfil();
+        activerNotifications();
+        return r;
+      },
+      connecterClient: async (email, motDePasse) => {
+        const r = await connecterClientServeur(email, motDePasse);
+        if (r.chauffeur) { canal.current?.unsubscribe(); setCourses([]); setRole('chauffeur'); activerNotifications(); return 0; }
+        setBrouillon((b) => ({ ...b, nom: '', telephone: '', email: '' }));
+        await demarrerClient(r.uid);
+        await chargerProfil();
+        activerNotifications();
+        return r.rattachees;
+      },
+      deconnecterClient: async () => {
+        await oublierTelephone().catch(() => {});
+        const uid = await deconnexion();
+        setCompte(null);
+        setBrouillon((b) => ({ ...b, nom: '', telephone: '', email: '' }));
+        await demarrerClient(uid);
+        setCleSession(uid);
+      },
+      majProfil: async (nom, telephone) => {
+        await majProfilServeur(nom, telephone);
+        setBrouillon((b) => ({ ...b, nom, telephone }));
+        await chargerProfil();
+      },
       simulerEchec,
       setSimulerEchec,
       prefs,
@@ -269,7 +320,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       apparence,
       setApparence,
     }),
-    [brouillon, courses, simulerEchec, prefs, apparence, serveur, tarifsVersion, role, demoChauffeur],
+    [brouillon, courses, simulerEchec, prefs, apparence, serveur, tarifsVersion, role, demoChauffeur, compte, cleSession],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

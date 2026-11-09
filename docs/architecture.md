@@ -111,7 +111,7 @@ règles sont vérifiées par un jeu de 21 tests exécutés sur un PostgreSQL loc
    le client à la confirmation, au refus (motif), à l'annulation, au message, rappel la veille.
    Reste : **email récapitulatif** (Brevo). Test : version de développement (Expo Go Android ne reçoit
    plus les push).
-5. **Comptes clients** : passer du compte invité à un compte email pour retrouver ses courses sur un
+5. ✅ **Comptes clients** (migration 11) : passer du compte invité à un compte email pour retrouver ses courses sur un
    autre téléphone ; adresses favorites.
 6. **Statistiques et confidentialité** : GA4 avec consentement ; politique de confidentialité du site
    mise à jour.

@@ -192,6 +192,21 @@ sont numérotées TEST-BC-… / TEST-F-…, portent un filigrane « document de 
 dans les totaux. Bouton **Effacer les pièces de test** juste en dessous. Les vrais numéros ne bougent
 pas. **Désactiver le mode test avant d'accueillir de vrais clients.**
 
+## Comptes clients (migration 11)
+
+**SQL Editor** › coller [`migrations/20261114000000_comptes.sql`](migrations/20261114000000_comptes.sql) › **Run**.
+
+Dans l'appli : Profil › **Créer un compte** (nom, téléphone, email, mot de passe). Le compte invité du
+téléphone devient un compte permanent : les courses déjà réservées sont conservées. **J'ai déjà un
+compte** : sur un autre téléphone, les courses réservées en invité y sont rattachées. Les coordonnées
+sont préremplies à chaque réservation.
+
+Réglage Supabase à faire une fois : **Authentication** › **Sign In / Providers** › **Email** :
+- « Email » activé (c'est déjà le cas pour le compte de Fabrice) ;
+- **« Confirm email » désactivé pour l'instant** : le service d'email intégré de Supabase n'envoie
+  qu'aux membres de l'équipe et quelques messages par heure. On le réactivera avec l'envoi d'emails
+  par Brevo (prochaine étape), en même temps que « mot de passe oublié ».
+
 ## Tester la confirmation en temps réel
 
 Avec deux téléphones (ou un téléphone et le navigateur) : envoyez une demande côté client, puis
@@ -211,7 +226,7 @@ Les règles de prix et de sécurité sont vérifiées sur un PostgreSQL local, s
 cd supabase/tests && npm install && npm test
 ```
 
-Les 133 vérifications doivent afficher « OK ».
+Les 148 vérifications doivent afficher « OK ».
 
 Fonctions serveur (SumUp et la base simulés, aucun appel réel) :
 

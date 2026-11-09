@@ -16,7 +16,7 @@ import { Bouton, Itineraire, Teinture, appelerFabrice } from '../src/ui';
 export default function Envoyee() {
   const { c, type, s } = useTheme(creerStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { courses, changerStatut, reinitialiser, serveur } = useStore();
+  const { courses, changerStatut, reinitialiser, serveur, compte } = useStore();
   const insets = useSafeAreaInsets();
   const course = courses.find((x) => x.id === id);
   const confirmee = course?.statut === 'confirmee';
@@ -120,13 +120,13 @@ export default function Envoyee() {
         </View>
         </Reanimated.View>
 
-        {!fonce && !ferme ? (
+        {!fonce && !ferme && !compte ? (
           <View style={s.compte}>
             <Text style={type.h3}>Retrouver vos courses sur tous vos appareils</Text>
             <Text style={[type.small, { marginTop: 4, marginBottom: space.m }]}>
               Créez un compte avec votre email : vos coordonnées seront préremplies la prochaine fois.
             </Text>
-            <Bouton titre="Créer un compte" variante="contour" onPress={() => router.push('/profil')} />
+            <Bouton titre="Créer un compte" variante="contour" onPress={() => router.push({ pathname: '/compte', params: { mode: 'creer' } })} />
           </View>
         ) : null}
 

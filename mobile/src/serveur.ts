@@ -421,3 +421,73 @@ export async function rembourserTout(courseId: string): Promise<number> {
   if (dus.length) total += (await rembourserAcompte(courseId)).rembourse;
   return total;
 }
+
+// ——— Comptes clients (migration 11) ———
+export type Profil = { nom: string | null; telephone: string | null; email: string | null };
+export type Session = { uid: string; anonyme: boolean; email: string | null };
+
+export async function sessionActuelle(): Promise<Session | null> {
+  if (!supabase) return null;
+  const { data } = await supabase.auth.getSession();
+  const u = data.session?.user;
+  return u ? { uid: u.id, anonyme: !!u.is_anonymous, email: u.email ?? null } : null;
+}
+
+export async function monProfil(): Promise<Profil | null> {
+  if (!supabase) return null;
+  const s = await sessionActuelle();
+  if (!s) return null;
+  const { data } = await supabase.from('profils').select('nom, telephone, email').eq('id', s.uid).maybeSingle();
+  return data as Profil | null;
+}
+
+const messageAuth = (m?: string) =>
+  !m ? 'Opération impossible pour le moment'
+  : /invalid login credentials/i.test(m) ? 'Email ou mot de passe incorrect'
+  : /already (been )?registered|already exists|email_exists/i.test(m) ? 'Un compte existe déjà avec cet email : connectez-vous.'
+  : /password should be at least|weak/i.test(m) ? 'Mot de passe trop court (6 caractères au moins).'
+  : /email.*invalid|invalid.*email/i.test(m) ? 'Adresse email invalide.'
+  : /rate limit|too many/i.test(m) ? 'Trop de tentatives, réessayez dans quelques minutes.'
+  : /not confirmed/i.test(m) ? 'Email pas encore confirmé : ouvrez le lien reçu par email.'
+  : m;
+
+// Transforme le compte invité de ce téléphone en compte permanent (même identifiant : les courses
+// restent). Renvoie « confirmation » si Supabase demande de valider l'email avant le mot de passe.
+export async function creerCompte(p: { nom: string; telephone: string; email: string; motDePasse: string }): Promise<'ok' | 'confirmation'> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  await connexionInvite();
+  const email = p.email.trim().toLowerCase();
+  const r1 = await supabase.auth.updateUser({ email });
+  if (r1.error) throw new Error(messageAuth(r1.error.message));
+  if ((r1.data.user?.email ?? '').toLowerCase() !== email) {
+    // Confirmation d'email activée : le mot de passe se définira après le clic sur le lien.
+    await supabase.rpc('enregistrer_profil', { p_nom: p.nom, p_telephone: p.telephone });
+    return 'confirmation';
+  }
+  const r2 = await supabase.auth.updateUser({ password: p.motDePasse });
+  if (r2.error) throw new Error(messageAuth(r2.error.message));
+  await supabase.auth.refreshSession(); // nouveau jeton : n'est plus « invité »
+  const r3 = await supabase.rpc('enregistrer_profil', { p_nom: p.nom, p_telephone: p.telephone });
+  if (r3.error) throw new Error(r3.error.message);
+  return 'ok';
+}
+
+// Connexion à un compte existant ; les courses réservées en invité sur ce téléphone le suivent.
+export async function connecterClient(email: string, motDePasse: string): Promise<{ uid: string; chauffeur: boolean; rattachees: number }> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const avant = await sessionActuelle();
+  let jeton: string | null = null;
+  if (avant?.anonyme) jeton = ((await supabase.rpc('preparer_fusion')).data as string | null) ?? null;
+  const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: motDePasse });
+  if (error || !data.user) throw new Error(messageAuth(error?.message));
+  let rattachees = 0;
+  if (jeton) rattachees = Number((await supabase.rpc('fusionner_compte', { p_jeton: jeton })).data ?? 0);
+  return { uid: data.user.id, chauffeur: await estChauffeur(), rattachees };
+}
+
+export async function majProfil(nom: string, telephone: string): Promise<Profil> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const { data, error } = await supabase.rpc('enregistrer_profil', { p_nom: nom, p_telephone: telephone });
+  if (error) throw new Error(messageAuth(error.message));
+  return data as Profil;
+}

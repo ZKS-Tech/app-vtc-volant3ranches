@@ -37,14 +37,23 @@ export default function Messages() {
     const fils = conversations
       .map((cv) => ({ ...cv, mission: parId.get(cv.courseId) }))
       .filter((cv) => cv.mission && correspond(cv.mission));
-    const avecConversation = new Set(conversations.map((cv) => cv.courseId));
+    // Un client = une ligne (sa prochaine course), même s'il a plusieurs réservations.
+    const cle = (m: Mission) => m.client_id ?? m.fiche_id ?? m.nom;
+    const clientsAvecConversation = new Set(fils.map((cv) => cle(cv.mission!)));
     const maintenant = Date.now();
-    const aEcrire = missions
-      .filter((m) => m.client_id && !avecConversation.has(m.id) && (m.statut === 'confirmee' || m.statut === 'envoyee' || m.statut === 'acompte_attendu') && m.date.getTime() > maintenant - 3600000)
+    const parClient = new Map<string, { m: Mission; n: number }>();
+    missions
+      .filter((m) => m.client_id && (m.statut === 'confirmee' || m.statut === 'envoyee' || m.statut === 'acompte_attendu') && m.date.getTime() > maintenant - 3600000)
       .filter(correspond)
       .sort((a, b) => +a.date - +b.date)
-      .slice(0, 15)
-      .map((m) => ({ courseId: m.id, mission: m, dernier: null, nonLus: 0 }));
+      .forEach((m) => {
+        const k = cle(m);
+        if (clientsAvecConversation.has(k)) return;
+        const deja = parClient.get(k);
+        if (deja) deja.n += 1; else parClient.set(k, { m, n: 1 });
+      });
+    const aEcrire = [...parClient.values()].slice(0, 15)
+      .map(({ m, n }) => ({ courseId: m.id, mission: m, dernier: null, nonLus: 0, autres: n - 1 }));
     return [
       { title: '', data: fils },
       { title: 'Écrire à un client', data: aEcrire },
@@ -89,7 +98,9 @@ export default function Messages() {
                     {estAMoi(item.dernier) ? 'Vous : ' : ''}{item.dernier.texte}
                   </Text>
                 ) : (
-                  <Text style={[type.small, { color: c.accent, marginTop: 2 }]}>Démarrer la conversation</Text>
+                  <Text style={[type.small, { color: c.accent, marginTop: 2 }]}>
+                    Démarrer la conversation{(() => { const n = 'autres' in item ? Number(item.autres) : 0; return n ? ` · ${n} autre${n > 1 ? 's' : ''} course${n > 1 ? 's' : ''} à venir` : ''; })()}
+                  </Text>
                 )}
               </View>
               {fort ? <View style={s.badge}><Text style={{ color: c.blanc, fontSize: 12, fontWeight: '700' }}>{item.nonLus}</Text></View> : null}

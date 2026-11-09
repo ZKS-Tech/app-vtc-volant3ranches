@@ -76,6 +76,14 @@ if (process.argv[4]) {
   }
   if (process.argv[11]) { await db.exec(readFileSync(process.argv[11], 'utf8')); ok(true, 'migration 9 (factures) appliquée sans erreur'); }
   if (process.argv[12]) { await db.exec(readFileSync(process.argv[12], 'utf8')); ok(true, 'migration 10 (mode test) appliquée sans erreur'); }
+  if (process.argv[13]) {
+    // Simulation de auth.jwt() de Supabase (revendications de la session : email, is_anonymous).
+    await db.exec(`create or replace function auth.jwt() returns jsonb language sql stable as $$
+      select coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb, '{}'::jsonb) $$;
+      grant execute on function auth.jwt() to anon, authenticated;`);
+    await db.exec(readFileSync(process.argv[13], 'utf8'));
+    ok(true, 'migration 11 (comptes) appliquée sans erreur');
+  }
 }
 
 
@@ -604,4 +612,61 @@ if (process.argv[12]) {
   ok(r[0].n >= 2 && reste[0].t === 0 && reste[0].n === vraies, `pièces de test effacées (${r[0].n}), vraies pièces intactes (${vraies})`);
   await echoue(() => srv(`delete from public.documents where not test`), 'une vraie pièce reste impossible à supprimer');
   await srv(`update public.parametres set paiements_test = false`);
+}
+
+if (process.argv[13]) {
+  console.log('--- comptes clients');
+  const srv = async (sql) => { await db.exec('reset role'); return (await db.query(sql)).rows; };
+  // Session : utilisateur, invité ou non, email.
+  const session = async (uid, anonyme, email = null) => {
+    await en(uid);
+    await db.exec(`select set_config('request.jwt.claims', '${JSON.stringify({ sub: uid, is_anonymous: anonyme, email })}', false)`);
+  };
+  const invite = 'bbbbbbbb-0000-0000-0000-000000000001';
+  const compte = 'bbbbbbbb-0000-0000-0000-000000000002';
+  const intrus = 'bbbbbbbb-0000-0000-0000-000000000003';
+  await db.exec(`reset role; insert into auth.users values ('${invite}'), ('${compte}'), ('${intrus}') on conflict do nothing`);
+  await srv(`update public.parametres set acompte_pourcent = 0, paiements_test = false`);
+
+  // Profil
+  await session(compte, false, 'evan@exemple.fr');
+  await echoue(() => q(`select public.enregistrer_profil('E', '06 11 22 33 44')`), 'nom trop court refusé');
+  r = await q(`select * from public.enregistrer_profil('Evan Legouez', '06 11 22 33 44')`);
+  ok(r[0].nom === 'Evan Legouez' && r[0].email === 'evan@exemple.fr' && r[0].role === 'client', 'profil enregistré avec l\'email du compte, rôle client');
+  await echoue(() => q(`update public.profils set role = 'chauffeur' where id = '${compte}'`), 'un client ne peut toujours pas devenir chauffeur');
+
+  // Un invité réserve, puis se connecte à son compte : la course le suit
+  await session(invite, true);
+  const d = (await q(`select * from public.creer_demande(
+    '{"ref":"castres-gare","libelle":"Gare de Castres","lat":43.6007,"lon":2.2329,"type":"gare"}',
+    '{"ref":"tls","libelle":"Aéroport Toulouse-Blagnac","lat":43.6293,"lon":1.3638,"type":"aeroport"}',
+    now() + interval '6 days', false, 1, 1, null, 'tesla', 5, 5, 'Evan L', '06 11 22 33 44', 'evan@exemple.fr', null)`))[0];
+  await q(`select public.envoyer_message('${d.id}', 'Bonjour, vol AF 6127')`);
+  await q(`select public.enregistrer_appareil('ExponentPushToken[tel-evan]', 'android')`);
+  const jeton = (await q(`select public.preparer_fusion() as j`))[0].j;
+  ok(!!jeton, 'l\'invité obtient un jeton de fusion');
+  await echoue(() => q(`select public.fusionner_compte('${jeton}')`), 'un invité ne peut pas fusionner vers lui-même');
+  await session(compte, false, 'evan@exemple.fr');
+  ok((await q(`select public.preparer_fusion() as j`))[0].j === null, 'pas de jeton pour un compte permanent');
+  r = await q(`select public.fusionner_compte('${jeton}') as n`);
+  ok(r[0].n === 1, 'connexion au compte : la course réservée en invité est rattachée');
+  r = await q(`select id from public.courses where id = '${d.id}'`);
+  ok(r.length === 1, 'le compte voit la course');
+  r = await q(`select count(*)::int n from public.messages where course_id = '${d.id}' and auteur_id = '${compte}'`);
+  ok(r[0].n === 1, 'ses messages le suivent');
+  r = await srv(`select user_id from public.appareils where token = 'ExponentPushToken[tel-evan]'`);
+  ok(r[0].user_id === compte, 'les notifications arrivent sur le compte');
+  r = await q(`select public.fusionner_compte('${jeton}') as n`);
+  ok(r[0].n === 0, 'un jeton ne sert qu\'une fois');
+  await session(invite, true);
+  r = await q(`select count(*)::int n from public.courses`);
+  ok(r[0].n === 0, 'l\'ancien invité ne voit plus la course');
+  // Jeton expiré
+  const j2 = (await q(`select public.preparer_fusion() as j`))[0].j;
+  await srv(`update public.fusions_comptes set cree_le = now() - interval '20 minutes' where jeton = '${j2}'`);
+  await session(intrus, false, 'intrus@exemple.fr');
+  r = await q(`select public.fusionner_compte('${j2}') as n`);
+  ok(r[0].n === 0, 'jeton expiré (15 min) : rien n\'est rattaché');
+  await session(intrus, false);
+  await echoue(() => q(`select * from public.fusions_comptes`), 'personne ne lit les jetons directement');
 }

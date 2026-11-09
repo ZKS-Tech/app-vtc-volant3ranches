@@ -34,9 +34,9 @@ export default function Racine() {
 // Stack.Protected n'ouvre que celle qui correspond au compte connecté.
 function Navigation() {
   const { c, estSombre } = useTheme();
-  const { role, demoChauffeur, serveur } = useStore();
+  const { role, demoChauffeur, serveur, cleSession } = useStore();
   const chauffeur = role === 'chauffeur' || demoChauffeur;
-  useNotifications(serveur.etat === 'connecte' ? role : null);
+  useNotifications(serveur.etat === 'connecte' ? `${role}:${cleSession}` : null);
   // À chaque bascule client ↔ chauffeur, on ouvre l'accueil de l'interface qui vient d'être autorisée.
   const precedent = useRef(chauffeur);
   useEffect(() => {
@@ -66,6 +66,7 @@ function Navigation() {
         <Stack.Screen name="course/[id]" options={{ title: 'Votre course' }} />
         <Stack.Screen name="panneau" options={{ presentation: 'fullScreenModal', headerShown: false }} />
         <Stack.Screen name="connexion-chauffeur" options={{ presentation: 'modal', title: 'Espace chauffeur' }} />
+        <Stack.Screen name="compte" options={{ presentation: 'modal', title: 'Mon compte' }} />
         <Stack.Screen name="annonce/[id]" options={{ title: 'Annonce' }} />
         <Stack.Screen name="paiement-test" options={{ presentation: 'modal', title: 'Paiement (test)' }} />
       </Stack.Protected>
