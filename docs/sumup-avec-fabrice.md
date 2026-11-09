@@ -31,8 +31,10 @@ visible) et me l'envoyer, je vous guiderai.
 
 > **État au 09/11** : clé API et code marchand (MDGSVKNL) enregistrés dans Supabase et corrects, mais
 > SumUp refuse la création de paiements en ligne (400 INVALID « pay_to_email or merchant_code »).
-> À faire : vérifier/activer les paiements en ligne sur le compte, ou demander au support SumUp
-> d'activer l'API Checkouts pour MDGSVKNL. En attendant : acompte à 0 % ou mode test.
+> Diagnostic : même un paiement minimal (sans page hébergée) est refusé, alors que les liens de
+> paiement du tableau de bord fonctionnent → l'accès « paiements » de l'API n'est pas ouvert pour ce
+> compte. **À faire : demander au support SumUp d'activer l'API Checkouts pour MDGSVKNL.**
+> En attendant : acompte à 0 % ou mode test. Solution de repli : acompte via Stripe.
 
 ## Dans Supabase
 
