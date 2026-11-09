@@ -1,0 +1,10 @@
+# Réglages des fonctions serveur (utilisés par « supabase functions deploy »).
+# Les fonctions vérifient elles-mêmes la session de l'utilisateur ; sumup-webhook est appelée par SumUp.
+[functions.acompte]
+verify_jwt = false
+
+[functions.acompte-rembourser]
+verify_jwt = false
+
+[functions.sumup-webhook]
+verify_jwt = false

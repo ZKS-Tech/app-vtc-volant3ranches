@@ -67,6 +67,13 @@ if (process.argv[4]) {
     ok(true, 'migration 6 appliquée sans erreur');
   }
   if (process.argv[8]) { await db.exec(readFileSync(process.argv[8], 'utf8')); ok(true, 'migration 7 appliquée sans erreur'); }
+  if (process.argv[10]) {
+    await db.exec(readFileSync(process.argv[9], 'utf8'));
+    await db.exec(readFileSync(process.argv[10], 'utf8'));
+    // Les tests précédents supposent une confirmation directe : l'acompte est testé à la fin.
+    await db.exec(`update public.parametres set acompte_pourcent = 0`);
+    ok(true, 'migration 8 (acompte) appliquée sans erreur');
+  }
 }
 
 
@@ -317,4 +324,130 @@ if (process.argv[8]) {
     '{"ref":"tls","libelle":"Aéroport Toulouse-Blagnac","lat":43.6293,"lon":1.3638,"type":"aeroport"}',
     now() + interval '15 days', false, 1, 1, null, 'tesla', 90, 70, null, 'telephone', null)`).catch((e) => [{ erreur: e.message }]);
   ok(r[0] && !r[0].erreur, `Fabrice peut quand même saisir une course pendant ses vacances${r[0]?.erreur ? ' → ' + r[0].erreur : ''}`);
+}
+
+if (process.argv[10]) {
+  console.log('--- acompte');
+  await db.exec(`reset role; update public.parametres set acompte_pourcent = 10, acompte_delai_min = 60`);
+  let n = 0;
+  const nouveauClient = async () => {
+    const id = `88888888-8888-8888-8888-${String(++n).padStart(12, '0')}`;
+    await db.exec(`reset role; insert into auth.users values ('${id}') on conflict do nothing`);
+    await en(id);
+    await q(`select public.enregistrer_appareil('ExponentPushToken[tel-${n}]', 'android')`);
+    return id;
+  };
+  const demander = (heures) => q(`select * from public.creer_demande(
+    '{"ref":"castres-gare","libelle":"Gare de Castres","lat":43.6007,"lon":2.2329,"type":"gare"}',
+    '{"ref":"tls","libelle":"Aéroport Toulouse-Blagnac","lat":43.6293,"lon":1.3638,"type":"aeroport"}',
+    now() + interval '${heures} hours', false, 1, 1, null, 'tesla', 5, 5, 'Léa Petit', '06 33 44 55 66', 'lea@exemple.fr', null)`);
+  const serveur = async (sql) => { await db.exec('reset role'); if (sql.includes(';')) { await db.exec(sql); return []; } return (await db.query(sql)).rows; };
+  const vider = () => db.exec(`reset role; delete from net.envois`);
+  const envois = async () => (await db.query(`select body from net.envois order by id`)).rows.map((x) => x.body).flat();
+  const course = async (id) => (await serveur(`select * from public.courses where id = '${id}'`))[0];
+
+  // 1. Acceptation : acompte demandé
+  const c1 = await nouveauClient();
+  const d1 = (await demander(72))[0];
+  await vider(); await en(fabrice);
+  r = await q(`select * from public.repondre_demande('${d1.id}', true)`);
+  const attendu = Math.max(1, Math.round(Number(d1.montant) * 10) / 100);
+  ok(r[0].statut === 'acompte_attendu' && Number(r[0].acompte_montant) === attendu, `acceptation → acompte demandé (${r[0].acompte_montant} € sur ${d1.montant} €)`);
+  const delai = (new Date(r[0].acompte_limite) - Date.now()) / 60000;
+  ok(delai > 55 && delai <= 61, `délai de paiement d'1 h (${Math.round(delai)} min)`);
+  let e = await envois();
+  ok(e.some((x) => x.to === `ExponentPushToken[tel-${n}]` && x.title === 'Fabrice peut vous conduire'), `client prévenu (${e[0]?.body})`);
+
+  // 2. Droits
+  await en(c1);
+  r = await q(`select * from public.acompte_a_payer('${d1.id}')`);
+  ok(Number(r[0].montant) === attendu && !r[0].deja_paye, 'le client obtient le montant à régler');
+  await echoue(() => q(`select public.confirmer_paiement('x', 'y', 999)`), 'le client ne peut pas se déclarer payé');
+  await echoue(() => q(`select public.enregistrer_checkout('${d1.id}', 1, 'x', 'y')`), 'le client ne peut pas créer de paiement lui-même');
+  await echoue(() => q(`update public.courses set statut = 'confirmee' where id = '${d1.id}' returning id`).then((x) => { if (!x.length) throw new Error('aucune ligne'); }), 'le client ne peut pas confirmer sa course');
+  const autreClient = await nouveauClient();
+  await echoue(() => q(`select * from public.acompte_a_payer('${d1.id}')`), 'un autre client ne peut pas payer cette course');
+
+  // 3. Paiement vérifié par le serveur
+  await serveur(`select public.enregistrer_checkout('${d1.id}', ${attendu}, 'chk-1', 'https://pay.sumup.com/chk-1')`);
+  await echoue(() => serveur(`select public.confirmer_paiement('chk-1', 'tx-1', ${attendu - 0.5})`), 'montant insuffisant refusé');
+  await vider();
+  await serveur(`select public.confirmer_paiement('chk-1', 'tx-1', ${attendu})`);
+  let c = await course(d1.id);
+  ok(c.statut === 'confirmee' && c.acompte_paye_le, 'acompte payé → course confirmée');
+  e = await envois();
+  ok(e.some((x) => x.title === 'Course confirmée') && e.some((x) => x.title.startsWith('Acompte reçu')), 'client et Fabrice prévenus');
+  await serveur(`select public.confirmer_paiement('chk-1', 'tx-1', ${attendu})`);
+  r = await serveur(`select count(*)::int n from public.paiements where course_id = '${d1.id}' and statut = 'paye'`);
+  ok(r[0].n === 1, 'notification SumUp reçue deux fois : un seul paiement');
+  await en(autreClient);
+  r = await q(`select count(*)::int n from public.paiements`);
+  ok(r[0].n === 0, 'un client ne voit pas les paiements des autres');
+
+  // 4. Annulation plus de 24 h avant : acompte remboursé
+  await en(c1);
+  await q(`select public.annuler_course('${d1.id}')`);
+  r = await serveur(`select * from public.remboursements_dus('${d1.id}')`);
+  ok(r.length === 1 && Number(r[0].remboursement_du) === attendu, 'annulation à 3 jours : acompte à rembourser');
+  await vider();
+  await serveur(`select public.remboursement_effectue('${r[0].id}', ${attendu})`);
+  r = await serveur(`select statut from public.paiements where course_id = '${d1.id}'`);
+  e = await envois();
+  ok(r[0].statut === 'rembourse' && e.some((x) => x.title === 'Acompte remboursé'), 'remboursement noté, client prévenu');
+  r = await serveur(`select * from public.remboursements_dus('${d1.id}')`);
+  ok(r.length === 0, 'pas de second remboursement');
+
+  // 5. Annulation à moins de 24 h : acompte conservé
+  const c2 = await nouveauClient();
+  const d2 = (await demander(10))[0];
+  await en(fabrice); await q(`select public.repondre_demande('${d2.id}', true)`);
+  const a2 = Number((await course(d2.id)).acompte_montant);
+  await serveur(`select public.enregistrer_checkout('${d2.id}', ${a2}, 'chk-2', 'l'); select public.confirmer_paiement('chk-2', 'tx-2', ${a2})`);
+  await en(c2);
+  r = await q(`select * from public.annuler_course('${d2.id}')`);
+  const dus2 = await serveur(`select * from public.remboursements_dus('${d2.id}')`);
+  ok(dus2.length === 0 && Number(r[0].frais_annulation) === Number(d2.montant), `annulation à 10 h : acompte conservé, frais CGV 100 % (${r[0].frais_annulation} €)`);
+
+  // 6. Fabrice annule : remboursement intégral
+  const c3 = await nouveauClient();
+  const d3 = (await demander(8))[0];
+  await en(fabrice); await q(`select public.repondre_demande('${d3.id}', true)`);
+  const a3 = Number((await course(d3.id)).acompte_montant);
+  await serveur(`select public.enregistrer_checkout('${d3.id}', ${a3}, 'chk-3', 'l'); select public.confirmer_paiement('chk-3', 'tx-3', ${a3})`);
+  await en(fabrice); await q(`select public.annuler_course_chauffeur('${d3.id}', 0)`);
+  r = await serveur(`select * from public.remboursements_dus('${d3.id}')`);
+  ok(r.length === 1 && Number(r[0].remboursement_du) === a3, 'Fabrice annule (même à 8 h) : acompte remboursé en entier');
+
+  // 7. Délai dépassé : la demande expire
+  const c4 = await nouveauClient();
+  const d4 = (await demander(48))[0];
+  await en(fabrice); await q(`select public.repondre_demande('${d4.id}', true)`);
+  const a4 = Number((await course(d4.id)).acompte_montant);
+  await serveur(`select public.enregistrer_checkout('${d4.id}', ${a4}, 'chk-4', 'l'); update public.courses set acompte_limite = now() - interval '1 minute' where id = '${d4.id}'`);
+  await en(c4);
+  await echoue(() => q(`select * from public.acompte_a_payer('${d4.id}')`), 'paiement refusé après le délai');
+  await vider();
+  await serveur(`select public.relances_notifications()`);
+  c = await course(d4.id); e = await envois();
+  ok(c.statut === 'expiree' && e.some((x) => x.title === 'Réservation non confirmée') && e.some((x) => x.title.startsWith('Acompte non réglé')), 'délai dépassé → expirée, client et Fabrice prévenus');
+  await serveur(`select public.confirmer_paiement('chk-4', 'tx-4', ${a4})`);
+  c = await course(d4.id);
+  r = await serveur(`select * from public.remboursements_dus('${d4.id}')`);
+  ok(c.statut === 'expiree' && r.length === 1, 'payé trop tard : la course reste expirée et l\'acompte est à rembourser');
+
+  // 8. Sans acompte, et courses saisies par Fabrice
+  await serveur(`update public.parametres set acompte_pourcent = 0`);
+  await nouveauClient();
+  const d5 = (await demander(30))[0];
+  await en(fabrice);
+  r = await q(`select * from public.repondre_demande('${d5.id}', true)`);
+  ok(r[0].statut === 'confirmee', 'acompte désactivé (0 %) : confirmation directe');
+  await serveur(`update public.parametres set acompte_pourcent = 10`);
+  await en(fabrice);
+  const m = await q(`select * from public.creer_course_manuelle(null, 'Marc Roux', '06 77 88 99 00', null,
+    '{"ref":"albi","libelle":"Albi","lat":43.93,"lon":2.15,"type":"ville"}',
+    '{"ref":"tls","libelle":"Aéroport Toulouse-Blagnac","lat":43.63,"lon":1.36,"type":"aeroport"}',
+    now() + interval '2 days', false, 1, 1, null, 'tesla', 80, 70, null, 'telephone', null)`);
+  r = await q(`select * from public.acompte_a_payer('${m[0].id}')`);
+  ok(m[0].statut === 'confirmee' && Number(r[0].montant) > 0, `course téléphone : confirmée, lien d'acompte possible (${r[0].montant} €)`);
 }
