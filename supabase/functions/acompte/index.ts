@@ -4,10 +4,29 @@
 // Réponse : { url, montant, limite } ou { deja_paye: true }.
 //
 // Secrets (Supabase › Edge Functions › Secrets) : SUMUP_API_KEY, SUMUP_MERCHANT_CODE.
-// SUPABASE_URL, SUPABASE_ANON_KEY et SUPABASE_SERVICE_ROLE_KEY sont fournis par Supabase.
+// L'adresse et les clés du projet sont fournies automatiquement par Supabase.
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const SUMUP = 'https://api.sumup.com';
+// Clés du projet fournies par Supabase : anciens noms (ANON / SERVICE_ROLE) ou nouveaux
+// (SUPABASE_PUBLISHABLE_KEYS / SUPABASE_SECRET_KEYS, objets JSON { default: "sb_…" }).
+function cleProjet(type: 'publique' | 'secrete'): string {
+  const [liste, une, ancienne] = type === 'publique'
+    ? ['SUPABASE_PUBLISHABLE_KEYS', 'SUPABASE_PUBLISHABLE_KEY', 'SUPABASE_ANON_KEY']
+    : ['SUPABASE_SECRET_KEYS', 'SUPABASE_SECRET_KEY', 'SUPABASE_SERVICE_ROLE_KEY'];
+  const brut = Deno.env.get(liste);
+  if (brut) {
+    try {
+      const o = JSON.parse(brut) as Record<string, string>;
+      const v = o.default ?? Object.values(o)[0];
+      if (v) return v;
+    } catch { /* format inattendu : on essaie les autres noms */ }
+  }
+  const v = Deno.env.get(une) ?? Deno.env.get(ancienne);
+  if (!v) throw new Error(`Clé ${type} du projet introuvable`);
+  return v;
+}
+
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -29,14 +48,14 @@ Deno.serve(async (req) => {
     if (typeof course_id !== 'string') return reponse({ erreur: 'Course manquante' }, 400);
 
     // Avec la session de l'utilisateur : la base vérifie qu'il a le droit de payer cette course.
-    const utilisateur = createClient(url, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: `Bearer ${jeton}` } } });
+    const utilisateur = createClient(url, cleProjet('publique'), { global: { headers: { Authorization: `Bearer ${jeton}` } } });
     const { data: lignes, error } = await utilisateur.rpc('acompte_a_payer', { p_course: course_id });
     if (error) return reponse({ erreur: error.message }, 400);
     const a = lignes?.[0];
     if (!a) return reponse({ erreur: 'Course introuvable' }, 404);
     if (a.deja_paye) return reponse({ deja_paye: true, montant: a.montant });
 
-    const admin = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    const admin = createClient(url, cleProjet('secrete'));
 
     // Un lien encore valable est réutilisé (même montant, pas encore payé).
     const { data: enCours } = await admin.from('paiements').select('*')

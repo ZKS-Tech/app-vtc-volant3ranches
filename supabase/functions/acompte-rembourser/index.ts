@@ -5,6 +5,25 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const SUMUP = 'https://api.sumup.com';
+// Clés du projet fournies par Supabase : anciens noms (ANON / SERVICE_ROLE) ou nouveaux
+// (SUPABASE_PUBLISHABLE_KEYS / SUPABASE_SECRET_KEYS, objets JSON { default: "sb_…" }).
+function cleProjet(type: 'publique' | 'secrete'): string {
+  const [liste, une, ancienne] = type === 'publique'
+    ? ['SUPABASE_PUBLISHABLE_KEYS', 'SUPABASE_PUBLISHABLE_KEY', 'SUPABASE_ANON_KEY']
+    : ['SUPABASE_SECRET_KEYS', 'SUPABASE_SECRET_KEY', 'SUPABASE_SERVICE_ROLE_KEY'];
+  const brut = Deno.env.get(liste);
+  if (brut) {
+    try {
+      const o = JSON.parse(brut) as Record<string, string>;
+      const v = o.default ?? Object.values(o)[0];
+      if (v) return v;
+    } catch { /* format inattendu : on essaie les autres noms */ }
+  }
+  const v = Deno.env.get(une) ?? Deno.env.get(ancienne);
+  if (!v) throw new Error(`Clé ${type} du projet introuvable`);
+  return v;
+}
+
 const cors = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -24,11 +43,11 @@ Deno.serve(async (req) => {
     if (!jeton || typeof course_id !== 'string') return reponse({ erreur: 'Requête invalide' }, 400);
 
     // Seuls le client de la course et Fabrice la voient (règles de la base).
-    const utilisateur = createClient(url, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: `Bearer ${jeton}` } } });
+    const utilisateur = createClient(url, cleProjet('publique'), { global: { headers: { Authorization: `Bearer ${jeton}` } } });
     const { data: course } = await utilisateur.from('courses').select('id').eq('id', course_id).maybeSingle();
     if (!course) return reponse({ erreur: 'Course introuvable' }, 404);
 
-    const admin = createClient(url, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    const admin = createClient(url, cleProjet('secrete'));
     const { data: dus, error } = await admin.rpc('remboursements_dus', { p_course: course_id });
     if (error) throw new Error(error.message);
     let rembourse = 0;

@@ -25,8 +25,9 @@ globalThis.fetch = (async (entree: string | URL | Request, init?: RequestInit) =
 }) as typeof fetch;
 
 Deno.env.set('SUPABASE_URL', 'http://supabase.test');
-Deno.env.set('SUPABASE_ANON_KEY', 'cle-anon');
-Deno.env.set('SUPABASE_SERVICE_ROLE_KEY', 'cle-service');
+// Nouveau format des clés (projets récents) : objets JSON.
+Deno.env.set('SUPABASE_PUBLISHABLE_KEYS', JSON.stringify({ default: 'sb_publishable_test' }));
+Deno.env.set('SUPABASE_SECRET_KEYS', JSON.stringify({ default: 'sb_secret_test' }));
 Deno.env.set('SUMUP_API_KEY', 'sup_sk_test');
 Deno.env.set('SUMUP_MERCHANT_CODE', 'MCTEST');
 
@@ -154,4 +155,28 @@ Deno.test('rembourser : course invisible pour l’utilisateur → refusé', asyn
   const r = await rembourser(requete({ course_id: COURSE }, 'jeton-autre'));
   assertEquals(r.status, 404);
   assert(!appels.some((a) => a.url.includes('sumup.com')));
+});
+
+Deno.test('les appels à la base utilisent la clé secrète pour le serveur, la clé publique pour l’utilisateur', async () => {
+  const entetes: { url: string; apikey: string | null; auth: string | null }[] = [];
+  const avant = globalThis.fetch;
+  globalThis.fetch = (async (e: string | URL | Request, init?: RequestInit) => {
+    const url = typeof e === 'string' ? e : e instanceof URL ? e.href : e.url;
+    const h = new Headers(init?.headers ?? (e instanceof Request ? e.headers : undefined));
+    entetes.push({ url, apikey: h.get('apikey'), auth: h.get('Authorization') });
+    return avant(e, init);
+  }) as typeof fetch;
+  reponses = {
+    'rpc/acompte_a_payer': () => [{ course_id: COURSE, montant: 5, limite: null, description: 'x', deja_paye: false }],
+    '/rest/v1/paiements': () => [],
+    'POST /v0.1/checkouts': () => ({ id: 'chk-k', hosted_checkout_url: 'https://checkout.sumup.com/pay/chk-k' }),
+    'rpc/enregistrer_checkout': () => ({}),
+  };
+  await acompte(requete({ course_id: COURSE }));
+  globalThis.fetch = avant;
+  const util = entetes.find((x) => x.url.includes('acompte_a_payer'))!;
+  const admin = entetes.find((x) => x.url.includes('enregistrer_checkout'))!;
+  assertEquals(util.apikey, 'sb_publishable_test');
+  assertEquals(util.auth, 'Bearer jeton-client');
+  assertEquals(admin.apikey, 'sb_secret_test');
 });

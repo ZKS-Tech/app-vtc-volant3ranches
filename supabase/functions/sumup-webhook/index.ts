@@ -5,6 +5,25 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
 const SUMUP = 'https://api.sumup.com';
+// Clés du projet fournies par Supabase : anciens noms (ANON / SERVICE_ROLE) ou nouveaux
+// (SUPABASE_PUBLISHABLE_KEYS / SUPABASE_SECRET_KEYS, objets JSON { default: "sb_…" }).
+function cleProjet(type: 'publique' | 'secrete'): string {
+  const [liste, une, ancienne] = type === 'publique'
+    ? ['SUPABASE_PUBLISHABLE_KEYS', 'SUPABASE_PUBLISHABLE_KEY', 'SUPABASE_ANON_KEY']
+    : ['SUPABASE_SECRET_KEYS', 'SUPABASE_SECRET_KEY', 'SUPABASE_SERVICE_ROLE_KEY'];
+  const brut = Deno.env.get(liste);
+  if (brut) {
+    try {
+      const o = JSON.parse(brut) as Record<string, string>;
+      const v = o.default ?? Object.values(o)[0];
+      if (v) return v;
+    } catch { /* format inattendu : on essaie les autres noms */ }
+  }
+  const v = Deno.env.get(une) ?? Deno.env.get(ancienne);
+  if (!v) throw new Error(`Clé ${type} du projet introuvable`);
+  return v;
+}
+
 const ok = () => new Response('ok', { status: 200 });
 
 Deno.serve(async (req) => {
@@ -14,7 +33,7 @@ Deno.serve(async (req) => {
     if (typeof id !== 'string' || !/^[\w-]{6,64}$/.test(id)) return ok();
     const cleSumup = Deno.env.get('SUMUP_API_KEY')!;
     const marchand = Deno.env.get('SUMUP_MERCHANT_CODE')!;
-    const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!);
+    const admin = createClient(Deno.env.get('SUPABASE_URL')!, cleProjet('secrete'));
 
     const r = await fetch(`${SUMUP}/v0.1/checkouts/${id}`, { headers: { Authorization: `Bearer ${cleSumup}` } });
     if (!r.ok) { console.error('SumUp lecture', id, r.status); return ok(); }
