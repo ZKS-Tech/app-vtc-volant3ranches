@@ -180,3 +180,15 @@ Deno.test('les appels à la base utilisent la clé secrète pour le serveur, la 
   assertEquals(util.auth, 'Bearer jeton-client');
   assertEquals(admin.apikey, 'sb_secret_test');
 });
+
+Deno.test('acompte : la raison du refus de SumUp est transmise (sans la clé)', async () => {
+  reponses = {
+    'rpc/acompte_a_payer': () => [{ course_id: COURSE, montant: 1, limite: null, description: 'x', deja_paye: false }],
+    '/rest/v1/paiements': () => [],
+    'POST /v0.1/checkouts': () => new Response(JSON.stringify({ error_code: 'INVALID', message: 'Validation error', param: 'merchant_code' }), { status: 400, headers: { 'Content-Type': 'application/json' } }),
+  };
+  const r = await acompte(requete({ course_id: COURSE }));
+  const corps = await r.json();
+  assertEquals(r.status, 502);
+  assert(corps.erreur.includes('400') && corps.erreur.includes('merchant_code') && !corps.erreur.includes('sup_sk'));
+});

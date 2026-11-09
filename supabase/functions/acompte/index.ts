@@ -86,7 +86,12 @@ Deno.serve(async (req) => {
     const checkout = await r.json().catch(() => ({}));
     if (!r.ok || !checkout.id || !checkout.hosted_checkout_url) {
       console.error('SumUp checkout', r.status, JSON.stringify(checkout).slice(0, 500));
-      return reponse({ erreur: 'SumUp n’a pas pu créer le paiement. Réessayez dans un instant.' }, 502);
+      // Raison donnée par SumUp (jamais la clé) : aide à régler le compte marchand.
+      const raison = [checkout.error_code, checkout.message ?? checkout.error_message, checkout.param].filter(Boolean).join(' · ');
+      const conseil = r.status === 401 ? ' (clé API refusée : vérifier SUMUP_API_KEY)'
+        : r.status === 403 ? ' (accès refusé : paiements en ligne non activés, ou code marchand ne correspondant pas à la clé)'
+        : r.ok && !checkout.hosted_checkout_url ? ' (page de paiement hébergée non disponible sur ce compte)' : '';
+      return reponse({ erreur: `SumUp n’a pas pu créer le paiement (${r.status}${raison ? ` : ${raison}` : ''})${conseil}.` }, 502);
     }
 
     const { error: e2 } = await admin.rpc('enregistrer_checkout', {
