@@ -250,6 +250,7 @@ publication.
 
 - ~~Messagerie client ↔ chauffeur~~ : faite (détail d'une course › « Écrire à Fabrice » ; côté Fabrice,
   onglet « Messages » de l'espace chauffeur).
+- ~~Factures et bons de commande~~ : faits (migration 9 et fonction `document-pdf` ; voir `supabase/README.md`).
 - ~~Acompte de 10 % (SumUp)~~ : fait (migration 8 et fonctions serveur ; mise en place dans `supabase/README.md`).
   CGV du site à mettre à jour (acompte, remboursement).
 - ~~Annonces et absences~~ : faites (Gestion › Annonces et absences ; migration 7).

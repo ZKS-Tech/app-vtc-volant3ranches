@@ -7,6 +7,7 @@ import { useStore } from '../../src/store';
 import { Couleurs, f, radius, space } from '../../src/theme';
 import { DelaiConfirmation } from '../../src/DelaiConfirmation';
 import { BlocAcompte, ResteAPayer } from '../../src/Acompte';
+import { ListeDocuments, useDocumentsCourse } from '../../src/Documents';
 import { useMessagerie } from '../../src/messagerie';
 import { useTheme } from '../../src/useTheme';
 import { Bouton, Itineraire, Ligne, Note, Teinture, Titre, appelerFabrice, estFermee, teintesDe } from '../../src/ui';
@@ -18,6 +19,7 @@ export default function DetailCourse() {
   const [annuler, setAnnuler] = useState(false);
   const { nonLus } = useMessagerie();
   const course = courses.find((x) => x.id === id);
+  const { docs } = useDocumentsCourse(id, !!course && !course.demo);
   if (!course) return null;
   const t = teintesDe(c)[course.statut];
   const o = offre(course.offreId);
@@ -91,6 +93,14 @@ export default function DetailCourse() {
         {course.acompteMontant ? <Ligne libelle={course.acomptePaye ? 'Acompte réglé' : 'Acompte'} valeur={euros(course.acompteMontant)} /> : null}
         <Ligne libelle="Paiement" valeur={course.acompteMontant ? `Reste ${euros(Math.max(0, course.montant - course.acompteMontant))} à bord` : 'À bord ou sur facture'} />
       </View>
+
+      {docs.length ? (
+        <>
+          <Titre>Vos documents</Titre>
+          <ListeDocuments docs={docs} />
+          <Text style={[type.small, { marginTop: space.s }]}>Touchez un document pour l'ouvrir en PDF.</Text>
+        </>
+      ) : null}
 
       <Titre>Votre chauffeur</Titre>
       <View style={s.chauffeur}>

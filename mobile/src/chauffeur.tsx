@@ -3,7 +3,7 @@ import { Lieu, OffreId, appliquerTarifs, euros, joursFeries, lieu, lieux, montan
 import {
   Fiche, LigneCourse, ajouterFerie, chargerEspaceChauffeur, chargerTarifs, ecouterEspaceChauffeur, enregistrerFiche,
   majTable, normaliserTelephone, retirerFerie, rpcChauffeur,
-  lienAcompte as lienAcompteServeur, rembourserAcompte,
+  lienAcompte as lienAcompteServeur, rembourserAcompte, emettreFacture, ModePaiement,
 } from './serveur';
 import { dansJours, useStore } from './store';
 
@@ -58,6 +58,8 @@ type Ctx = {
   /** Lien de paiement de l'acompte à envoyer au client (null en démonstration). */
   lienAcompte: (id: string) => Promise<string | null>;
   rembourser: (id: string) => Promise<number>;
+  /** Course effectuée (ou frais d'annulation) : facture émise avec le mode de paiement. */
+  facturer: (id: string, mode: ModePaiement) => Promise<void>;
   noter: (id: string, note: string) => Promise<void>;
   sauverFiche: (f: Partial<Fiche> & { nom: string }) => Promise<Fiche>;
   saisie: Saisie;
@@ -165,6 +167,17 @@ export function ChauffeurProvider({ children }: { children: ReactNode }) {
       if (r.deja_paye) throw new Error('L’acompte de cette course est déjà réglé.');
       return r.url ?? null;
     },
+    facturer: async (id, mode) => {
+      const m0 = missions.find((m) => m.id === id);
+      if (demo) {
+        if (m0?.statut === 'confirmee') local(id, { statut: 'terminee', terminee_le: maintenant() });
+        annoncer('Démonstration : facture non émise (aucun enregistrement).');
+        return;
+      }
+      const d = await emettreFacture(id, mode);
+      if (m0?.statut === 'confirmee') local(id, { statut: 'terminee', terminee_le: maintenant() });
+      annoncer(`Facture ${d.numero} émise (${euros(Number(d.total_ttc))}).`);
+    },
     rembourser: async (id) => {
       if (demo) return 0;
       return (await rembourserAcompte(id)).rembourse;
@@ -183,6 +196,7 @@ export function ChauffeurProvider({ children }: { children: ReactNode }) {
         const nouvelle: Fiche = {
           id: f.id ?? `demo-f-${Date.now()}`, nom: f.nom.trim(), telephone: f.telephone?.trim() || null, email: f.email?.trim() || null,
           notes: f.notes?.trim() || null, profil_id: existante?.profil_id ?? null, cree_le: existante?.cree_le ?? maintenant(), maj_le: maintenant(),
+          entreprise: f.entreprise?.trim() || null, adresse: f.adresse?.trim() || null, code_postal: f.code_postal?.trim() || null, ville: f.ville?.trim() || null,
         };
         fusionFiche(nouvelle);
         return nouvelle;

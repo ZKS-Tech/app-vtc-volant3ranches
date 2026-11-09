@@ -78,6 +78,7 @@ function Navigation() {
         <Stack.Screen name="chiffre-affaires" options={{ title: "Chiffre d'affaires" }} />
         <Stack.Screen name="gestion" options={{ title: 'Gestion' }} />
         <Stack.Screen name="annonces" options={{ title: 'Annonces' }} />
+        <Stack.Screen name="documents" options={{ title: 'Factures et bons' }} />
         <Stack.Screen name="annonce-edition" options={{ title: 'Annonce' }} />
       </Stack.Protected>
       <Stack.Screen name="conversation/[id]" options={{ title: 'Messages' }} />

@@ -152,6 +152,35 @@ Sécurité : le message de SumUp n'est pas signé, la fonction relit donc toujou
 avant de confirmer ; un client ne peut ni se déclarer payé, ni confirmer sa course, ni déclencher un
 remboursement non prévu par les CGV (vérifié par les tests).
 
+## Factures et bons de commande (migration 9 et fonction document-pdf)
+
+D'après les modèles V2 de Fabrice (logo, mentions légales, TVA 10 %) :
+
+- **Bon de commande** (BC-AAAA-0001) : émis automatiquement à chaque course confirmée (acompte payé,
+  confirmation directe ou course saisie par Fabrice).
+- **Facture** (F-AAAA-0001) : émise par Fabrice quand il marque la course « effectuée » et choisit le
+  mode de paiement (carte, espèces, chèque, virement), ou pour des frais d'annulation. L'acompte payé
+  en ligne est déduit.
+- Numérotation continue par année, sans trou ; une pièce émise ne peut être ni modifiée ni supprimée
+  (même depuis le tableau de bord Supabase). Une erreur se corrigera par un avoir (à venir).
+- Adresse de facturation et entreprise : sur la fiche du client (espace chauffeur › Clients). Chaque
+  fiche a un numéro client (C-0001).
+- Suivi : Gestion › **Factures et bons de commande** (totaux HT, TVA, TTC du mois, répartition par
+  mode de paiement, courses effectuées non facturées, export tableur). Le client retrouve ses pièces
+  dans le détail de sa course.
+
+Mise en place :
+
+1. **SQL Editor** › coller [`migrations/20261112000000_factures.sql`](migrations/20261112000000_factures.sql) › **Run**.
+   Elle crée aussi l'espace de stockage privé `documents` (vérifier dans **Storage** ; sinon le créer
+   à la main : nom `documents`, **non public**).
+2. **Edge Functions** › Deploy a new function › Via Editor › nom `document-pdf`, coller
+   [`functions/document-pdf/index.ts`](functions/document-pdf/index.ts), **Deploy**, puis désactiver
+   « Verify JWT ». Le PDF est créé à la première ouverture puis conservé.
+
+Les informations de l'entreprise (raison sociale, siège, SIREN, n° de TVA, taux de TVA) sont dans
+**Table Editor** › `parametres` ; elles sont recopiées dans chaque pièce au moment de l'émission.
+
 ## Tester la confirmation en temps réel
 
 Avec deux téléphones (ou un téléphone et le navigateur) : envoyez une demande côté client, puis
@@ -171,7 +200,7 @@ Les règles de prix et de sécurité sont vérifiées sur un PostgreSQL local, s
 cd supabase/tests && npm install && npm test
 ```
 
-Les 97 vérifications doivent afficher « OK ».
+Les 119 vérifications doivent afficher « OK ».
 
 Fonctions serveur (SumUp et la base simulés, aucun appel réel) :
 

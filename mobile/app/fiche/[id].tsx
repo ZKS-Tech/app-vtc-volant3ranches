@@ -16,11 +16,12 @@ export default function FicheClient() {
   const nouveau = id === 'nouveau';
   const { fiche, missionsDe, sauverFiche, viderSaisie } = useChauffeur();
   const f = nouveau ? undefined : fiche(id);
-  const [form, setForm] = useState({ nom: f?.nom ?? '', telephone: f?.telephone ?? '', email: f?.email ?? '', notes: f?.notes ?? '' });
+  const versForm = (x?: typeof f) => ({ nom: x?.nom ?? '', telephone: x?.telephone ?? '', email: x?.email ?? '', notes: x?.notes ?? '', entreprise: x?.entreprise ?? '', adresse: x?.adresse ?? '', code_postal: x?.code_postal ?? '', ville: x?.ville ?? '' });
+  const [form, setForm] = useState(() => versForm(f));
   const [modifie, setModifie] = useState(nouveau);
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState('');
-  useEffect(() => { if (f && !modifie) setForm({ nom: f.nom, telephone: f.telephone ?? '', email: f.email ?? '', notes: f.notes ?? '' }); }, [f?.maj_le]);
+  useEffect(() => { if (f && !modifie) setForm(versForm(f)); }, [f?.maj_le]);
   if (!nouveau && !f) return <Text style={[type.small, { padding: space.l }]}>Client introuvable.</Text>;
 
   const ms = f ? missionsDe(f.id) : [];
@@ -63,6 +64,13 @@ export default function FicheClient() {
       <Champ libelle="Nom" value={form.nom} onChangeText={(v) => maj({ nom: v })} placeholder="Prénom Nom ou société" />
       <Champ libelle="Téléphone" value={form.telephone} onChangeText={(v) => maj({ telephone: v })} keyboardType="phone-pad" placeholder="06 12 34 56 78" />
       <Champ libelle="Email" value={form.email} onChangeText={(v) => maj({ email: v })} keyboardType="email-address" autoCapitalize="none" placeholder="client@exemple.fr" />
+      <Text style={[type.label, { marginTop: space.l }]}>Facturation{f?.numero_client ? ` · client C-${String(f.numero_client).padStart(4, '0')}` : ''}</Text>
+      <Champ libelle="Entreprise (facultatif)" value={form.entreprise} onChangeText={(v) => maj({ entreprise: v })} placeholder="Nom de la société à facturer" />
+      <Champ libelle="Adresse" value={form.adresse} onChangeText={(v) => maj({ adresse: v })} placeholder="3 rue des Lices" />
+      <View style={{ flexDirection: 'row', gap: space.s }}>
+        <View style={{ width: 120 }}><Champ libelle="Code postal" value={form.code_postal} onChangeText={(v) => maj({ code_postal: v })} keyboardType="number-pad" placeholder="81000" /></View>
+        <View style={{ flex: 1 }}><Champ libelle="Ville" value={form.ville} onChangeText={(v) => maj({ ville: v })} placeholder="Albi" /></View>
+      </View>
       <Champ libelle="Notes (visibles par vous seul)" value={form.notes} onChangeText={(v) => maj({ notes: v })} multiline placeholder="Siège enfant, facturation entreprise, préférences…" />
       {erreur ? <View style={{ marginBottom: space.m }}><Note ton="erreur">{erreur}</Note></View> : null}
       {modifie ? <Bouton titre={nouveau ? 'Créer le client' : 'Enregistrer'} onPress={enregistrer} chargement={envoi} /> : null}

@@ -9,13 +9,14 @@ import { Couleurs, f, radius, sansContourWeb, space } from '../../src/theme';
 import { Bouton, Ligne, Note, Teinture, Titre, teintesDe } from '../../src/ui';
 import { useMessagerie } from '../../src/messagerie';
 import { AcompteChauffeur } from '../../src/AcompteChauffeur';
+import { Facturer, ListeDocuments, useDocumentsCourse } from '../../src/Documents';
 import { useTheme } from '../../src/useTheme';
 
 // Une course vue par Fabrice : le client, le trajet, les actions selon le statut.
 export default function Mission() {
   const { c, type, s } = useTheme(creerStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { missions, fiche, terminer, annuler, noter } = useChauffeur();
+  const { missions, fiche, terminer, annuler, noter, facturer, demo } = useChauffeur();
   const { nonLus } = useMessagerie();
   const maintenant = useMaintenant();
   const m = missions.find((x) => x.id === id);
@@ -25,6 +26,8 @@ export default function Mission() {
   const [frais, setFrais] = useState('');
   const [action, setAction] = useState<string | null>(null);
   const [erreur, setErreur] = useState('');
+  const [finCourse, setFinCourse] = useState(false);
+  const { docs } = useDocumentsCourse(id, !demo);
   useEffect(() => { setNote(m?.note_chauffeur ?? ''); setNoteSauvee(true); }, [m?.note_chauffeur]);
   if (!m) return <Text style={[type.small, { padding: space.l }]}>Course introuvable.</Text>;
 
@@ -111,7 +114,32 @@ export default function Mission() {
             <Bouton titre="Waze" icone="navigate-outline" variante="contour" onPress={() => ouvrirGps('waze', m.depart_lat, m.depart_lon, m.depart_libelle)} style={{ flex: 1 }} />
             <Bouton titre="Maps" icone="map-outline" variante="contour" onPress={() => ouvrirGps('maps', m.depart_lat, m.depart_lon, m.depart_libelle)} style={{ flex: 1 }} />
           </View>
-          <Bouton titre="Course effectuée" icone="checkmark-done" chargement={action === 'terminer'} onPress={() => faire('terminer', () => terminer(m.id))} />
+          {finCourse ? null : <Bouton titre="Course effectuée" icone="checkmark-done" onPress={() => setFinCourse(true)} />}
+        </View>
+      ) : null}
+      {m.statut === 'confirmee' && finCourse ? (
+        <View style={{ gap: space.s }}>
+          <Facturer
+            titre="Course effectuée"
+            rappel={m.acompte_paye_le ? `Acompte de ${euros(Number(m.acompte_montant ?? 0))} déjà réglé en ligne : reste ${euros(Math.max(0, m.montant - Number(m.acompte_montant ?? 0)))} encaissé à bord.` : `${euros(m.montant)} encaissés à bord.`}
+            onFacturer={async (mode) => { await facturer(m.id, mode); setFinCourse(false); }}
+          />
+          <Bouton titre="Terminer sans facture pour l'instant" variante="texte" chargement={action === 'terminer'} onPress={() => faire('terminer', async () => { await terminer(m.id); setFinCourse(false); })} />
+        </View>
+      ) : null}
+      {!demo && !docs.some((d) => d.type === 'facture') && (m.statut === 'terminee' || (m.statut === 'annulee' && Number(m.frais_annulation ?? 0) > 0)) ? (
+        <Facturer
+          titre={m.statut === 'annulee' ? `Facturer les frais d'annulation (${euros(Number(m.frais_annulation))})` : 'Facturer la course'}
+          onFacturer={(mode) => facturer(m.id, mode)}
+        />
+      ) : null}
+      {docs.length ? (
+        <View style={{ gap: space.s }}>
+          <Text accessibilityRole="header" style={type.h3}>Documents</Text>
+          <ListeDocuments docs={docs} />
+          {fi && !fi.adresse && !docs.some((d) => d.type === 'facture') ? (
+            <Bouton titre="Ajouter l'adresse de facturation du client" variante="texte" icone="business-outline" onPress={() => router.push(`/fiche/${fi.id}`)} style={{ alignSelf: 'flex-start' }} />
+          ) : null}
         </View>
       ) : null}
       {erreur ? <Note ton="erreur">{erreur}</Note> : null}

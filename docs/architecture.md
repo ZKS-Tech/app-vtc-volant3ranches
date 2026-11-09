@@ -143,5 +143,10 @@ règles sont vérifiées par un jeu de 21 tests exécutés sur un PostgreSQL loc
      automatique ou en le partageant lui-même (SMS, WhatsApp…).
   4. Terme retenu : « acompte » (CGV du site à mettre à jour : 10 %, règles de remboursement).
 
+- ✅ **Factures et bons de commande** (demande de Fabrice, modèles V2 ; migration 9, fonction
+  `document-pdf`) : bon de commande automatique à la confirmation, facture à la fin de course avec le
+  mode de paiement, numérotation sans trou, pièces figées, PDF fidèles aux modèles, écran de contrôle
+  mensuel (HT, TVA, TTC, modes de paiement, courses non facturées) et export tableur. À venir : avoirs.
+
 **Ensuite :** SMS, suivi de Fabrice en approche, version anglaise, paiement en ligne, factures
 entreprise, formulaire du site branché sur la même base.

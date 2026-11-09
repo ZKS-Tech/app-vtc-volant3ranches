@@ -64,6 +64,8 @@ export type LigneCourse = {
 export type Fiche = {
   id: string; nom: string; telephone: string | null; email: string | null; notes: string | null;
   profil_id: string | null; cree_le: string; maj_le: string;
+  // Facturation (migration 9)
+  numero_client?: number | null; entreprise?: string | null; adresse?: string | null; code_postal?: string | null; ville?: string | null;
 };
 
 const deux = (n: number) => String(n).padStart(2, '0');
@@ -225,6 +227,10 @@ export async function enregistrerFiche(f: Partial<Fiche> & { nom: string }): Pro
     email: f.email?.trim() || null,
     notes: f.notes?.trim() || null,
     maj_le: new Date().toISOString(),
+    // Coordonnées de facturation : envoyées seulement si renseignées (base sans la migration 9 : ignorées).
+    ...Object.fromEntries((['entreprise', 'adresse', 'code_postal', 'ville'] as const)
+      .filter((k) => f[k] !== undefined && (f[k]?.trim() || f[k] === ''))
+      .map((k) => [k, f[k]?.trim() || null])),
   };
   const r = f.id
     ? await supabase.from('fiches_clients').update(ligne).eq('id', f.id).select().single()
@@ -334,14 +340,14 @@ export type Paiement = {
   lien: string | null; cree_le: string; paye_le: string | null; remboursement_du: number; rembourse: number; rembourse_le: string | null;
 };
 
-async function fonction<T>(nom: string, corps: Record<string, unknown>): Promise<T> {
+async function fonction<T>(nom: string, corps: Record<string, unknown>, defaut = 'Paiement indisponible pour le moment. Réessayez ou appelez Fabrice.'): Promise<T> {
   if (!supabase) throw new Error('Serveur non configuré');
   const { data, error } = await supabase.functions.invoke(nom, { body: corps });
   if (error) {
     // Le message utile est dans le corps de la réponse ({ erreur }).
     const ctx = (error as { context?: Response }).context;
     const detail = ctx && typeof ctx.json === 'function' ? await ctx.json().catch(() => null) : null;
-    throw new Error(detail?.erreur ?? 'Paiement indisponible pour le moment. Réessayez ou appelez Fabrice.');
+    throw new Error(detail?.erreur ?? defaut);
   }
   if (data?.erreur) throw new Error(data.erreur);
   return data as T;
@@ -357,4 +363,42 @@ export const rembourserAcompte = (courseId: string) => fonction<{ rembourse: num
 export async function paiementsDe(courseId: string): Promise<Paiement[]> {
   if (!supabase) return [];
   return verifier(await supabase.from('paiements').select('*').eq('course_id', courseId).order('cree_le')) as Paiement[];
+}
+
+// ——— Bons de commande et factures (migration 9 et fonction document-pdf) ———
+export type ModePaiement = 'cb' | 'cheque' | 'especes' | 'virement' | 'en_ligne';
+export const libelleMode: Record<ModePaiement, string> = { cb: 'Carte bancaire', cheque: 'Chèque', especes: 'Espèces', virement: 'Virement', en_ligne: 'CB en ligne' };
+export type DocumentEmis = {
+  id: string; type: 'commande' | 'facture'; numero: string; course_id: string; emis_le: string;
+  total_ht: number; tva: number; total_ttc: number; mode_paiement: ModePaiement | null;
+  contenu: { client?: { nom?: string; entreprise?: string | null }; course?: { date?: string; depart?: string; arrivee?: string }; acompte?: number };
+};
+
+export async function chargerDocuments(filtre?: { courseId?: string; depuis?: Date; jusqua?: Date }): Promise<DocumentEmis[]> {
+  if (!supabase) return [];
+  let r = supabase.from('documents').select('id, type, numero, course_id, emis_le, total_ht, tva, total_ttc, mode_paiement, contenu').order('emis_le', { ascending: false });
+  if (filtre?.courseId) r = r.eq('course_id', filtre.courseId);
+  if (filtre?.depuis) r = r.gte('emis_le', filtre.depuis.toISOString());
+  if (filtre?.jusqua) r = r.lt('emis_le', filtre.jusqua.toISOString());
+  const { data, error } = await r;
+  if (error) {
+    if (/documents/.test(error.message) && /exist|schema cache/.test(error.message)) return []; // migration 9 pas encore faite
+    throw new Error(error.message);
+  }
+  return (data ?? []).map((d) => ({ ...d, total_ht: Number(d.total_ht), tva: Number(d.tva), total_ttc: Number(d.total_ttc) })) as DocumentEmis[];
+}
+
+export async function emettreFacture(courseId: string, mode: ModePaiement): Promise<DocumentEmis> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const { data, error } = await supabase.rpc('emettre_facture', { p_course: courseId, p_mode: mode });
+  if (error) throw new Error(error.message);
+  return data as DocumentEmis;
+}
+
+// Lien de téléchargement du PDF (valable 1 h).
+export const lienPdf = (documentId: string) => fonction<{ url: string; numero: string }>('document-pdf', { document_id: documentId }, 'PDF indisponible pour le moment. Réessayez dans un instant.');
+
+export function ecouterDocuments(surDocument: () => void): RealtimeChannel | null {
+  if (!supabase) return null;
+  return supabase.channel('documents').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'documents' }, surDocument).subscribe();
 }
