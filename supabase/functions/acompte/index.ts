@@ -86,6 +86,14 @@ Deno.serve(async (req) => {
     const checkout = await r.json().catch(() => ({}));
     if (!r.ok || !checkout.id || !checkout.hosted_checkout_url) {
       console.error('SumUp checkout', r.status, JSON.stringify(checkout).slice(0, 500));
+      // Code marchand refusé : on cherche dans les journaux les codes des comptes liés à la clé.
+      if (String(checkout.param ?? '').includes('merchant_code')) {
+        const m = await fetch(`${SUMUP}/v0.1/memberships`, { headers: { Authorization: `Bearer ${cleSumup}` } }).catch(() => null);
+        const liste = m && m.ok ? await m.json().catch(() => null) : null;
+        const codes = ((liste?.items ?? []) as { type?: string; resource_id?: string; resource?: { name?: string } }[])
+          .filter((x) => x.type === 'merchant' || x.resource_id).map((x) => `${x.resource_id}${x.resource?.name ? ` (${x.resource.name})` : ''}`);
+        console.error(`SumUp : code marchand saisi « ${marchand} » refusé. Comptes liés à cette clé : ${codes.length ? codes.join(', ') : `introuvables (réponse ${m?.status ?? 'absente'})`}`);
+      }
       // Raison donnée par SumUp (jamais la clé) : aide à régler le compte marchand.
       const raison = [checkout.error_code, checkout.message ?? checkout.error_message, checkout.param].filter(Boolean).join(' · ');
       const conseil = r.status === 401 ? ' (clé API refusée : vérifier SUMUP_API_KEY)'
