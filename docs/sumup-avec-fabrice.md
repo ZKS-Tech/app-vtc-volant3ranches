@@ -34,7 +34,7 @@ visible) et me l'envoyer, je vous guiderai.
 5. [ ] **Edge Functions › Secrets** : ajouter
        - `SUMUP_API_KEY` = la clé `sup_sk_…`
        - `SUMUP_MERCHANT_CODE` = le code marchand
-6. [ ] **Edge Functions › Deploy a new function › Via Editor**, trois fois (nom exact, coller le
+6. [x] (fait le 09/11) **Edge Functions › Deploy a new function › Via Editor**, trois fois (nom exact, coller le
        fichier, Deploy, puis désactiver « Verify JWT » dans les réglages de la fonction) :
        - `acompte` ← `supabase/functions/acompte/index.ts`
        - `sumup-webhook` ← `supabase/functions/sumup-webhook/index.ts`
