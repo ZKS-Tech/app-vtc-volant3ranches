@@ -74,6 +74,7 @@ if (process.argv[4]) {
     await db.exec(`update public.parametres set acompte_pourcent = 0`);
     ok(true, 'migration 8 (acompte) appliquée sans erreur');
   }
+  if (process.argv[11]) { await db.exec(readFileSync(process.argv[11], 'utf8')); ok(true, 'migration 9 (factures) appliquée sans erreur'); }
 }
 
 
@@ -450,4 +451,91 @@ if (process.argv[10]) {
     now() + interval '2 days', false, 1, 1, null, 'tesla', 80, 70, null, 'telephone', null)`);
   r = await q(`select * from public.acompte_a_payer('${m[0].id}')`);
   ok(m[0].statut === 'confirmee' && Number(r[0].montant) > 0, `course téléphone : confirmée, lien d'acompte possible (${r[0].montant} €)`);
+}
+
+if (process.argv[11]) {
+  console.log('--- factures et bons de commande');
+  const annee = new Date().getFullYear();
+  const srv = async (sql) => { await db.exec('reset role'); return (await db.query(sql)).rows; };
+  const manuelle = async (jours, ar = false, prix = null) => {
+    await en(fabrice);
+    return (await q(`select * from public.creer_course_manuelle(null, 'Sophie Laurent', '06 44 55 66 77', 'sophie@exemple.fr',
+      '{"ref":"albi","libelle":"Albi","lat":43.93,"lon":2.15,"type":"ville"}',
+      '{"ref":"tls","libelle":"Aéroport Toulouse-Blagnac","lat":43.63,"lon":1.36,"type":"aeroport"}',
+      now() + interval '${jours} days', ${ar}, 2, 1, null, 'tesla', 80, 70, ${prix ?? 'null'}, 'telephone', null)`))[0];
+  };
+
+  // Bon de commande automatique
+  const avant = (await srv(`select count(*)::int n from public.documents where type = 'commande'`))[0].n;
+  const c1 = await manuelle(3);
+  let docs = await srv(`select * from public.documents where course_id = '${c1.id}'`);
+  ok(docs.length === 1 && docs[0].type === 'commande' && docs[0].numero.startsWith(`BC-${annee}-`), `bon de commande émis à la confirmation (${docs[0]?.numero})`);
+  const bc = docs[0];
+  ok(Number(bc.total_ttc) === Number(c1.montant) && Number(bc.total_ht) === Math.round(Number(c1.montant) / 1.1 * 100) / 100
+     && Math.abs(Number(bc.total_ht) + Number(bc.tva) - Number(bc.total_ttc)) < 0.001, `montants : ${bc.total_ht} HT + ${bc.tva} TVA = ${bc.total_ttc} TTC`);
+  const somme = bc.contenu.lignes.reduce((t, l) => t + Number(l.total_ht), 0);
+  ok(Math.abs(somme - Number(bc.total_ht)) < 0.001, `les lignes font bien le total HT (${bc.contenu.lignes.map((l) => l.libelle).join(' + ')})`);
+  ok(bc.contenu.vendeur.siren === '932 513 443' && bc.contenu.taux_tva == 10 && /^C-\d{4}$/.test(bc.contenu.client.numero), `mentions de l'entreprise et n° client (${bc.contenu.client.numero})`);
+  r = await srv(`select count(*)::int n from public.documents where type = 'commande'`);
+  const num = (x) => Number(x.split('-')[2]);
+  const derniers = await srv(`select numero from public.documents where type = 'commande' order by numero`);
+  ok(derniers.every((d, i) => num(d.numero) === i + 1), `numérotation continue des bons (${derniers.length} bons, ${derniers[0].numero} → ${derniers.at(-1).numero})`);
+
+  // Aller-retour : remise visible
+  const c2 = await manuelle(4, true);
+  const bc2 = (await srv(`select * from public.documents where course_id = '${c2.id}'`))[0];
+  ok(Number(bc2.contenu.lignes[0].quantite) === 2 * Number(c2.distance_km) && bc2.contenu.lignes.some((l) => l.libelle.startsWith('Remise aller-retour')), `aller-retour : ${bc2.contenu.lignes[0].quantite} km (2 × ${c2.distance_km}) et remise indiquée (${bc2.contenu.lignes.map((l) => `${l.libelle} ${l.total_ht}`).join(' ; ')})`);
+
+  // Facture
+  await en(client);
+  await echoue(() => q(`select public.emettre_facture('${c1.id}', 'cb')`), 'un client ne peut pas émettre de facture');
+  await en(fabrice);
+  await echoue(() => q(`select public.emettre_facture('${c1.id}', 'bitcoin')`), 'mode de paiement invalide refusé');
+  await q(`update public.fiches_clients set entreprise = 'Laurent Conseil', adresse = '3 rue des Lices', code_postal = '81000', ville = 'Albi' where id = '${c1.fiche_id}'`);
+  const f1 = (await q(`select * from public.emettre_facture('${c1.id}', 'cb')`))[0];
+  ok(f1.numero.startsWith(`F-${annee}-`) && f1.contenu.acquittee && f1.contenu.client.entreprise === 'Laurent Conseil' && f1.contenu.client.ville === 'Albi', `facture émise avec l'adresse de facturation (${f1.numero})`);
+  r = await srv(`select statut from public.courses where id = '${c1.id}'`);
+  ok(r[0].statut === 'terminee', 'la course passe à « terminée »');
+  await echoue(() => q(`select public.emettre_facture('${c1.id}', 'cb')`), 'pas de seconde facture pour la même course');
+  const f2 = (await q(`select * from public.emettre_facture('${c2.id}', 'especes')`))[0];
+  ok(num(f2.numero) === num(f1.numero) + 1, `numéros de facture sans trou malgré les refus (${f1.numero}, ${f2.numero})`);
+
+  // Documents figés
+  await echoue(() => srv(`update public.documents set total_ttc = 1 where id = '${f1.id}'`), 'une facture émise ne peut pas être modifiée (même par l\'administrateur)');
+  await echoue(() => srv(`delete from public.documents where id = '${f1.id}'`), 'une facture émise ne peut pas être supprimée');
+  await srv(`update public.documents set pdf_chemin = 'factures/x.pdf' where id = '${f1.id}'`);
+  ok((await srv(`select pdf_chemin from public.documents where id = '${f1.id}'`))[0].pdf_chemin === 'factures/x.pdf', 'seul le chemin du PDF peut être renseigné');
+  await en(client);
+  await echoue(() => q(`insert into public.documents (type, numero, course_id, total_ht, tva, total_ttc, contenu) values ('facture', 'F-0', '${c1.id}', 1, 0, 1, '{}')`), 'un client ne peut pas créer de document');
+  const visibles = await q(`select course_id from public.documents`);
+  const siens = (await srv(`select id from public.courses where client_id = '${client}'`)).map((x) => x.id);
+  ok(visibles.every((v) => siens.includes(v.course_id)) && !visibles.some((v) => v.course_id === c1.id), `un client ne voit que les documents de ses courses (${visibles.length})`);
+
+  // Annulation : facture des frais seulement s'il y en a
+  const c3 = await manuelle(5);
+  await en(fabrice); await q(`select public.annuler_course_chauffeur('${c3.id}', 40)`);
+  const f3 = (await q(`select * from public.emettre_facture('${c3.id}', 'cb')`))[0];
+  ok(Number(f3.total_ttc) === 40 && f3.contenu.lignes[0].libelle.startsWith("Frais d'annulation"), `facture des frais d'annulation (${f3.total_ht} HT, ${f3.total_ttc} TTC)`);
+  const c4 = await manuelle(6);
+  await en(fabrice); await q(`select public.annuler_course_chauffeur('${c4.id}', 0)`);
+  await echoue(() => q(`select public.emettre_facture('${c4.id}', 'cb')`), 'pas de facture pour une annulation sans frais');
+
+  // Client de l'appli : voit les documents de ses courses, avec l'acompte déduit
+  await srv(`update public.parametres set acompte_pourcent = 10`);
+  await db.exec(`reset role; insert into auth.users values ('99999999-9999-9999-9999-999999999999') on conflict do nothing`);
+  const cli = '99999999-9999-9999-9999-999999999999';
+  await en(cli);
+  const d = (await q(`select * from public.creer_demande(
+    '{"ref":"castres-gare","libelle":"Gare de Castres","lat":43.6007,"lon":2.2329,"type":"gare"}',
+    '{"ref":"tls","libelle":"Aéroport Toulouse-Blagnac","lat":43.6293,"lon":1.3638,"type":"aeroport"}',
+    now() + interval '5 days', false, 1, 1, null, 'tesla', 5, 5, 'Nina Blanc', '06 10 20 30 40', 'nina@exemple.fr', null)`))[0];
+  await en(fabrice); await q(`select public.repondre_demande('${d.id}', true)`);
+  const ac = (await srv(`select acompte_montant from public.courses where id = '${d.id}'`))[0].acompte_montant;
+  await srv(`select public.enregistrer_checkout('${d.id}', ${ac}, 'chk-fac', 'l')`);
+  await srv(`select public.confirmer_paiement('chk-fac', 'tx-fac', ${ac})`);
+  const bcApp = (await srv(`select * from public.documents where course_id = '${d.id}'`))[0];
+  ok(bcApp?.mode_paiement === 'en_ligne' && Number(bcApp.contenu.acompte) === Number(ac) && Number(bcApp.contenu.reste) === Number(d.montant) - Number(ac), `bon de commande après acompte : acompte ${ac} € déduit, reste ${bcApp?.contenu.reste} €`);
+  await en(cli);
+  r = await q(`select type from public.documents`);
+  ok(r.length === 1 && r[0].type === 'commande', 'le client voit le bon de commande de sa course');
 }
