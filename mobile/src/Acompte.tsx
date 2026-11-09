@@ -2,7 +2,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
-import { euros, regles } from './data';
+import { appliquerTarifs, euros, regles } from './data';
+import { chargerTarifs, supabase } from './serveur';
 import { Course, useStore } from './store';
 import { Couleurs, f, radius, space } from './theme';
 import { Bouton, Note, heureCourte } from './ui';
@@ -28,9 +29,11 @@ export function BlocAcompte({ course, surFonce }: { course: Course; surFonce?: b
   const depasse = minutes !== null && minutes <= 0;
 
   const payer = async () => {
-    // Mode test : écran de paiement simulé dans l'appli au lieu de la page SumUp.
-    if (regles.paiementsTest) { router.push({ pathname: '/paiement-test', params: { id: course.id } }); return; }
     setEtat('ouverture'); setErreur('');
+    // Réglages relus au moment de payer : le mode test a pu être activé depuis l'ouverture de l'appli.
+    if (supabase && !course.demo) { try { appliquerTarifs(await chargerTarifs()); } catch { /* on garde les réglages connus */ } }
+    // Mode test : écran de paiement simulé dans l'appli au lieu de la page SumUp.
+    if (regles.paiementsTest) { setEtat(null); router.push({ pathname: '/paiement-test', params: { id: course.id } }); return; }
     try {
       const url = await payerAcompte(course.id);
       if (url) { await Linking.openURL(url); setEtat('ouvert'); } else setEtat(null);
