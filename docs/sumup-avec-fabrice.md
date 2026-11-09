@@ -29,9 +29,14 @@ Le détail technique est dans `supabase/README.md` (section « Acompte de 10 % a
 Si une rubrique a changé de nom ou reste introuvable : prendre une capture de l'écran (sans clé
 visible) et me l'envoyer, je vous guiderai.
 
+> **État au 09/11** : clé API et code marchand (MDGSVKNL) enregistrés dans Supabase et corrects, mais
+> SumUp refuse la création de paiements en ligne (400 INVALID « pay_to_email or merchant_code »).
+> À faire : vérifier/activer les paiements en ligne sur le compte, ou demander au support SumUp
+> d'activer l'API Checkouts pour MDGSVKNL. En attendant : acompte à 0 % ou mode test.
+
 ## Dans Supabase
 
-5. [ ] **Edge Functions › Secrets** : ajouter
+5. [x] (fait le 09/11) **Edge Functions › Secrets** : ajouter
        - `SUMUP_API_KEY` = la clé `sup_sk_…`
        - `SUMUP_MERCHANT_CODE` = le code marchand
 6. [x] (fait le 09/11) **Edge Functions › Deploy a new function › Via Editor**, trois fois (nom exact, coller le
