@@ -93,6 +93,14 @@ Deno.serve(async (req) => {
         const codes = ((liste?.items ?? []) as { type?: string; resource_id?: string; resource?: { name?: string } }[])
           .filter((x) => x.type === 'merchant' || x.resource_id).map((x) => `${x.resource_id}${x.resource?.name ? ` (${x.resource.name})` : ''}`);
         console.error(`SumUp : code marchand saisi « ${marchand} » refusé. Comptes liés à cette clé : ${codes.length ? codes.join(', ') : `introuvables (réponse ${m?.status ?? 'absente'})`}`);
+        // Diagnostic : même paiement sans page hébergée ni date limite, aussitôt désactivé s'il passe.
+        const essai = await fetch(`${SUMUP}/v0.1/checkouts`, {
+          method: 'POST', headers: { Authorization: `Bearer ${cleSumup}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ checkout_reference: `diagnostic-${Date.now()}`, amount: 1, currency: 'EUR', merchant_code: marchand }),
+        }).catch(() => null);
+        const corpsEssai = essai ? await essai.json().catch(() => ({})) : {};
+        if (essai?.ok && corpsEssai.id) await fetch(`${SUMUP}/v0.1/checkouts/${corpsEssai.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${cleSumup}` } }).catch(() => null);
+        console.error(`SumUp diagnostic (paiement minimal) : ${essai?.status ?? 'sans réponse'} ${JSON.stringify(corpsEssai).slice(0, 300)}`);
       }
       // Raison donnée par SumUp (jamais la clé) : aide à régler le compte marchand.
       const raison = [checkout.error_code, checkout.message ?? checkout.error_message, checkout.param].filter(Boolean).join(' · ');
