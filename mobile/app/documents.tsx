@@ -36,8 +36,11 @@ export default function Documents() {
   };
   useEffect(() => { charger(); }, [mois.getTime(), demo]);
 
-  const factures = docs.filter((d) => d.type === 'facture');
-  const bons = docs.filter((d) => d.type === 'commande');
+  // Les pièces de test (mode test, numéros TEST-…) ne comptent pas dans les totaux.
+  const reelles = docs.filter((d) => !d.numero.startsWith('TEST-'));
+  const nbTest = docs.length - reelles.length;
+  const factures = reelles.filter((d) => d.type === 'facture');
+  const bons = reelles.filter((d) => d.type === 'commande');
   const somme = (xs: DocumentEmis[], k: 'total_ht' | 'tva' | 'total_ttc') => xs.reduce((t, d) => t + d[k], 0);
   const parMode = useMemo(() => {
     const m = new Map<ModePaiement, number>();
@@ -56,7 +59,7 @@ export default function Documents() {
   const exporter = async () => {
     const lignes = [
       ['Type', 'Numéro', 'Date', 'Client', 'Entreprise', 'Date course', 'Total HT', 'TVA', 'Total TTC', 'Acompte en ligne', 'Mode de paiement'].join(';'),
-      ...[...docs].reverse().map((d) => [
+      ...[...reelles].reverse().map((d) => [
         d.type === 'facture' ? 'Facture' : 'Bon de commande', d.numero, new Date(d.emis_le).toLocaleDateString('fr-FR'),
         d.contenu.client?.nom ?? '', d.contenu.client?.entreprise ?? '', d.contenu.course?.date ?? '',
         d.total_ht, d.tva, d.total_ttc, Number(d.contenu.acompte ?? 0), d.mode_paiement ? libelleMode[d.mode_paiement] : '',
@@ -65,7 +68,7 @@ export default function Documents() {
     await Share.share({ title: `Volant3ranches ${MOIS[mois.getMonth()]} ${mois.getFullYear()}`, message: lignes.join('\n') });
   };
 
-  const liste = onglet === 'facture' ? factures : bons;
+  const liste = docs.filter((d) => d.type === onglet);
   return (
     <ScrollView style={{ backgroundColor: c.sol }} contentContainerStyle={{ padding: space.l, paddingBottom: space.xxl }}
       refreshControl={<RefreshControl refreshing={chargement} onRefresh={charger} tintColor={c.accent} />}>
@@ -81,6 +84,7 @@ export default function Documents() {
 
       {demo ? <Note ton="bain" icone="eye-outline">Démonstration : les factures et bons de commande sont émis seulement avec le serveur.</Note> : null}
       {erreur ? <Note ton="erreur">{erreur}</Note> : null}
+      {nbTest ? <View style={{ marginTop: space.s }}><Note ton="alerte" icone="flask-outline">{nbTest} pièce{nbTest > 1 ? 's' : ''} de test (TEST-…) : affichée{nbTest > 1 ? 's' : ''} dans la liste, non comptée{nbTest > 1 ? 's' : ''} dans les totaux.</Note></View> : null}
 
       <View style={[s.bloc, { flexDirection: 'row', paddingVertical: space.l, gap: space.m, marginTop: space.m }]}>
         <Chiffre valeur={euros(somme(factures, 'total_ttc')).replace(',00', '')} libelle="facturé TTC" fort />
@@ -108,7 +112,7 @@ export default function Documents() {
       ) : null}
 
       <Titre>Pièces émises</Titre>
-      <Segment options={[{ id: 'facture', titre: `Factures (${factures.length})` }, { id: 'commande', titre: `Bons (${bons.length})` }]} valeur={onglet} onChange={setOnglet} />
+      <Segment options={[{ id: 'facture', titre: `Factures (${docs.filter((d) => d.type === 'facture').length})` }, { id: 'commande', titre: `Bons (${docs.filter((d) => d.type === 'commande').length})` }]} valeur={onglet} onChange={setOnglet} />
       {liste.length ? (
         <View style={[s.bloc, { marginTop: space.m }]}>{liste.map((d, i) => <LigneDocument key={d.id} d={d} trait={i > 0} detail />)}</View>
       ) : (

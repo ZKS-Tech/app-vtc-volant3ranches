@@ -4,6 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from
 import { useChauffeur } from '../src/chauffeur';
 import { OffreId, dateCourte, euros, joursFeries, offres, regles } from '../src/data';
 import { useStore } from '../src/store';
+import { effacerDocumentsTest } from '../src/serveur';
 import { Couleurs, radius, sansContourWeb, space } from '../src/theme';
 import { Bouton, Compteur, Note, Segment, Titre, couleursSwitch } from '../src/ui';
 import { EcranAvecClavier } from '../src/Clavier';
@@ -22,6 +23,7 @@ export default function Tarifs() {
   const [weekend, setWeekend] = useState(regles.majorationWeekend);
   const [attente, setAttente] = useState({ aeroport: regles.attenteAeroportMin, gare: regles.attenteGareMin, standard: regles.attenteStandardMin });
   const [acompte, setAcompte] = useState({ pourcent: regles.acomptePourcent, delai: regles.acompteDelaiMin });
+  const [test, setTest] = useState(regles.paiementsTest);
   const [nouveauFerie, setNouveauFerie] = useState('');
   const [etat, setEtat] = useState<{ quoi: string; ok?: string; erreur?: string } | null>(null);
 
@@ -115,6 +117,29 @@ export default function Tarifs() {
         style={{ marginTop: space.m }}
       />
       {retour('acompte')}
+
+      <View style={[s.bloc, { marginTop: space.l }]}>
+        <View style={s.ligneSwitch}>
+          <Ionicons name="flask-outline" size={22} color={c.accent} />
+          <View style={{ flex: 1 }}>
+            <Text style={type.body}>Mode test (faux argent)</Text>
+            <Text style={type.small}>Paiements et remboursements simulés, pièces numérotées « TEST » et sans valeur. À désactiver avant d'accueillir de vrais clients.</Text>
+          </View>
+          <Switch value={test} {...couleursSwitch(c)} accessibilityLabel="Mode test"
+            onValueChange={(v) => { setTest(v); faire('test', () => majParametres({ paiements_test: v }), v ? 'Mode test activé : les paiements sont simulés.' : 'Mode test désactivé : paiements réels par SumUp.'); }} />
+        </View>
+      </View>
+      {retour('test')}
+      {demo ? null : (
+        <Bouton titre="Effacer les pièces de test" variante="texte" icone="trash-outline" chargement={etat?.quoi === 'effacer' && !etat.ok && !etat.erreur}
+          onPress={async () => {
+            setEtat({ quoi: 'effacer' });
+            try { const n = await effacerDocumentsTest(); setEtat({ quoi: 'effacer', ok: `${n} pièce${n > 1 ? 's' : ''} de test effacée${n > 1 ? 's' : ''}.` }); }
+            catch (e) { setEtat({ quoi: 'effacer', erreur: e instanceof Error ? e.message : String(e) }); }
+          }}
+          style={{ alignSelf: 'flex-start', marginTop: space.s }} />
+      )}
+      {retour('effacer')}
 
       <Titre>Jours fériés à venir</Titre>
       <View style={s.bloc}>

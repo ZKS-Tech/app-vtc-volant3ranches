@@ -3,7 +3,7 @@ import { Lieu, OffreId, appliquerTarifs, euros, joursFeries, lieu, lieux, montan
 import {
   Fiche, LigneCourse, ajouterFerie, chargerEspaceChauffeur, chargerTarifs, ecouterEspaceChauffeur, enregistrerFiche,
   majTable, normaliserTelephone, retirerFerie, rpcChauffeur,
-  lienAcompte as lienAcompteServeur, rembourserAcompte, emettreFacture, ModePaiement,
+  lienAcompte as lienAcompteServeur, rembourserTout, emettreFacture, ModePaiement, payerAcompteTest,
 } from './serveur';
 import { dansJours, useStore } from './store';
 
@@ -58,6 +58,8 @@ type Ctx = {
   /** Lien de paiement de l'acompte à envoyer au client (null en démonstration). */
   lienAcompte: (id: string) => Promise<string | null>;
   rembourser: (id: string) => Promise<number>;
+  /** Mode test : simule le paiement de l'acompte par le client. */
+  simulerPaiement: (id: string) => Promise<void>;
   /** Course effectuée (ou frais d'annulation) : facture émise avec le mode de paiement. */
   facturer: (id: string, mode: ModePaiement) => Promise<void>;
   noter: (id: string, note: string) => Promise<void>;
@@ -157,8 +159,8 @@ export function ChauffeurProvider({ children }: { children: ReactNode }) {
       fusionMission(m);
       // Annulation par Fabrice : l'acompte est rendu en entier.
       if (m.acompte_paye_le) {
-        const r = await rembourserAcompte(id).catch((e) => { annoncer(`Remboursement à refaire : ${e instanceof Error ? e.message : e}`); return null; });
-        if (r?.rembourse) annoncer(`Acompte de ${euros(r.rembourse)} remboursé à ${m.nom}.`);
+        const r = await rembourserTout(id).catch((e) => { annoncer(`Remboursement à refaire : ${e instanceof Error ? e.message : e}`); return null; });
+        if (r) annoncer(`Acompte de ${euros(r)} remboursé à ${m.nom}${regles.paiementsTest ? ' (test)' : ''}.`);
       }
     },
     lienAcompte: async (id) => {
@@ -178,9 +180,14 @@ export function ChauffeurProvider({ children }: { children: ReactNode }) {
       if (m0?.statut === 'confirmee') local(id, { statut: 'terminee', terminee_le: maintenant() });
       annoncer(`Facture ${d.numero} émise (${euros(Number(d.total_ttc))}).`);
     },
+    simulerPaiement: async (id) => {
+      if (demo) { local(id, { statut: 'confirmee', acompte_paye_le: maintenant(), confirmee_le: maintenant() }); return; }
+      await payerAcompteTest(id);
+      annoncer('Paiement de test enregistré : la course est confirmée.');
+    },
     rembourser: async (id) => {
       if (demo) return 0;
-      return (await rembourserAcompte(id)).rembourse;
+      return rembourserTout(id);
     },
     noter: async (id, note) => {
       if (demo) return local(id, { note_chauffeur: note.trim() || null });
@@ -256,6 +263,7 @@ export function ChauffeurProvider({ children }: { children: ReactNode }) {
         attenteStandardMin: v.attente_standard_min ?? regles.attenteStandardMin,
         acomptePourcent: v.acompte_pourcent ?? regles.acomptePourcent,
         acompteDelaiMin: v.acompte_delai_min ?? regles.acompteDelaiMin,
+        paiementsTest: v.paiements_test ?? regles.paiementsTest,
       });
       recalculerTarifs();
     },

@@ -2,7 +2,7 @@ import { activerNotifications, oublierTelephone } from './notifications';
 import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { OffreId, appliquerTarifs, lieu, offre, prix, trajet } from './data';
 import {
-  annulerCourse, chargerTarifs, lienAcompte, rembourserAcompte, connexionChauffeur, connexionInvite, creerDemande, deconnexion, ecouterMesCourses,
+  annulerCourse, chargerTarifs, lienAcompte, payerAcompteTest, rembourserTout, connexionChauffeur, connexionInvite, creerDemande, deconnexion, ecouterMesCourses,
   estChauffeur, mesCourses, supabase,
 } from './serveur';
 
@@ -111,6 +111,8 @@ type Store = {
   changerStatut: (id: string, s: Statut, motif?: string, extra?: Partial<Course>) => void;
   /** Adresse de la page de paiement de l'acompte (null en démonstration : payé aussitôt). */
   payerAcompte: (id: string) => Promise<string | null>;
+  /** Mode test : faux paiement de l'acompte (même circuit que le vrai, sans argent). */
+  payerAcompteTest: (id: string) => Promise<void>;
   annuler: (id: string) => Promise<void>;
   serveur: EtatServeur;
   tarifsVersion: number;
@@ -213,6 +215,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         });
       },
       changerStatut: (id, s, motif, extra) => setCourses((cs) => cs.map((c) => (c.id === id ? { ...c, statut: s, motifRefus: motif, ...extra } : c))),
+      payerAcompteTest: async (id) => {
+        if (supabase && serveur.etat === 'connecte' && !courses.find((c) => c.id === id)?.demo) {
+          await payerAcompteTest(id);
+          setCourses((cs) => cs.map((c) => (c.id === id ? { ...c, statut: c.statut === 'acompte_attendu' ? 'confirmee' : c.statut, acomptePaye: true } : c)));
+        } else setCourses((cs) => cs.map((c) => (c.id === id ? { ...c, statut: 'confirmee', acomptePaye: true } : c)));
+      },
       payerAcompte: async (id) => {
         if (supabase && serveur.etat === 'connecte' && !courses.find((c) => c.id === id)?.demo) {
           const r = await lienAcompte(id);
@@ -228,7 +236,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           const c = await annulerCourse(id);
           setCourses((cs) => cs.map((x) => (x.id === id ? c : x)));
           // Acompte remboursé si les CGV le prévoient (le serveur décide, rien sinon).
-          if (c.acomptePaye) rembourserAcompte(id).catch((e) => console.warn('Remboursement :', e instanceof Error ? e.message : e));
+          if (c.acomptePaye) rembourserTout(id).catch((e) => console.warn('Remboursement :', e instanceof Error ? e.message : e));
         } else {
           setCourses((cs) => cs.map((c) => (c.id === id ? { ...c, statut: 'annulee' } : c)));
         }

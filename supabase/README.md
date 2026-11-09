@@ -181,6 +181,17 @@ Mise en place :
 Les informations de l'entreprise (raison sociale, siège, SIREN, n° de TVA, taux de TVA) sont dans
 **Table Editor** › `parametres` ; elles sont recopiées dans chaque pièce au moment de l'émission.
 
+## Mode test : faux argent (migration 10)
+
+**SQL Editor** › coller [`migrations/20261113000000_mode_test.sql`](migrations/20261113000000_mode_test.sql) › **Run**.
+
+Dans l'appli, espace chauffeur › Gestion › Tarifs › **Mode test (faux argent)**. Tant qu'il est activé :
+l'acompte se « paie » sur un écran de test dans l'appli (sans SumUp ni carte) ; la base suit le vrai
+circuit (confirmation, notifications, bon de commande, facture, remboursement) ; les pièces émises
+sont numérotées TEST-BC-… / TEST-F-…, portent un filigrane « document de test » et ne comptent pas
+dans les totaux. Bouton **Effacer les pièces de test** juste en dessous. Les vrais numéros ne bougent
+pas. **Désactiver le mode test avant d'accueillir de vrais clients.**
+
 ## Tester la confirmation en temps réel
 
 Avec deux téléphones (ou un téléphone et le navigateur) : envoyez une demande côté client, puis
@@ -200,7 +211,7 @@ Les règles de prix et de sécurité sont vérifiées sur un PostgreSQL local, s
 cd supabase/tests && npm install && npm test
 ```
 
-Les 119 vérifications doivent afficher « OK ».
+Les 133 vérifications doivent afficher « OK ».
 
 Fonctions serveur (SumUp et la base simulés, aucun appel réel) :
 

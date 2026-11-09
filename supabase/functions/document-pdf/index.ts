@@ -4,7 +4,7 @@
 // téléchargement valable 1 heure est renvoyé : { url, numero }.
 // Seuls Fabrice et le client de la course peuvent l'obtenir (règles de la base).
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import { PDFDocument, PDFFont, PDFPage, StandardFonts, rgb } from 'npm:pdf-lib@1.17.1';
+import { PDFDocument, PDFFont, PDFPage, StandardFonts, degrees, rgb } from 'npm:pdf-lib@1.17.1';
 
 // Clés du projet fournies par Supabase : anciens noms (ANON / SERVICE_ROLE) ou nouveaux
 // (SUPABASE_PUBLISHABLE_KEYS / SUPABASE_SECRET_KEYS, objets JSON { default: "sb_…" }).
@@ -180,6 +180,12 @@ export async function rendrePdf(c: Contenu): Promise<Uint8Array> {
   if (facture && c.acquittee) {
     const lib = modes.find(([k]) => k === c.mode_paiement)?.[1] ?? '';
     t(page, `Facture acquittée le ${c.date}${lib ? ` (${lib})` : ''}`, 0, yT - 2, { f: g, size: 9, droite: 545 });
+  }
+
+  // Pièce émise en mode test : filigrane « sans valeur »
+  if (c.numero.startsWith('TEST-')) {
+    page.drawText('DOCUMENT DE TEST', { x: 95, y: 300, size: 46, font: g, color: rgb(0.85, 0.2, 0.2), opacity: 0.18, rotate: degrees(35) });
+    t(page, 'Document de test émis en mode essai : sans valeur comptable ni fiscale.', 0, 88, { f: g, size: 8, color: rgb(0.7, 0.15, 0.15), centre: 297 });
   }
 
   // Pied de page : mentions légales

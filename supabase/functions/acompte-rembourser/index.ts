@@ -52,6 +52,8 @@ Deno.serve(async (req) => {
     if (error) throw new Error(error.message);
     let rembourse = 0;
     for (const p of dus ?? []) {
+      if (String(p.transaction_id).startsWith('test-')) continue; // faux paiement (mode test) : remboursé par la base
+
       const montant = Math.round((Number(p.remboursement_du) - Number(p.rembourse)) * 100) / 100;
       const r = await fetch(`${SUMUP}/v1.0/merchants/${marchand}/payments/${p.transaction_id}/refunds`, {
         method: 'POST', headers: { Authorization: `Bearer ${cleSumup}`, 'Content-Type': 'application/json' },

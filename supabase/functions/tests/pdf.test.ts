@@ -32,3 +32,10 @@ Deno.test('bon de commande sans acompte : PDF valide', async () => {
   const sortie = Deno.env.get('PDF_SORTIE');
   if (sortie) await Deno.writeFile(`${sortie}/bon.pdf`, octets);
 });
+
+Deno.test('pièce de test : PDF avec filigrane', async () => {
+  const octets = await rendrePdf({ ...base, type: 'facture', numero: 'TEST-F-2026-0001', acompte: 0, reste: 154.15, mode_paiement: 'especes', acquittee: true });
+  assert(new TextDecoder().decode(octets.slice(0, 5)) === '%PDF-');
+  const sortie = Deno.env.get('PDF_SORTIE');
+  if (sortie) await Deno.writeFile(`${sortie}/test.pdf`, octets);
+});

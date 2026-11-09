@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { bilan, estAujourdhui, useChauffeur } from '../../src/chauffeur';
 import { Chiffre, DemandeCarte, LigneMission, TrajetLibre, appeler, dansCombien, heureDe, ouvrirGps, useMaintenant } from '../../src/chauffeurUi';
 import { CuveIndigo } from '../../src/CuveIndigo';
-import { euros, offre } from '../../src/data';
+import { euros, offre, regles } from '../../src/data';
 import { Couleurs, f, radius, space } from '../../src/theme';
 import { Bouton, Note, Titre } from '../../src/ui';
 import { useMessagerie } from '../../src/messagerie';
@@ -65,6 +65,11 @@ export default function TableauDeBord() {
             <Note ton="alerte" icone="calendar-outline">
               {absence.debut <= isoJour(maintenant) ? 'Absence en cours' : 'Absence prévue'} {periode(absence)} : les clients ne peuvent pas réserver ces jours-là.
             </Note>
+          </Pressable>
+        ) : null}
+        {regles.paiementsTest ? (
+          <Pressable onPress={() => router.push('/tarifs')} style={{ marginTop: space.l }} accessibilityRole="button">
+            <Note ton="alerte" icone="flask-outline">Mode test activé : paiements simulés (faux argent). À désactiver dans Tarifs avant les vrais clients.</Note>
           </Pressable>
         ) : null}
         {erreur ? (

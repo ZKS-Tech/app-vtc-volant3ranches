@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Linking, Share, Text, View } from 'react-native';
 import { Mission, useChauffeur } from './chauffeur';
 import { heureDe } from './chauffeurUi';
-import { dateCourte, euros } from './data';
+import { dateCourte, euros, regles } from './data';
 import { Paiement, paiementsDe } from './serveur';
 import { space } from './theme';
 import { Bouton, Note } from './ui';
@@ -12,7 +12,7 @@ import { useTheme } from './useTheme';
 // à un client qui a réservé par téléphone.
 export function AcompteChauffeur({ m }: { m: Mission }) {
   const { type } = useTheme();
-  const { lienAcompte, rembourser, demo, annoncer } = useChauffeur();
+  const { lienAcompte, rembourser, demo, annoncer, simulerPaiement } = useChauffeur();
   const [paiements, setPaiements] = useState<Paiement[]>([]);
   const [action, setAction] = useState<string | null>(null);
   const [erreur, setErreur] = useState('');
@@ -56,6 +56,10 @@ export function AcompteChauffeur({ m }: { m: Mission }) {
             ? rembourse > 0 ? ` ${euros(rembourse)} remboursé${rembourse > 1 ? 's' : ''}.` : aRembourser > 0 ? ' Remboursement en attente.' : ' Conservé (annulation tardive, CGV).'
             : ` Reste à encaisser : ${euros(Math.max(0, m.montant - montant))}.`}
         </Note>
+      ) : null}
+      {regles.paiementsTest && (m.statut === 'acompte_attendu' || (m.statut === 'confirmee' && !paye && m.date.getTime() > Date.now())) ? (
+        <Bouton titre="Mode test : simuler le paiement du client" variante="contour" icone="flask-outline" chargement={action === 'simuler'}
+          onPress={() => faire('simuler', () => simulerPaiement(m.id))} />
       ) : null}
       {aRembourser > 0 ? (
         <Bouton titre={`Rembourser ${euros(aRembourser)}`} variante="contour" icone="return-down-back-outline" chargement={action === 'rembourser'}

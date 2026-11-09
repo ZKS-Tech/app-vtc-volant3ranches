@@ -75,6 +75,7 @@ if (process.argv[4]) {
     ok(true, 'migration 8 (acompte) appliquée sans erreur');
   }
   if (process.argv[11]) { await db.exec(readFileSync(process.argv[11], 'utf8')); ok(true, 'migration 9 (factures) appliquée sans erreur'); }
+  if (process.argv[12]) { await db.exec(readFileSync(process.argv[12], 'utf8')); ok(true, 'migration 10 (mode test) appliquée sans erreur'); }
 }
 
 
@@ -538,4 +539,69 @@ if (process.argv[11]) {
   await en(cli);
   r = await q(`select type from public.documents`);
   ok(r.length === 1 && r[0].type === 'commande', 'le client voit le bon de commande de sa course');
+}
+
+if (process.argv[12]) {
+  console.log('--- mode test (faux argent)');
+  const srv = async (sql) => { await db.exec('reset role'); return (await db.query(sql)).rows; };
+  const annee = new Date().getFullYear();
+  await srv(`update public.parametres set acompte_pourcent = 10, paiements_test = false`);
+  await db.exec(`reset role; insert into auth.users values ('aaaaaaaa-0000-0000-0000-000000000001') on conflict do nothing`);
+  const testeur = 'aaaaaaaa-0000-0000-0000-000000000001';
+  const demande = async () => {
+    await en(testeur);
+    return (await q(`select * from public.creer_demande(
+      '{"ref":"castres-gare","libelle":"Gare de Castres","lat":43.6007,"lon":2.2329,"type":"gare"}',
+      '{"ref":"tls","libelle":"Aéroport Toulouse-Blagnac","lat":43.6293,"lon":1.3638,"type":"aeroport"}',
+      now() + interval '4 days', false, 1, 1, null, 'tesla', 5, 5, 'Evan Test', '06 00 00 00 01', 'test@exemple.fr', null)`))[0];
+  };
+  const d1 = await demande();
+  await en(fabrice); await q(`select public.repondre_demande('${d1.id}', true)`);
+  await en(testeur);
+  await echoue(() => q(`select public.payer_acompte_test('${d1.id}')`), 'faux paiement refusé tant que le mode test est désactivé');
+
+  const derniereVraie = (await srv(`select max(numero) n from public.documents where type = 'facture' and not test`))[0].n;
+  await srv(`update public.parametres set paiements_test = true`);
+  await en(testeur);
+  await q(`select public.payer_acompte_test('${d1.id}')`);
+  let c = (await srv(`select statut, acompte_paye_le from public.courses where id = '${d1.id}'`))[0];
+  ok(c.statut === 'confirmee' && c.acompte_paye_le, 'faux paiement → course confirmée par le vrai circuit');
+  let docs = await srv(`select * from public.documents where course_id = '${d1.id}'`);
+  ok(docs.length === 1 && docs[0].test && docs[0].numero === `TEST-BC-${annee}-0001` && docs[0].contenu.test === true, `bon de commande de test (${docs[0]?.numero})`);
+  await en(testeur);
+  await echoue(() => q(`select public.payer_acompte_test('${d1.id}')`), 'pas de double paiement');
+  const autre = 'aaaaaaaa-0000-0000-0000-000000000002';
+  await db.exec(`reset role; insert into auth.users values ('${autre}') on conflict do nothing`);
+  await en(autre);
+  await echoue(() => q(`select public.payer_acompte_test('${d1.id}')`), 'un autre client ne peut pas payer cette course');
+  await echoue(() => q(`select public.rembourser_test('${d1.id}')`), 'un autre client ne peut pas déclencher de remboursement');
+
+  // Facture de test et numéros réels intacts
+  await en(fabrice);
+  const f = (await q(`select * from public.emettre_facture('${d1.id}', 'cb')`))[0];
+  ok(f.test && f.numero === `TEST-F-${annee}-0001`, `facture de test (${f.numero})`);
+  const apres = (await srv(`select max(numero) n from public.documents where type = 'facture' and not test`))[0].n;
+  ok(apres === derniereVraie, `les vrais numéros de facture ne bougent pas (dernier : ${apres})`);
+
+  // Annulation + faux remboursement
+  const d2 = await demande();
+  await en(fabrice); await q(`select public.repondre_demande('${d2.id}', true)`);
+  await en(testeur); await q(`select public.payer_acompte_test('${d2.id}')`);
+  await q(`select public.annuler_course('${d2.id}')`);
+  r = await q(`select public.rembourser_test('${d2.id}') as m`);
+  const p2 = (await srv(`select statut, rembourse from public.paiements where course_id = '${d2.id}' and statut <> 'expire'`))[0];
+  ok(Number(r[0].m) > 0 && p2.statut === 'rembourse', `annulation à 4 jours : faux acompte remboursé (${r[0].m} €)`);
+  r = await q(`select public.rembourser_test('${d2.id}') as m`);
+  ok(Number(r[0].m) === 0, 'pas de second remboursement');
+
+  // Effacer les pièces de test, jamais les vraies
+  const vraies = (await srv(`select count(*)::int n from public.documents where not test`))[0].n;
+  await en(testeur);
+  await echoue(() => q(`select public.effacer_documents_test()`), 'un client ne peut pas effacer de pièces');
+  await en(fabrice);
+  r = await q(`select public.effacer_documents_test() as n`);
+  const reste = await srv(`select count(*)::int n, count(*) filter (where test)::int t from public.documents`);
+  ok(r[0].n >= 2 && reste[0].t === 0 && reste[0].n === vraies, `pièces de test effacées (${r[0].n}), vraies pièces intactes (${vraies})`);
+  await echoue(() => srv(`delete from public.documents where not test`), 'une vraie pièce reste impossible à supprimer');
+  await srv(`update public.parametres set paiements_test = false`);
 }

@@ -147,6 +147,7 @@ export const regles = {
   delaiConfirmationMin: 30,
   acomptePourcent: 10, // acompte demandé à l'acceptation (0 = aucun)
   acompteDelaiMin: 60, // délai pour le régler
+  paiementsTest: false, // mode test : paiements simulés, faux argent
 };
 
 export const joursFeries = [
@@ -162,7 +163,7 @@ export type TarifsServeur = {
   parametres: {
     nuit_debut: number; nuit_fin: number; majoration_weekend: boolean; coef_aller_retour: number; arrondi: number;
     attente_aeroport_min: number; attente_gare_min: number; attente_standard_min: number; delai_confirmation_min: number;
-    acompte_pourcent?: number; acompte_delai_min?: number;
+    acompte_pourcent?: number; acompte_delai_min?: number; paiements_test?: boolean;
   } | null;
   joursFeries: string[];
 };
@@ -187,6 +188,7 @@ export function appliquerTarifs(t: TarifsServeur) {
     // Sans la migration 8, la base ne connaît pas l'acompte : aucun n'est demandé.
     regles.acomptePourcent = p.acompte_pourcent ?? 0;
     if (p.acompte_delai_min) regles.acompteDelaiMin = p.acompte_delai_min;
+    regles.paiementsTest = !!p.paiements_test;
   }
   if (t.joursFeries.length) joursFeries.splice(0, joursFeries.length, ...t.joursFeries);
 }

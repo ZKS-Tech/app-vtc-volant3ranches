@@ -43,6 +43,7 @@ visible) et me l'envoyer, je vous guiderai.
 ## Dans l'appli (espace chauffeur de Fabrice)
 
 7. [ ] Gestion › Tarifs et jours fériés › **Acompte** : 10 %, délai 1 h › Enregistrer.
+   Vérifier que le **Mode test (faux argent)** est **désactivé**, sinon les paiements restent simulés.
 
 ## Premier essai réel (avec une vraie carte, petit montant)
 

@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
-import { euros } from './data';
+import { euros, regles } from './data';
 import { Course, useStore } from './store';
 import { Couleurs, f, radius, space } from './theme';
 import { Bouton, Note, heureCourte } from './ui';
@@ -27,6 +28,8 @@ export function BlocAcompte({ course, surFonce }: { course: Course; surFonce?: b
   const depasse = minutes !== null && minutes <= 0;
 
   const payer = async () => {
+    // Mode test : écran de paiement simulé dans l'appli au lieu de la page SumUp.
+    if (regles.paiementsTest) { router.push({ pathname: '/paiement-test', params: { id: course.id } }); return; }
     setEtat('ouverture'); setErreur('');
     try {
       const url = await payerAcompte(course.id);
@@ -67,7 +70,7 @@ export function BlocAcompte({ course, surFonce }: { course: Course; surFonce?: b
       <View style={s.securite}>
         <Ionicons name="lock-closed-outline" size={14} color={surFonce ? c.surCuve2 : c.pierre} />
         <Text style={[type.label, { color: surFonce ? c.surCuve2 : c.pierre, flex: 1 }]}>
-          Paiement sécurisé par SumUp. Remboursé si vous annulez plus de 24 h avant (CGV).
+          {regles.paiementsTest ? 'Mode test : paiement simulé, aucun argent réel.' : 'Paiement sécurisé par SumUp. Remboursé si vous annulez plus de 24 h avant (CGV).'}
         </Text>
       </View>
     </View>

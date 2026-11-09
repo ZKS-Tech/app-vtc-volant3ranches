@@ -148,5 +148,8 @@ règles sont vérifiées par un jeu de 21 tests exécutés sur un PostgreSQL loc
   mode de paiement, numérotation sans trou, pièces figées, PDF fidèles aux modèles, écran de contrôle
   mensuel (HT, TVA, TTC, modes de paiement, courses non facturées) et export tableur. À venir : avoirs.
 
+- ✅ **Mode test (faux argent)** (migration 10) : paiements et remboursements simulés pour essayer tout
+  le parcours ; pièces numérotées à part (TEST-…), effaçables, sans toucher aux vrais numéros.
+
 **Ensuite :** SMS, suivi de Fabrice en approche, version anglaise, paiement en ligne, factures
 entreprise, formulaire du site branché sur la même base.
