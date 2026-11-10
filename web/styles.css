@@ -237,7 +237,7 @@ main, footer { position: relative; overflow-x: clip; }
 .points .ico { color: var(--indigo); margin-top: .15em; }
 
 /* ---------- La plongée ---------- */
-.plongee { height: 860vh; position: relative; z-index: 3; margin-top: clamp(5rem, 10vw, 9rem); }
+.plongee { height: 620vh; position: relative; z-index: 3; margin-top: clamp(5rem, 10vw, 9rem); }
 .plongee-fixe { position: sticky; top: 0; height: 100svh; overflow: hidden; color: var(--ton); transition: color .7s var(--sortie); }
 .plongee .scene-ancre { position: absolute; inset: 14% 4% 12% 4%; }
 .plongee-titre { position: absolute; left: var(--marge); top: 6.5rem; right: var(--marge); opacity: calc(1 - var(--p2, 0)); transform: translateY(calc(var(--p2, 0) * -40px)); }
@@ -408,7 +408,7 @@ details[open] p { animation: entree .7s var(--sortie) both; }
   .fabrice-grille, .transferts-grille, .van, .questions { grid-template-columns: 1fr; }
   .questions .titre { position: static; }
   .valeurs > div { grid-template-columns: 1fr; gap: .3rem; }
-  .plongee { height: 760vh; }
+  .plongee { height: 560vh; }
   .plongee .scene-ancre { inset: 24% -10% 30% -10%; }
   .plongee-titre { top: 5.5rem; }
   .reperes li { max-width: 44vw; font-size: .85rem; }

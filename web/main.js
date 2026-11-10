@@ -169,7 +169,7 @@ for (const el of $$('[data-r]')) vus.observe(el);
 /* ------------------------------------------------------------------ */
 
 const plongee = $('.plongee'), plongeeFixe = $('.plongee-fixe'), reperes = $$('.reperes li'), pellicule = $('#pellicule'), barre = $('#barre');
-const PART_PLONGEE = 0.46;
+const PART_PLONGEE = 0.54;
 const ecranDom = $('#ecran');
 const etat = { pb: 0, embarquement: false, p: 0, niveau: 0, trouble: 0, fond: 0, souris: [0, 0], dernierY: 0 };
 let enCuve = null;
@@ -191,8 +191,8 @@ function mesurer() {
     li.style.setProperty('--o', (lisse(0.46 + i * 0.09, 0.54 + i * 0.09, etat.p) * (1 - lisse(0.84, 0.9, etat.p))).toFixed(3));
   });
   plongeeFixe.style.setProperty('--pf', (lisse(0.88, 0.97, etat.p) * (1 - lisse(0, 0.07, etat.pb))).toFixed(3));
-  plongeeFixe.style.setProperty('--e0', (lisse(0.03, 0.1, etat.pb) * (1 - lisse(0.24, 0.32, etat.pb))).toFixed(3));
-  plongeeFixe.style.setProperty('--e1', (lisse(0.47, 0.54, etat.pb) * (1 - lisse(0.7, 0.78, etat.pb))).toFixed(3));
+  plongeeFixe.style.setProperty('--e0', (lisse(0.01, 0.05, etat.pb) * (1 - lisse(0.17, 0.24, etat.pb))).toFixed(3));
+  plongeeFixe.style.setProperty('--e1', (lisse(0.4, 0.46, etat.pb) * (1 - lisse(0.64, 0.72, etat.pb))).toFixed(3));
   // Une fois dans l'écran de bord, le reste du site s'y déroule : le cadre de l'écran reste autour de la page.
   document.body.classList.toggle('dans-ecran', etat.embarquement && (etat.pb > 0.985 || brut >= 1));
 
@@ -653,7 +653,7 @@ function creerScene() {
   addEventListener('resize', taille);
 
   const lisseVue = { az: -100, el: 4, x: 0, pb: 0 };
-  const TEMPS = [0, 0.2, 0.36, 0.5, 0.66, 0.84, 1];
+  const TEMPS = [0, 0.09, 0.26, 0.42, 0.58, 0.8, 1];
   const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
   let propre = false;
   const cible = new THREE.Vector3(0, 0.62, 0);
@@ -701,8 +701,8 @@ function creerScene() {
     const pb = lisseVue.pb < 0.0004 ? 0 : lisseVue.pb;
     let quad = null;
     if (bord) {
-      bord.charniere.rotation.y = -1.18 * lisse(0.07, 0.3, pb);
-      bord.plafonnier.intensity = 2.4 * lisse(0.2, 0.5, pb);
+      bord.charniere.rotation.y = -1.18 * lisse(0.03, 0.17, pb);
+      bord.plafonnier.intensity = 2.4 * lisse(0.12, 0.4, pb);
     }
     if (pb > 0) {
       const portrait = Math.min(2.1, Math.max(1, 1.3 / camera.aspect));
@@ -727,7 +727,7 @@ function creerScene() {
       pos.copy(new THREE.CatmullRomCurve3(etapes.map((x) => x[0]), false, 'centripetal').getPoint(u));
       vise.copy(new THREE.CatmullRomCurve3(etapes.map((x) => x[1]), false, 'centripetal').getPoint(u));
       fov = mix(etapes[i][2], etapes[i + 1][2], k);
-      decalage = 1 - lisse(0, 0.15, pb);
+      decalage = 1 - lisse(0, 0.08, pb);
     }
     camera.fov = fov;
     camera.near = pb > 0 ? 0.03 : 0.1;
@@ -737,7 +737,7 @@ function creerScene() {
     camera.setViewOffset(W, H, (W / 2 - (r.left + r.width / 2)) * decalage, (H / 2 - (r.top + r.height / 2)) * decalage, W, H);
 
     // Le calque « écran de bord » épouse l'écran 3D, puis remplit la fenêtre.
-    const voile = pb > 0 ? lisse(0.5, 0.58, pb) * (1 - lisse(0.955, 1, pb)) : 0;
+    const voile = pb > 0 ? lisse(0.42, 0.5, pb) * (1 - lisse(0.955, 1, pb)) : 0;
     if (voile > 0.001) {
       camera.updateMatrixWorld(true);
       quad = bord.coins.map((c) => { const p = c.clone().project(camera); return p.z > 1 ? null : [(p.x * 0.5 + 0.5) * W, (-p.y * 0.5 + 0.5) * H]; });
