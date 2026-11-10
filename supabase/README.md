@@ -264,6 +264,11 @@ Supabase lui-même, il faut donc lui donner Brevo comme serveur d'envoi :
 
    et le sujet par « Votre code Volant3ranches ».
 
+**À surveiller** : la clé SMTP de Brevo expire au bout d'un an (date choisie à sa création, ici
+novembre 2027) et après 90 jours sans aucun email de code. Si un client ne reçoit plus son code :
+Brevo › SMTP et API › SMTP › générer une nouvelle clé, puis la coller dans Supabase (SMTP Settings ›
+Password). La clé API des autres emails (`BREVO_API_KEY`) expire seulement après 90 jours sans envoi.
+
 ## Tester la confirmation en temps réel
 
 Avec deux téléphones (ou un téléphone et le navigateur) : envoyez une demande côté client, puis
