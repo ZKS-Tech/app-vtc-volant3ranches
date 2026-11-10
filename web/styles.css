@@ -237,7 +237,7 @@ main, footer { position: relative; overflow-x: clip; }
 .points .ico { color: var(--indigo); margin-top: .15em; }
 
 /* ---------- La plongée ---------- */
-.plongee { height: 380vh; position: relative; z-index: 3; margin-top: clamp(5rem, 10vw, 9rem); }
+.plongee { height: 860vh; position: relative; z-index: 3; margin-top: clamp(5rem, 10vw, 9rem); }
 .plongee-fixe { position: sticky; top: 0; height: 100svh; overflow: hidden; color: var(--ton); transition: color .7s var(--sortie); }
 .plongee .scene-ancre { position: absolute; inset: 14% 4% 12% 4%; }
 .plongee-titre { position: absolute; left: var(--marge); top: 6.5rem; right: var(--marge); opacity: calc(1 - var(--p2, 0)); transform: translateY(calc(var(--p2, 0) * -40px)); }
@@ -258,6 +258,25 @@ main, footer { position: relative; overflow-x: clip; }
 .plongee-prix b { font: 700 clamp(3.2rem, 7vw, 6rem)/.9 var(--titrage); color: var(--feuille); font-variant-numeric: tabular-nums; }
 .plongee-prix span { font-size: .9rem; }
 .mention { position: absolute; left: var(--marge); bottom: 1.5rem; z-index: 1; font-size: .8rem; color: var(--ton-doux); opacity: .85; }
+
+/* L'embarquement : légendes, écran de bord et cadre de l'écran */
+.embarquement {
+  position: absolute; left: var(--marge); bottom: 12%; max-width: 14ch; color: var(--blanc); text-wrap: balance;
+  font: 700 clamp(2.2rem, 5vw, 4.5rem)/.95 var(--titrage); text-shadow: 0 2px 30px rgba(3, 5, 12, .7);
+  opacity: var(--o, 0); transform: translateY(calc((1 - var(--o, 0)) * 36px)); pointer-events: none;
+}
+.ecran {
+  position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; z-index: 4; transform-origin: 0 0; visibility: hidden; pointer-events: none;
+  background: radial-gradient(120% 90% at 50% 110%, var(--indigo), var(--cuve) 62%); color: var(--blanc); will-change: transform; backface-visibility: hidden;
+}
+.ecran-contenu { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; gap: 3vh; text-align: center; opacity: var(--suite, 1); }
+.ecran-marque { display: flex; align-items: center; gap: 1.2vw; font-weight: 700; font-size: clamp(1.2rem, 2.6vw, 2.4rem); }
+.ecran-marque img { width: clamp(2.4rem, 5vw, 4.5rem); height: auto; }
+.ecran strong { font: 700 clamp(3.2rem, 11.5vw, 11rem)/.9 var(--titrage); letter-spacing: -.015em; max-width: 9ch; text-wrap: balance; }
+.ecran-indice { font-size: clamp(1.1rem, 2.4vw, 2.2rem); font-weight: 600; color: var(--feuille); }
+.cadre { position: fixed; inset: 0; z-index: 9; pointer-events: none; opacity: 0; transition: opacity .9s var(--sortie); }
+.cadre::before { content: ''; position: absolute; inset: clamp(5px, .7vw, 10px); border-radius: clamp(14px, 1.8vw, 26px); box-shadow: 0 0 0 60px #03050b, inset 0 0 0 1px rgba(195, 207, 242, .22), inset 0 0 60px rgba(3, 5, 12, .45); }
+.dans-ecran .cadre { opacity: 1; }
 
 /* ---------- Photos ---------- */
 .photos { padding-top: clamp(3rem, 8vw, 6rem); }
@@ -389,7 +408,7 @@ details[open] p { animation: entree .7s var(--sortie) both; }
   .fabrice-grille, .transferts-grille, .van, .questions { grid-template-columns: 1fr; }
   .questions .titre { position: static; }
   .valeurs > div { grid-template-columns: 1fr; gap: .3rem; }
-  .plongee { height: 340vh; }
+  .plongee { height: 760vh; }
   .plongee .scene-ancre { inset: 24% -10% 30% -10%; }
   .plongee-titre { top: 5.5rem; }
   .reperes li { max-width: 44vw; font-size: .85rem; }

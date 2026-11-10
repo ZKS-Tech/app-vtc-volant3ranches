@@ -169,14 +169,18 @@ for (const el of $$('[data-r]')) vus.observe(el);
 /* ------------------------------------------------------------------ */
 
 const plongee = $('.plongee'), plongeeFixe = $('.plongee-fixe'), reperes = $$('.reperes li'), pellicule = $('#pellicule'), barre = $('#barre');
-const etat = { p: 0, niveau: 0, trouble: 0, fond: 0, souris: [0, 0], dernierY: 0 };
+const PART_PLONGEE = 0.46;
+const ecranDom = $('#ecran');
+const etat = { pb: 0, embarquement: false, p: 0, niveau: 0, trouble: 0, fond: 0, souris: [0, 0], dernierY: 0 };
 let enCuve = null;
 
 function mesurer() {
   const y = scrollY, vh = innerHeight;
   const r = plongee.getBoundingClientRect();
   const haut = r.top + y, course = r.height - vh;
-  etat.p = borne((y - haut) / course);
+  const brut = (y - haut) / course;
+  etat.p = borne(brut / PART_PLONGEE);
+  etat.pb = etat.embarquement ? borne((brut - PART_PLONGEE) / (1 - PART_PLONGEE)) : 0;
   etat.niveau = lisse(0.1, 0.5, etat.p);
   etat.trouble = borne(y / haut);
   const fin = haut + course;
@@ -186,7 +190,11 @@ function mesurer() {
   reperes.forEach((li, i) => {
     li.style.setProperty('--o', (lisse(0.46 + i * 0.09, 0.54 + i * 0.09, etat.p) * (1 - lisse(0.84, 0.9, etat.p))).toFixed(3));
   });
-  plongeeFixe.style.setProperty('--pf', lisse(0.88, 0.97, etat.p).toFixed(3));
+  plongeeFixe.style.setProperty('--pf', (lisse(0.88, 0.97, etat.p) * (1 - lisse(0, 0.07, etat.pb))).toFixed(3));
+  plongeeFixe.style.setProperty('--e0', (lisse(0.03, 0.1, etat.pb) * (1 - lisse(0.24, 0.32, etat.pb))).toFixed(3));
+  plongeeFixe.style.setProperty('--e1', (lisse(0.47, 0.54, etat.pb) * (1 - lisse(0.7, 0.78, etat.pb))).toFixed(3));
+  // Une fois dans l'écran de bord, le reste du site s'y déroule : le cadre de l'écran reste autour de la page.
+  document.body.classList.toggle('dans-ecran', etat.embarquement && (etat.pb > 0.985 || brut >= 1));
 
   const cuve = etat.niveau > 0.5;
   if (cuve !== enCuve) { enCuve = cuve; document.body.classList.toggle('en-cuve', cuve); }
@@ -296,6 +304,28 @@ function creerBain() {
     gl.uniform1f(loc.fond, etat.fond);
     gl.drawArrays(gl.TRIANGLES, 0, 3);
   };
+}
+
+// Transformation CSS qui envoie le rectangle (0,0)-(W,H) sur un quadrilatère quelconque (coins HG, HD, BD, BG).
+function versQuadrilatere(W, H, q) {
+  const src = [[0, 0], [W, 0], [W, H], [0, H]], A = [];
+  for (let i = 0; i < 4; i++) {
+    const [x, y] = src[i], [u, v] = q[i];
+    A.push([x, y, 1, 0, 0, 0, -u * x, -u * y, u], [0, 0, 0, x, y, 1, -v * x, -v * y, v]);
+  }
+  for (let c = 0; c < 8; c++) {
+    let m = c;
+    for (let l = c + 1; l < 8; l++) if (Math.abs(A[l][c]) > Math.abs(A[m][c])) m = l;
+    [A[c], A[m]] = [A[m], A[c]];
+    if (Math.abs(A[c][c]) < 1e-10) return null;
+    for (let l = 0; l < 8; l++) {
+      if (l === c) continue;
+      const k = A[l][c] / A[c][c];
+      for (let j = c; j < 9; j++) A[l][j] -= k * A[c][j];
+    }
+  }
+  const h = A.map((l, i) => l[8] / l[i]);
+  return `matrix3d(${h[0]},${h[3]},0,${h[6]},${h[1]},${h[4]},0,${h[7]},0,0,1,0,${h[2]},${h[5]},0,1)`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -539,6 +569,7 @@ function creerScene() {
 
   // Le modèle : Tesla Model 3 (2018) d'Ameer Studio, CC-BY 4.0. Voir models/tesla-model-3.LICENCE.txt.
   const pharesModele = [], feuxModele = [];
+  let bord = null; // portière, écran et trajectoire de l'embarquement
   let pret = false, debut = 0;
   const montrer = (objet) => { voiture.add(objet); refleter(objet); pret = true; debut = performance.now(); };
   const chargeur = new GLTFLoader();
@@ -560,12 +591,35 @@ function creerScene() {
       if (/^primary/.test(nom)) o.material = laque;
       else if (/^glass/.test(nom)) { o.material.color.set(0x0a0d14); o.material.opacity = 0.82; o.material.roughness = 0.04; o.material.metalness = 0; }
       else if (/^platnomor/.test(nom)) o.material.color.set(0x6f7480);
+      else if (/^(Putih|Seat_Leather_white)/.test(nom)) o.material.color.set(0x24262c); // sellerie noire, comme la voiture de Fabrice
       else if (/^wheels/.test(nom)) o.material.color.set(0xb9bec9);
       else if (/front_light|light_night|foglight/.test(nom)) { o.material.emissive = new THREE.Color(0xdfe9ff); o.material.emissiveMap = o.material.map; pharesModele.push(o.material); }
       else if (/rear_light|breaklight/.test(nom)) { o.material.emissive = new THREE.Color(0xff1a10); o.material.emissiveMap = o.material.map; feuxModele.push(o.material); }
     });
     const pivot = new THREE.Group();
     pivot.add(m);
+    pivot.updateMatrixWorld(true);
+    const porte = m.getObjectByName('door_lf_dummy'), lcd = m.getObjectByName('LCDs');
+    if (porte && lcd) {
+      // La portière conducteur pivote sur une charnière placée à son bord avant.
+      const bp = new THREE.Box3().setFromObject(porte);
+      const charniere = new THREE.Group();
+      charniere.position.set(bp.max.x - 0.03, 0, bp.min.z + 0.2);
+      pivot.add(charniere);
+      charniere.attach(porte);
+      // L'écran central : ses quatre coins, vus du siège (le haut est incliné vers l'avant).
+      const be = new THREE.Box3().setFromObject(lcd);
+      const coins = [[be.max.x, be.max.y, be.min.z], [be.max.x, be.max.y, be.max.z], [be.min.x, be.min.y, be.max.z], [be.min.x, be.min.y, be.min.z]].map((c) => new THREE.Vector3(...c));
+      const centre = be.getCenter(new THREE.Vector3());
+      const normale = coins[1].clone().sub(coins[0]).cross(coins[3].clone().sub(coins[0])).normalize();
+      if (normale.x > 0) normale.negate();
+      const plafonnier = new THREE.PointLight(0xfff0dc, 0, 5, 1.6);
+      plafonnier.position.set(0.15, 1.22, -0.1);
+      pivot.add(plafonnier);
+      bord = { charniere, coins, centre, normale, plafonnier, largeur: be.max.z - be.min.z, hauteur: coins[0].distanceTo(coins[3]) };
+      etat.embarquement = true;
+      mesurer();
+    }
     montrer(pivot);
   }, undefined, () => { for (const s of halos) s.position.set(2.2, 0.68, Math.sign(s.position.z) * 0.6); montrer(secours); });
 
@@ -598,7 +652,9 @@ function creerScene() {
   taille();
   addEventListener('resize', taille);
 
-  const lisseVue = { az: -100, el: 4, x: 0 };
+  const lisseVue = { az: -100, el: 4, x: 0, pb: 0 };
+  const TEMPS = [0, 0.2, 0.36, 0.5, 0.66, 0.84, 1];
+  const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
   let propre = false;
   const cible = new THREE.Vector3(0, 0.62, 0);
 
@@ -636,15 +692,67 @@ function creerScene() {
     const tg = Math.tan((camera.fov * Math.PI) / 360);
     const d = Math.max((largeur * H) / (r.width * tg), (0.92 * H) / (r.height * tg)) + Math.abs(Math.cos(a)) * 2.2;
     camera.aspect = W / H;
-    camera.position.set(Math.cos(a) * Math.cos(e) * d, cible.y + Math.sin(e) * d, Math.sin(a) * Math.cos(e) * d);
-    camera.lookAt(cible);
+    const pos = v3(Math.cos(a) * Math.cos(e) * d, cible.y + Math.sin(e) * d, Math.sin(a) * Math.cos(e) * d), vise = cible.clone();
+    let fov = 24, decalage = 1;
+
+    // L'embarquement : on fait le tour jusqu'à la portière, elle s'ouvre, on s'assoit, puis on entre dans l'écran.
+    const pbCible = dansPlongee && bord ? etat.pb : 0;
+    lisseVue.pb += (pbCible - lisseVue.pb) * (calme ? 1 : 0.14);
+    const pb = lisseVue.pb < 0.0004 ? 0 : lisseVue.pb;
+    let quad = null;
+    if (bord) {
+      bord.charniere.rotation.y = -1.18 * lisse(0.07, 0.3, pb);
+      bord.plafonnier.intensity = 2.4 * lisse(0.2, 0.5, pb);
+    }
+    if (pb > 0) {
+      const portrait = Math.min(2.1, Math.max(1, 1.3 / camera.aspect));
+      const large = (f, k) => (2 * Math.atan(Math.tan((f * Math.PI) / 360) * mix(1, portrait, k)) * 180) / Math.PI;
+      const fovFin = large(34, 1), tgFin = Math.tan((fovFin * Math.PI) / 360);
+      // Distance à laquelle l'écran remplit exactement la fenêtre.
+      const dFin = Math.min(bord.hauteur / 2 / tgFin, bord.largeur / 2 / (tgFin * camera.aspect)) * 0.96;
+      const C = bord.centre, volant = v3(C.x - 0.03, C.y + 0.02, -0.3);
+      const etapes = [
+        [pos, vise, 24],
+        [v3(0.3, 1.2, -3.7), v3(0.3, 0.85, -0.9), large(30, 0.5)],
+        [v3(0.08, 1.17, -1.6), v3(0.6, 0.88, -0.3), large(46, 1)],
+        [v3(-0.1, 1.13, -0.4), volant, large(64, 1)],
+        [v3(-0.12, 1.12, -0.36), v3(C.x, C.y, C.z - 0.14), large(60, 1)],
+        [v3(C.x - 0.42, C.y + 0.1, C.z - 0.08), C, large(46, 1)],
+        [C.clone().addScaledVector(bord.normale, dFin), C, fovFin],
+      ];
+      let i = 0;
+      while (i < TEMPS.length - 2 && pb > TEMPS[i + 1]) i++;
+      const k = lisse(0, 1, (pb - TEMPS[i]) / (TEMPS[i + 1] - TEMPS[i])) * 0.6 + borne((pb - TEMPS[i]) / (TEMPS[i + 1] - TEMPS[i])) * 0.4;
+      const u = (i + k) / (TEMPS.length - 1);
+      pos.copy(new THREE.CatmullRomCurve3(etapes.map((x) => x[0]), false, 'centripetal').getPoint(u));
+      vise.copy(new THREE.CatmullRomCurve3(etapes.map((x) => x[1]), false, 'centripetal').getPoint(u));
+      fov = mix(etapes[i][2], etapes[i + 1][2], k);
+      decalage = 1 - lisse(0, 0.15, pb);
+    }
+    camera.fov = fov;
+    camera.near = pb > 0 ? 0.03 : 0.1;
+    camera.position.copy(pos);
+    camera.lookAt(vise);
     // Le point de fuite est déplacé au centre de l'ancre : la voiture suit la mise en page sans être rognée.
-    camera.setViewOffset(W, H, W / 2 - (r.left + r.width / 2), H / 2 - (r.top + r.height / 2), W, H);
+    camera.setViewOffset(W, H, (W / 2 - (r.left + r.width / 2)) * decalage, (H / 2 - (r.top + r.height / 2)) * decalage, W, H);
+
+    // Le calque « écran de bord » épouse l'écran 3D, puis remplit la fenêtre.
+    const voile = pb > 0 ? lisse(0.5, 0.58, pb) * (1 - lisse(0.955, 1, pb)) : 0;
+    if (voile > 0.001) {
+      camera.updateMatrixWorld(true);
+      quad = bord.coins.map((c) => { const p = c.clone().project(camera); return p.z > 1 ? null : [(p.x * 0.5 + 0.5) * W, (-p.y * 0.5 + 0.5) * H]; });
+      const tr = quad.includes(null) ? null : versQuadrilatere(W, H, quad);
+      ecranDom.style.visibility = tr ? 'visible' : 'hidden';
+      if (tr) { ecranDom.style.transform = tr; ecranDom.style.opacity = voile.toFixed(3); ecranDom.style.setProperty('--suite', (1 - lisse(0.86, 0.95, pb)).toFixed(3)); }
+    } else if (ecranDom.style.visibility !== 'hidden') ecranDom.style.visibility = 'hidden';
+    toile.style.opacity = pb > 0 ? (1 - lisse(0.94, 0.995, pb)).toFixed(3) : '1';
 
     // La voiture arrive en glissant, flotte, puis s'enfonce un peu quand l'encre monte.
     const flotte = calme ? 0 : Math.sin(t * 0.9) * 0.012;
-    voiture.position.set(dansPlongee ? 0 : (1 - entree) * 7, flotte - plonge * 0.05, 0);
-    voiture.rotation.z = calme ? 0 : Math.sin(t * 0.7) * 0.004;
+    // À bord, la voiture ne bouge plus : la caméra et l'écran sont calés sur elle.
+    const tangage = 1 - lisse(0, 0.12, pb);
+    voiture.position.set(dansPlongee ? 0 : (1 - entree) * 7, (flotte - plonge * 0.05) * tangage, 0);
+    voiture.rotation.z = calme ? 0 : Math.sin(t * 0.7) * 0.004 * tangage;
     const tour = dansPlongee ? -t * 0.6 : -(1 - entree) * 16 - t * 0.4;
     for (const roue of roues) roue.rotation.z = roue.parent.rotation.y ? -tour : tour;
     reflet.position.copy(voiture.position); reflet.position.y = -voiture.position.y - 0.02;
@@ -661,7 +769,7 @@ function creerScene() {
     for (const m of pharesModele) m.emissiveIntensity = mix(0.5, 3.2, allume);
     for (const m of feuxModele) m.emissiveIntensity = mix(0.35, 2.4, allume);
     refletMat.uniforms.c.value.setHex(plonge > 0.5 ? 0x5f7fc0 : 0x1e3277);
-    refletMat.uniforms.f.value = mix(0.14, 0.16, plonge);
+    refletMat.uniforms.f.value = mix(0.14, 0.16, plonge) * (1 - lisse(0, 0.18, pb));
     ombre.material.opacity = mix(0.75, 0.5, plonge);
     ondes.material.uniforms.t.value = calme ? 0 : t;
     ondes.material.uniforms.c.value.setHex(plonge > 0.5 ? 0x9fb6ee : 0x7f9ad6);
