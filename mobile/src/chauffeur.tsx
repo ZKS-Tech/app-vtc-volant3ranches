@@ -1,4 +1,5 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { AppState } from 'react-native';
 import { Lieu, OffreId, appliquerTarifs, euros, joursFeries, lieu, lieux, montantAcompte, offre, prix, regles, trajet } from './data';
 import {
   Fiche, LigneCourse, ajouterFerie, chargerEspaceChauffeur, chargerTarifs, ecouterEspaceChauffeur, enregistrerFiche,
@@ -108,7 +109,9 @@ export function ChauffeurProvider({ children }: { children: ReactNode }) {
     if (demo) return;
     recharger();
     const canal = ecouterEspaceChauffeur((c) => fusionMission(versMission(c)), fusionFiche);
-    return () => { canal?.unsubscribe(); };
+    // Retour au premier plan : le temps réel a pu être coupé pendant la mise en veille.
+    const abo = AppState.addEventListener('change', (etat) => { if (etat === 'active') recharger(); });
+    return () => { canal?.unsubscribe(); abo.remove(); };
   }, [demo]);
 
   // En démonstration, les actions modifient les données locales.

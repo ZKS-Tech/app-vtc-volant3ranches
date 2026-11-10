@@ -151,15 +151,18 @@ export async function annulerCourse(id: string): Promise<Course> {
 }
 
 // Temps réel : la confirmation de Fabrice arrive sans recharger.
-export function ecouterMesCourses(uid: string, surChangement: (c: Course) => void): RealtimeChannel | null {
+export function ecouterMesCourses(uid: string, surChangement: (c: Course) => void, surCoupure?: () => void): RealtimeChannel | null {
   if (!supabase) return null;
+  // Nom unique : réabonner le même sujet juste après l'avoir quitté peut être ignoré par le serveur.
   return supabase
-    .channel(`courses-${uid}`)
+    .channel(`courses-${uid}-${Date.now()}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'courses', filter: `client_id=eq.${uid}` }, (p) => {
       const c = versCourse(p.new as LigneCourse);
       if (c) surChangement(c);
     })
-    .subscribe();
+    .subscribe((etat) => {
+      if (etat === 'CHANNEL_ERROR' || etat === 'TIMED_OUT') surCoupure?.();
+    });
 }
 
 // ——— Espace chauffeur ———

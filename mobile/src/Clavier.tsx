@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { View, ViewStyle } from 'react-native';
-import Reanimated, { useAnimatedKeyboard, useAnimatedStyle } from 'react-native-reanimated';
+import Reanimated, { KeyboardState, useAnimatedKeyboard, useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Écran qui remonte exactement de la hauteur du clavier, quel que soit le clavier de la personne
@@ -11,7 +11,13 @@ export function EcranAvecClavier({ children, style }: { children: ReactNode; sty
   const clavier = useAnimatedKeyboard();
   const insets = useSafeAreaInsets();
   const bas = insets.bottom;
-  const decalage = useAnimatedStyle(() => ({ paddingBottom: Math.max(0, clavier.height.value - bas) }));
+  // Sur Android, la hauteur peut rester à sa dernière valeur après la fermeture du clavier (clavier
+  // fermé sur l'écran précédent, par exemple) : on se fie aussi à son état, ouvert ou fermé.
+  const decalage = useAnimatedStyle(() => {
+    const etat = clavier.state.value;
+    const visible = etat === KeyboardState.OPEN || etat === KeyboardState.OPENING || etat === KeyboardState.CLOSING;
+    return { paddingBottom: visible ? Math.max(0, clavier.height.value - bas) : 0 };
+  });
   // Le contenu vit dans une vue intérieure : les barres fixées en bas (position absolue) remontent
   // avec elle au-dessus du clavier.
   return (

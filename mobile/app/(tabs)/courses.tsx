@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { ScrollView, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, Text, View } from 'react-native';
 import { useStore } from '../../src/store';
 import { space } from '../../src/theme';
 import { useTheme } from '../../src/useTheme';
@@ -8,7 +8,8 @@ import { Bouton, CarteCourse, Segment } from '../../src/ui';
 
 export default function Courses() {
   const { c, type } = useTheme();
-  const { courses } = useStore();
+  const { courses, rafraichir } = useStore();
+  const [actualisation, setActualisation] = useState(false);
   const [onglet, setOnglet] = useState<'avenir' | 'passees'>('avenir');
   const maintenant = new Date();
   const liste = courses
@@ -19,7 +20,9 @@ export default function Courses() {
     .sort((a, b) => (onglet === 'avenir' ? +a.date - +b.date : +b.date - +a.date));
 
   return (
-    <ScrollView style={{ backgroundColor: c.sol }} contentContainerStyle={{ padding: space.l, gap: space.l }}>
+    <ScrollView style={{ backgroundColor: c.sol }} contentContainerStyle={{ padding: space.l, gap: space.l }}
+      refreshControl={<RefreshControl refreshing={actualisation} tintColor={c.accent}
+        onRefresh={async () => { setActualisation(true); try { await rafraichir(); } finally { setActualisation(false); } }} />}>
       <Segment
         options={[{ id: 'avenir', titre: 'À venir' }, { id: 'passees', titre: 'Passées' }]}
         valeur={onglet}

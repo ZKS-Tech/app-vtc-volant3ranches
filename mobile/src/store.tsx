@@ -1,5 +1,7 @@
 import { activerNotifications, oublierTelephone } from './notifications';
 import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState, Platform } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { OffreId, appliquerTarifs, lieu, offre, prix, trajet } from './data';
 import {
   annulerCourse, chargerTarifs, lienAcompte, payerAcompteTest, rembourserTout,
@@ -138,6 +140,8 @@ type Store = {
   reinitialiserMotDePasse: (email: string, code: string, motDePasse: string) => Promise<number>;
   deconnecterClient: () => Promise<void>;
   majProfil: (nom: string, telephone: string) => Promise<void>;
+  /** Recharge les courses du client depuis le serveur. */
+  rafraichir: () => Promise<void>;
   /** Change à chaque changement de compte (sert à réenregistrer le téléphone pour les notifications). */
   cleSession: string;
 };
@@ -163,14 +167,42 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const canal = useRef<ReturnType<typeof ecouterMesCourses>>(null);
 
   // Côté client : les courses de ce téléphone, puis la confirmation de Fabrice en temps réel.
+  const uidClient = useRef<string | null>(null);
+  const relance = useRef<ReturnType<typeof setTimeout> | null>(null);
   const demarrerClient = async (uid: string) => {
+    uidClient.current = uid;
     canal.current?.unsubscribe();
+    canal.current = null;
     const liste = await mesCourses();
+    if (uidClient.current !== uid) return; // compte changé entre-temps
     setCourses(liste);
-    canal.current = ecouterMesCourses(uid, (c) =>
-      setCourses((cs) => (cs.some((x) => x.id === c.id) ? cs.map((x) => (x.id === c.id ? c : x)) : [c, ...cs])),
+    canal.current = ecouterMesCourses(
+      uid,
+      (c) => setCourses((cs) => (cs.some((x) => x.id === c.id) ? cs.map((x) => (x.id === c.id ? c : x)) : [c, ...cs])),
+      // Connexion temps réel coupée : on recharge et on se réabonne quelques secondes plus tard.
+      () => {
+        if (relance.current) clearTimeout(relance.current);
+        relance.current = setTimeout(() => { if (uidClient.current === uid) demarrerClient(uid).catch(() => {}); }, 3000);
+      },
     );
   };
+  // Recharge les courses (retour au premier plan, notification reçue, « tirer pour actualiser »).
+  const rafraichirClient = async () => {
+    if (!supabase || !uidClient.current) return;
+    await demarrerClient(uidClient.current);
+  };
+
+  // L'appli en arrière-plan ou l'écran verrouillé coupent le temps réel : au retour, on recharge.
+  useEffect(() => {
+    const abo = AppState.addEventListener('change', (etat) => {
+      if (etat === 'active' && role === 'client' && !demoChauffeur) rafraichirClient().catch(() => {});
+    });
+    // Notification reçue appli ouverte (confirmation, refus…) : la course a changé, on recharge.
+    const notif = Platform.OS === 'web' ? null : Notifications.addNotificationReceivedListener(() => {
+      if (role === 'client' && !demoChauffeur) rafraichirClient().catch(() => {});
+    });
+    return () => { abo.remove(); notif?.remove(); };
+  }, [role, demoChauffeur]);
 
   // Profil du compte (ou de l'invité) : préremplit les coordonnées de réservation.
   const chargerProfil = async () => {
@@ -286,6 +318,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       entrerDemoChauffeur: () => setDemoChauffeur(true),
       compte,
       cleSession,
+      rafraichir: rafraichirClient,
       creerCompte: async (p) => {
         const r = await creerCompteServeur(p);
         setBrouillon((b) => ({ ...b, nom: p.nom, telephone: p.telephone, email: p.email }));
