@@ -257,7 +257,7 @@ main, footer { position: relative; overflow-x: clip; }
 .plongee-prix p { font-size: 1.05rem; color: var(--ton-doux); display: grid; }
 .plongee-prix b { font: 700 clamp(3.2rem, 7vw, 6rem)/.9 var(--titrage); color: var(--feuille); font-variant-numeric: tabular-nums; }
 .plongee-prix span { font-size: .9rem; }
-.mention { position: absolute; left: var(--marge); bottom: 1.5rem; font-size: .8rem; color: var(--ton-doux); opacity: .85; }
+.mention { position: absolute; left: var(--marge); bottom: 1.5rem; z-index: 1; font-size: .8rem; color: var(--ton-doux); opacity: .85; }
 
 /* ---------- Photos ---------- */
 .photos { padding-top: clamp(3rem, 8vw, 6rem); }
@@ -397,7 +397,7 @@ details[open] p { animation: entree .7s var(--sortie) both; }
   .reperes li:nth-child(2) { top: auto; bottom: 23%; }
   .reperes li:nth-child(3) { bottom: 8%; max-width: 70vw; }
   .plongee-prix { left: var(--marge); bottom: 7%; justify-items: start; text-align: left; }
-  .mention { display: none; }
+  .mention { right: var(--marge); bottom: .6rem; font-size: .7rem; }
   .pellicule { height: 62vw; }
   .regles { grid-template-columns: 1fr; }
   .liste-prestations li { grid-template-columns: 2.25rem 1fr; }

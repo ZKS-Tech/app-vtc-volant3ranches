@@ -3,6 +3,8 @@
 // (shader repris de mobile/src/CuveIndigo.tsx) et la Tesla 3D (maillage procédural, three.js).
 
 import * as THREE from 'three';
+import { GLTFLoader } from './vendor/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from './vendor/libs/meshopt_decoder.module.js';
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -313,7 +315,7 @@ function courbe(cles) {
   };
 }
 
-const LONG = 4.69, DEMI = 0.925;
+const LONG = 4.69, DEMI = 0.925, ORIENTATION = -Math.PI / 2;
 const AXES = [1.5, -1.375], RAYON_ROUE = 0.335, RAYON_ARCHE = 0.395;
 // u : 0 = poupe, 1 = proue. Cotes en mètres, relevées sur la silhouette d'une berline fastback.
 const bas = courbe([[0, 0.36], [0.04, 0.25], [0.12, 0.18], [0.88, 0.18], [0.96, 0.21], [1, 0.27]]);
@@ -443,6 +445,8 @@ function creerScene() {
   const voiture = new THREE.Group();
   scene.add(voiture);
 
+  // Voiture de secours, générée par code : elle ne sert que si le modèle 3D ne se charge pas.
+  const secours = new THREE.Group();
   // Carrosserie : tôle noire vernie + pavillon vitré. Les passages de roue sont découpés dans le shader.
   const peinture = new THREE.MeshPhysicalMaterial({ color: 0x10152a, metalness: 0.75, roughness: 0.36, clearcoat: 1, clearcoatRoughness: 0.05, side: THREE.DoubleSide });
   const decoupe = (sh) => {
@@ -455,7 +459,7 @@ function creerScene() {
   const verre = new THREE.MeshPhysicalMaterial({ color: 0x020409, metalness: 0, roughness: 0.04, clearcoat: 1, clearcoatRoughness: 0, envMapIntensity: 0.9, side: THREE.DoubleSide });
   const plastique = new THREE.MeshStandardMaterial({ color: 0x05060a, roughness: 0.75, metalness: 0, side: THREE.DoubleSide });
   plastique.onBeforeCompile = decoupe;
-  voiture.add(new THREE.Mesh(creerCarrosserie(), [peinture, verre, plastique]));
+  secours.add(new THREE.Mesh(creerCarrosserie(), [peinture, verre, plastique]));
 
   // Roues, passages de roue, rétroviseurs.
   const noir = new THREE.MeshBasicMaterial({ color: 0x020308, side: THREE.DoubleSide });
@@ -477,25 +481,25 @@ function creerScene() {
     porte.position.set(x, RAYON_ROUE, 0.785 * cote);
     if (cote < 0) porte.rotation.y = Math.PI;
     porte.add(roue);
-    voiture.add(porte);
+    secours.add(porte);
     roues.push(roue);
     const p = new THREE.Mesh(passage, noir), fp = new THREE.Mesh(fondPassage, noir);
     p.position.set(x, RAYON_ROUE, 0.6 * cote);
     fp.position.set(x, RAYON_ROUE, 0.36 * cote);
-    voiture.add(p, fp);
+    secours.add(p, fp);
   }
   for (const cote of [1, -1]) {
     const retro = new THREE.Mesh(new THREE.SphereGeometry(0.1, 20, 14).scale(1, 0.62, 0.72), peinture);
     retro.position.set(0.63, 1.0, 0.98 * cote);
-    voiture.add(retro);
+    secours.add(retro);
   }
 
   // Optiques : elles s'allument quand l'encre monte.
   const phare = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, toneMapped: false });
   const feu = new THREE.MeshBasicMaterial({ color: 0xff2a1f, side: THREE.DoubleSide, toneMapped: false });
   for (const cote of [1, -1]) {
-    voiture.add(new THREE.Mesh(piece(0.93, 0.992, -4, -9.5, cote), phare));
-    voiture.add(new THREE.Mesh(piece(0.005, 0.075, -4, -10, cote), feu));
+    secours.add(new THREE.Mesh(piece(0.93, 0.992, -4, -9.5, cote), phare));
+    secours.add(new THREE.Mesh(piece(0.005, 0.075, -4, -10, cote), feu));
   }
   const halo = (() => {
     const c = document.createElement('canvas'); c.width = c.height = 128;
@@ -506,22 +510,64 @@ function creerScene() {
   })();
   const halos = [1, -1].map((cote) => {
     const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: halo, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0 }));
-    s.position.set(2.2, 0.68, 0.6 * cote); s.scale.setScalar(1.4);
+    s.position.set(1.98, 0.69, 0.74 * cote); s.scale.setScalar(1.15);
     voiture.add(s);
     return s;
   });
 
   // Reflet dans le bain : la même voiture, retournée, fondue dans l'eau.
   const refletMat = new THREE.ShaderMaterial({
-    transparent: true, depthWrite: false, side: THREE.DoubleSide,
+    transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4, side: THREE.DoubleSide,
     uniforms: { c: { value: new THREE.Color(0x1e3277) }, f: { value: 0.3 } },
-    vertexShader: 'varying float h; void main(){ h = position.y; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    vertexShader: 'varying float h; void main(){ h = -(modelMatrix * vec4(position, 1.0)).y; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
     fragmentShader: 'uniform vec3 c; uniform float f; varying float h; void main(){ gl_FragColor = vec4(c, f * smoothstep(0.85, 0.15, h)); }',
   });
-  const reflet = new THREE.Mesh(voiture.children[0].geometry, refletMat);
+  const reflet = new THREE.Group();
   reflet.scale.y = -1;
-  reflet.renderOrder = -2;
   scene.add(reflet);
+  // Deux passes : la profondeur d'abord, pour ne refléter que la silhouette et pas l'intérieur de la voiture.
+  const refletProfondeur = new THREE.MeshBasicMaterial({ colorWrite: false, side: THREE.DoubleSide });
+  const refleter = (objet) => {
+    for (const [matiere, ordre] of [[refletProfondeur, -2.5], [refletMat, -2]]) {
+      const copie = objet.clone();
+      // Seule l'enveloppe se reflète (carrosserie, vitres, roues, optiques) : c'est plus juste et bien plus léger.
+      const dehors = /^(primary|glass|wheels|hub|front_black|JUST_BLACK|Plastic|black_lights)|light/;
+      copie.traverse((o) => { if (!o.isMesh) return; if (o.material.name && !dehors.test(o.material.name)) { o.visible = false; return; } o.material = matiere; o.renderOrder = ordre; });
+      reflet.add(copie);
+    }
+  };
+
+  // Le modèle : Tesla Model 3 (2018) d'Ameer Studio, CC-BY 4.0. Voir models/tesla-model-3.LICENCE.txt.
+  const pharesModele = [], feuxModele = [];
+  let pret = false, debut = 0;
+  const montrer = (objet) => { voiture.add(objet); refleter(objet); pret = true; debut = performance.now(); };
+  const chargeur = new GLTFLoader();
+  chargeur.setMeshoptDecoder(MeshoptDecoder);
+  chargeur.load('models/tesla-model-3.glb', (gltf) => {
+    const m = gltf.scene;
+    // Mise à l'échelle réelle (4,69 m), roues au sol, proue vers +X.
+    let boite = new THREE.Box3().setFromObject(m);
+    const t = boite.getSize(new THREE.Vector3());
+    m.scale.multiplyScalar(LONG / Math.max(t.x, t.z));
+    if (t.z > t.x) m.rotation.y = ORIENTATION;
+    boite = new THREE.Box3().setFromObject(m);
+    const c = boite.getCenter(new THREE.Vector3());
+    m.position.set(-c.x, -boite.min.y, -c.z);
+    const laque = new THREE.MeshPhysicalMaterial({ color: 0x030407, metalness: 0.25, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.03, envMapIntensity: 0.6 });
+    m.traverse((o) => {
+      if (!o.isMesh) return;
+      const nom = o.material.name;
+      if (/^primary/.test(nom)) o.material = laque;
+      else if (/^glass/.test(nom)) { o.material.color.set(0x0a0d14); o.material.opacity = 0.82; o.material.roughness = 0.04; o.material.metalness = 0; }
+      else if (/^platnomor/.test(nom)) o.material.color.set(0x6f7480);
+      else if (/^wheels/.test(nom)) o.material.color.set(0xb9bec9);
+      else if (/front_light|light_night|foglight/.test(nom)) { o.material.emissive = new THREE.Color(0xdfe9ff); o.material.emissiveMap = o.material.map; pharesModele.push(o.material); }
+      else if (/rear_light|breaklight/.test(nom)) { o.material.emissive = new THREE.Color(0xff1a10); o.material.emissiveMap = o.material.map; feuxModele.push(o.material); }
+    });
+    const pivot = new THREE.Group();
+    pivot.add(m);
+    montrer(pivot);
+  }, undefined, () => { for (const s of halos) s.position.set(2.2, 0.68, Math.sign(s.position.z) * 0.6); montrer(secours); });
 
   // Ombre de contact et ondes à la surface.
   const ombreTex = (() => {
@@ -552,12 +598,12 @@ function creerScene() {
   taille();
   addEventListener('resize', taille);
 
-  const debut = performance.now();
   const lisseVue = { az: -100, el: 4, x: 0 };
   let propre = false;
   const cible = new THREE.Vector3(0, 0.62, 0);
 
   return (t) => {
+    if (!pret) return;
     const W = innerWidth, H = innerHeight;
     const rh = ancres.hero.getBoundingClientRect(), rp = ancres.plongee.getBoundingClientRect();
     const dansPlongee = rp.top < H * 1.2 && plongee.getBoundingClientRect().bottom > 0 && rh.bottom <= 0;
@@ -612,6 +658,8 @@ function creerScene() {
     phare.color.setScalar(mix(0.92, 2.4, allume));
     feu.color.setRGB(mix(0.5, 1.9, allume), mix(0.02, 0.12, allume), mix(0.02, 0.08, allume));
     for (const s of halos) s.material.opacity = allume * 0.9;
+    for (const m of pharesModele) m.emissiveIntensity = mix(0.5, 3.2, allume);
+    for (const m of feuxModele) m.emissiveIntensity = mix(0.35, 2.4, allume);
     refletMat.uniforms.c.value.setHex(plonge > 0.5 ? 0x5f7fc0 : 0x1e3277);
     refletMat.uniforms.f.value = mix(0.14, 0.16, plonge);
     ombre.material.opacity = mix(0.75, 0.5, plonge);
