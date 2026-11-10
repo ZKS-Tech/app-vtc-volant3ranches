@@ -204,11 +204,16 @@ Deno.serve(async () => {
     if (!cleBrevo || !expediteur) return new Response(JSON.stringify({ erreur: 'Brevo non configuré' }), { status: 503 });
     const secrete = cleProjet('secrete');
     const admin = createClient(url, secrete);
-    const { data: p } = await admin.from('parametres').select('*').eq('id', 1).single();
-    if (!p?.emails_actifs) return new Response(JSON.stringify({ envoyes: 0, raison: 'emails désactivés' }));
+    const { data: p, error: eP } = await admin.from('parametres').select('*').eq('id', 1).single();
+    if (eP || !p) {
+      console.error('emails : réglages illisibles', eP?.message);
+      return new Response(JSON.stringify({ envoyes: 0, raison: `réglages illisibles : ${eP?.message ?? 'aucune ligne'}` }), { status: 500 });
+    }
+    if (!p.emails_actifs) { console.log('emails : désactivés dans l’appli'); return new Response(JSON.stringify({ envoyes: 0, raison: 'emails désactivés' })); }
 
     const { data: file, error } = await admin.rpc('prendre_emails', { p_nombre: 20 });
-    if (error) throw new Error(error.message);
+    if (error) throw new Error(`prendre_emails : ${error.message}`);
+    console.log(`emails : ${file?.length ?? 0} à envoyer`);
     let envoyes = 0;
     for (const m of file ?? []) {
       try {
@@ -262,9 +267,10 @@ Deno.serve(async () => {
         await admin.rpc('email_resultat', { p_email: m.id, p_ok: false, p_message_id: null, p_erreur: err instanceof Error ? err.message : String(err) });
       }
     }
-    return new Response(JSON.stringify({ envoyes }), { headers: { 'Content-Type': 'application/json' } });
+    console.log(`emails : ${envoyes} envoyé(s) sur ${file?.length ?? 0}`);
+    return new Response(JSON.stringify({ envoyes, pris: file?.length ?? 0 }), { headers: { 'Content-Type': 'application/json' } });
   } catch (e) {
     console.error('emails', e);
-    return new Response(JSON.stringify({ erreur: 'Erreur du serveur d’emails' }), { status: 500 });
+    return new Response(JSON.stringify({ erreur: 'Erreur du serveur d’emails', detail: e instanceof Error ? e.message : String(e) }), { status: 500 });
   }
 });
