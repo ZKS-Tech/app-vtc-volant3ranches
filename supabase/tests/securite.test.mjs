@@ -85,6 +85,11 @@ if (process.argv[4]) {
     ok(true, 'migration 11 (comptes) appliquée sans erreur');
   }
   if (process.argv[14]) { await db.exec(readFileSync(process.argv[14], 'utf8')); ok(true, 'migration 12 (emails) appliquée sans erreur'); }
+  if (process.argv[15]) {
+    await db.exec(`do $$ begin if not exists (select 1 from pg_roles where rolname = 'service_role') then create role service_role nologin bypassrls; end if; end $$;`);
+    await db.exec(readFileSync(process.argv[15], 'utf8'));
+    ok(true, 'migration 13 (droits serveur) appliquée sans erreur');
+  }
 }
 
 
@@ -748,4 +753,21 @@ if (process.argv[14]) {
   r = await q(`select count(*)::int n from public.emails`);
   ok(r[0].n > 0, 'Fabrice voit le journal des emails');
   await srv(`update public.parametres set emails_actifs = false`);
+}
+
+if (process.argv[15]) {
+  console.log('--- droits des fonctions serveur');
+  const comme = async (role, sql) => { await db.exec(`reset role; set role ${role}`); try { return (await db.query(sql)).rows; } finally { await db.exec('reset role'); } };
+  r = await comme('service_role', `select emails_actifs from public.parametres where id = 1`);
+  ok(r.length === 1, 'le serveur lit les réglages (la panne des emails)');
+  r = await comme('service_role', `select count(*)::int n from public.prendre_emails(0)`);
+  ok(r.length === 1, 'le serveur peut prendre les emails en file');
+  r = await comme('service_role', `select count(*)::int n from public.courses`);
+  ok(r[0].n > 0, 'le serveur lit les courses (emails, PDF, SumUp)');
+  await db.exec(`reset role; create table public.table_future (id int); `);
+  r = await comme('service_role', `select count(*)::int n from public.table_future`);
+  ok(r[0].n === 0, 'les tables des prochaines migrations lui sont aussi accessibles');
+  await db.exec(`reset role; drop table public.table_future`);
+  await en(client);
+  await echoue(() => q(`select public.prendre_emails(1)`), 'un client n\'a toujours aucun accès aux fonctions du serveur');
 }

@@ -207,6 +207,13 @@ Réglage Supabase à faire une fois : **Authentication** › **Sign In / Provide
   qu'aux membres de l'équipe et quelques messages par heure. On le réactivera avec l'envoi d'emails
   par Brevo (prochaine étape), en même temps que « mot de passe oublié ».
 
+## Droits des fonctions serveur (migration 13) — à faire avant les emails, les PDF et SumUp
+
+**SQL Editor** › coller [`migrations/20261116000000_droits_serveur.sql`](migrations/20261116000000_droits_serveur.sql) › **Run**.
+Les projets Supabase récents ne donnent plus automatiquement accès aux tables au rôle des fonctions
+serveur (`service_role`) : sans cette migration, elles échouent avec « permission denied ». Les
+clients de l'appli ne gagnent aucun droit.
+
 ## Emails avec Brevo (migration 12 et fonction emails)
 
 Envoyés au client : demande reçue, acompte à régler, confirmation avec le **bon de commande en PDF**,
@@ -272,7 +279,7 @@ Les règles de prix et de sécurité sont vérifiées sur un PostgreSQL local, s
 cd supabase/tests && npm install && npm test
 ```
 
-Les 167 vérifications doivent afficher « OK ».
+Les 173 vérifications doivent afficher « OK ».
 
 Fonctions serveur (SumUp et la base simulés, aucun appel réel) :
 
