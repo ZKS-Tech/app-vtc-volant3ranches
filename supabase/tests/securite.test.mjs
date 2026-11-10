@@ -84,6 +84,7 @@ if (process.argv[4]) {
     await db.exec(readFileSync(process.argv[13], 'utf8'));
     ok(true, 'migration 11 (comptes) appliquée sans erreur');
   }
+  if (process.argv[14]) { await db.exec(readFileSync(process.argv[14], 'utf8')); ok(true, 'migration 12 (emails) appliquée sans erreur'); }
 }
 
 
@@ -669,4 +670,82 @@ if (process.argv[13]) {
   ok(r[0].n === 0, 'jeton expiré (15 min) : rien n\'est rattaché');
   await session(intrus, false);
   await echoue(() => q(`select * from public.fusions_comptes`), 'personne ne lit les jetons directement');
+}
+
+if (process.argv[14]) {
+  console.log('--- emails');
+  const srv = async (sql) => { await db.exec('reset role'); if (sql.includes(';')) { await db.exec(sql); return []; } return (await db.query(sql)).rows; };
+  const file = async (courseId) => srv(`select type, destinataire, document_id, statut from public.emails where course_id = '${courseId}' order by cree_le, type`);
+  await srv(`update public.parametres set acompte_pourcent = 0, paiements_test = false, emails_actifs = false`);
+  const cli = 'cccccccc-0000-0000-0000-000000000001';
+  await db.exec(`reset role; insert into auth.users values ('${cli}') on conflict do nothing`);
+  const demander = async (nom = 'Léa Martin', email = 'lea@exemple.fr') => {
+    await en(cli);
+    return (await q(`select * from public.creer_demande(
+      '{"ref":"castres-gare","libelle":"Gare de Castres","lat":43.6007,"lon":2.2329,"type":"gare"}',
+      '{"ref":"tls","libelle":"Aéroport Toulouse-Blagnac","lat":43.6293,"lon":1.3638,"type":"aeroport"}',
+      now() + interval '5 days', false, 1, 1, null, 'tesla', 5, 5, '${nom}', '06 11 11 11 11', '${email}', null)`))[0];
+  };
+
+  const d0 = await demander();
+  ok((await file(d0.id)).length === 0, 'emails désactivés : rien en file');
+
+  await srv(`update public.parametres set emails_actifs = true, email_chauffeur = 'fabrice@exemple.fr'; delete from net.envois`);
+  const d1 = await demander();
+  let f = await file(d1.id);
+  ok(f.some((x) => x.type === 'demande_recue' && x.destinataire === 'lea@exemple.fr') && f.some((x) => x.type === 'chauffeur_demande' && x.destinataire === 'fabrice@exemple.fr'),
+    `demande : email au client et copie à Fabrice (${f.map((x) => x.type).join(', ')})`);
+  r = await srv(`select count(*)::int n from net.envois where url like '%/functions/v1/emails'`);
+  ok(r[0].n >= 1, 'la fonction d\'envoi est réveillée aussitôt');
+
+  await en(fabrice); await q(`select public.repondre_demande('${d1.id}', true)`);
+  f = await file(d1.id);
+  const conf = f.find((x) => x.type === 'confirmation');
+  ok(conf && conf.document_id, 'confirmation envoyée avec le bon de commande joint');
+  await en(fabrice); await q(`select public.emettre_facture('${d1.id}', 'cb')`);
+  f = await file(d1.id);
+  ok(f.some((x) => x.type === 'facture' && x.document_id), 'facture envoyée avec son PDF');
+
+  const d2 = await demander();
+  await en(fabrice); await q(`select public.repondre_demande('${d2.id}', false, 'Indisponible à cet horaire')`);
+  ok((await file(d2.id)).some((x) => x.type === 'refus'), 'refus : email au client');
+
+  const d3 = await demander();
+  await en(cli); await q(`select public.annuler_course('${d3.id}')`);
+  f = await file(d3.id);
+  ok(f.some((x) => x.type === 'annulation') && f.some((x) => x.type === 'chauffeur_annulation'), 'annulation par le client : client et Fabrice prévenus');
+
+  // Pas d'adresse : rien ; pas de doublon
+  await en(fabrice);
+  const m = (await q(`select * from public.creer_course_manuelle(null, 'Sans Email', '06 99 99 99 99', null,
+    '{"ref":"albi","libelle":"Albi","lat":43.93,"lon":2.15,"type":"ville"}',
+    '{"ref":"tls","libelle":"Aéroport Toulouse-Blagnac","lat":43.63,"lon":1.36,"type":"aeroport"}',
+    now() + interval '3 days', false, 1, 1, null, 'tesla', 80, 70, null, 'telephone', null)`))[0];
+  ok((await file(m.id)).length === 0, 'client sans email : rien en file (et pas d\'erreur)');
+  await srv(`select public.mettre_email('refus', '${d2.id}', null, 'lea@exemple.fr', 'Léa')`);
+  ok((await file(d2.id)).filter((x) => x.type === 'refus').length === 1, 'jamais deux fois le même email');
+
+  // File : prise, échecs, relance
+  const pris = await srv(`select * from public.prendre_emails(100)`);
+  const repris = await srv(`select * from public.prendre_emails(100)`);
+  ok(pris.length >= 6 && repris.length === 0, `emails pris une seule fois (${pris.length})`);
+  const e1 = pris[0].id;
+  await srv(`select public.email_resultat('${e1}', false, null, 'Brevo 500')`);
+  ok((await srv(`select statut from public.emails where id = '${e1}'`))[0].statut === 'a_envoyer', 'échec : remis en file pour une nouvelle tentative');
+  await srv(`update public.emails set tentatives = 5 where id = '${e1}'; select public.email_resultat('${e1}', false, null, 'Brevo 500')`);
+  ok((await srv(`select statut from public.emails where id = '${e1}'`))[0].statut === 'erreur', 'après 5 échecs : marqué en erreur');
+  await srv(`select public.email_resultat('${pris[1].id}', true, '<msg@brevo>', null)`);
+  ok((await srv(`select statut, envoye_le from public.emails where id = '${pris[1].id}'`))[0].statut === 'envoye', 'envoi réussi noté');
+
+  // Droits
+  await en(cli);
+  await echoue(() => q(`select * from public.emails`).then((x) => { if (!x.length) throw new Error('aucun'); }), 'un client ne lit pas les emails');
+  await echoue(() => q(`select public.renvoyer_email('${e1}')`), 'un client ne peut pas renvoyer d\'email');
+  await echoue(() => q(`select public.prendre_emails(10)`), 'un client ne peut pas vider la file');
+  await en(fabrice);
+  await q(`select public.renvoyer_email('${e1}')`);
+  ok((await srv(`select statut, tentatives from public.emails where id = '${e1}'`))[0].tentatives === 0, 'Fabrice peut renvoyer un email en erreur');
+  r = await q(`select count(*)::int n from public.emails`);
+  ok(r[0].n > 0, 'Fabrice voit le journal des emails');
+  await srv(`update public.parametres set emails_actifs = false`);
 }
