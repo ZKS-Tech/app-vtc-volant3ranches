@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#101B45">
 <link rel="icon" href="img/logo.png">
 <link rel="preload" href="fonts/archivo-narrow-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="styles.css?v=4">
+<link rel="stylesheet" href="styles.css?v=7">
 <script>document.documentElement.classList.add('js')</script>
 <script type="importmap">{"imports":{"three":"./vendor/three.module.min.js"}}</script>
 </head>
@@ -45,6 +45,7 @@
   <nav aria-label="Sections">
     <a href="#fabrice">Votre chauffeur</a>
     <a href="#vehicules">Véhicules</a>
+    <a href="#application">L'application</a>
     <a href="#tarifs">Tarifs</a>
     <a href="#questions">Questions</a>
   </nav>
@@ -206,6 +207,38 @@
   </div>
 </section>
 
+<!-- L'application mobile -->
+<section class="appli cuve" id="application" aria-labelledby="t-appli" data-etape="0">
+  <div class="appli-fixe">
+    <div class="appli-texte">
+      <h2 id="t-appli" class="titre">Et pour réserver, tout tient dans la poche.</h2>
+      <ol class="appli-etapes">
+        <li><h3>Dites où vous allez</h3><p>Une adresse, l'aéroport ou une gare : Blagnac, Albi, Castres et Carcassonne sont déjà en raccourci.</p></li>
+        <li><h3>Voyez le prix tout de suite</h3><p>Tesla ou Van, le prix s'affiche avant que vous donniez vos coordonnées.</p></li>
+        <li><h3>Fabrice confirme</h3><p>Vous envoyez la demande, il la confirme sous 30 minutes. L'écran se teinte d'indigo quand c'est fait.</p></li>
+        <li><h3>Votre nom sur le panneau</h3><p>À l'arrivée, vous savez quel panneau chercher : Fabrice tient le même.</p></li>
+        <li><h3>Vos courses au même endroit</h3><p>À venir ou passées, avec leur état : envoyée, confirmée, terminée.</p></li>
+      </ol>
+      <p class="appli-bientot">L'application arrive sur iPhone et Android.</p>
+    </div>
+    <div class="appli-scene" aria-hidden="true">
+      <div class="telephone fantome"><div class="telephone-ecran"><img src="img/app/sombre.webp" alt="" width="780" height="1688" loading="lazy"></div></div>
+      <div class="telephone principal">
+        <div class="telephone-ecran">
+          <img src="img/app/accueil.webp" alt="" width="780" height="1688" loading="lazy">
+          <img src="img/app/vehicule.webp" alt="" width="780" height="1688" loading="lazy">
+          <img src="img/app/envoyee.webp" alt="" width="780" height="1688" loading="lazy">
+          <img class="encre" src="img/app/confirmee.webp" alt="" width="780" height="1688" loading="lazy">
+          <img src="img/app/panneau.webp" alt="" width="780" height="1688" loading="lazy">
+          <img src="img/app/courses.webp" alt="" width="780" height="1688" loading="lazy">
+        </div>
+        <span class="telephone-ilot"></span>
+        <span class="telephone-reflet"></span>
+      </div>
+    </div>
+  </div>
+</section>
+
 <!-- Tarifs -->
 <section class="bloc cuve tarifs" id="tarifs" aria-labelledby="t-tarifs">
   <h2 id="t-tarifs" class="titre" data-r="mots">Le prix d'abord, et vrai.</h2>
@@ -294,15 +327,23 @@
 
 <div class="ecran" id="ecran" aria-hidden="true">
   <div class="ecran-contenu">
-    <span class="ecran-marque"><img src="img/logo-blanc.png" alt="" width="64" height="64">Volant3ranches</span>
-    <strong>La suite, sur l'écran.</strong>
-    <span class="ecran-indice">Continuez à faire défiler</span>
+    <svg class="ecran-carte" id="ec-carte" viewBox="0 0 1000 640" preserveAspectRatio="xMidYMid slice"></svg>
+    <div class="ecran-fiche">
+      <span class="ecran-marque"><img src="img/logo-blanc.png" alt="" width="64" height="64">Volant3ranches</span>
+      <p class="ecran-lieux">
+        <span class="repere rond"></span><b id="ec-depart"></b>
+        <span class="repere carre"></span><b id="ec-arrivee"></b>
+      </p>
+      <p class="ecran-quand" id="ec-quand"></p>
+      <p class="ecran-prix"><b id="ec-prix"></b><span id="ec-km"></span></p>
+      <span class="ecran-indice">Continuez à faire défiler</span>
+    </div>
   </div>
 </div>
 <div class="cadre" aria-hidden="true"></div>
 
 <div class="avis-apercu" id="apercu" role="status" hidden>Aperçu visuel : l'envoi de la demande n'est pas encore branché.</div>
 
-<script type="module" src="main.js?v=4"></script>
+<script type="module" src="main.js?v=7"></script>
 </body>
 </html>

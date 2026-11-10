@@ -269,11 +269,31 @@ main, footer { position: relative; overflow-x: clip; }
   position: fixed; left: 0; top: 0; width: 100vw; height: 100vh; z-index: 4; transform-origin: 0 0; visibility: hidden; pointer-events: none;
   background: radial-gradient(120% 90% at 50% 110%, var(--indigo), var(--cuve) 62%); color: var(--blanc); will-change: transform; backface-visibility: hidden;
 }
-.ecran-contenu { position: absolute; inset: 0; display: grid; align-content: center; justify-items: center; gap: 3vh; text-align: center; opacity: var(--suite, 1); }
-.ecran-marque { display: flex; align-items: center; gap: 1.2vw; font-weight: 700; font-size: clamp(1.2rem, 2.6vw, 2.4rem); }
-.ecran-marque img { width: clamp(2.4rem, 5vw, 4.5rem); height: auto; }
-.ecran strong { font: 700 clamp(3.2rem, 11.5vw, 11rem)/.9 var(--titrage); letter-spacing: -.015em; max-width: 9ch; text-wrap: balance; }
-.ecran-indice { font-size: clamp(1.1rem, 2.4vw, 2.2rem); font-weight: 600; color: var(--feuille); }
+.ecran-contenu { position: absolute; inset: 0; opacity: var(--suite, 1); }
+.ecran-carte { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ecran-carte .ville { fill: var(--bain4); }
+.ecran-carte text { fill: var(--sur-cuve); font: 600 17px var(--texte); opacity: .75; }
+.ecran-carte .route { fill: none; stroke: var(--feuille); stroke-width: 6; stroke-linecap: round; stroke-dasharray: 2 16; animation: route 1.6s linear infinite; }
+.ecran-carte .route-fond { fill: none; stroke: rgba(201, 212, 92, .25); stroke-width: 16; stroke-linecap: round; }
+.ecran-carte .but { fill: var(--blanc); stroke: var(--cuve); stroke-width: 4; }
+.ecran-carte .but-nom { fill: var(--blanc); font: 700 26px var(--titrage); opacity: 1; paint-order: stroke; stroke: var(--cuve); stroke-width: 8px; stroke-linejoin: round; }
+.ecran-carte .auto { fill: var(--feuille); }
+@keyframes route { to { stroke-dashoffset: -36; } }
+.ecran-fiche {
+  position: absolute; left: 3.5vw; top: 7vh; bottom: 7vh; width: 34vw; padding: 4vh 2.6vw; border-radius: 2.2vw; display: grid; align-content: start; gap: 3vh;
+  background: rgba(8, 13, 36, .88); box-shadow: 0 2vh 6vh rgba(0, 0, 0, .45);
+}
+.ecran-marque { display: flex; align-items: center; gap: 1vw; font-weight: 700; font-size: 1.7vw; }
+.ecran-marque img { width: 3.2vw; height: auto; }
+.ecran-lieux { display: grid; grid-template-columns: auto 1fr; gap: 1.6vh 1.2vw; align-items: center; font: 700 3.1vw/1 var(--titrage); }
+.ecran-lieux .repere { width: 1.1vw; height: 1.1vw; grid-row: auto; }
+.ecran-lieux .repere.rond { border: .28vw solid var(--blanc); }
+.ecran-lieux .repere.carre { background: var(--blanc); }
+.ecran-quand { font-size: 1.6vw; color: var(--sur-cuve); font-weight: 600; }
+.ecran-prix { display: grid; gap: .6vh; }
+.ecran-prix b { font: 700 6vw/.9 var(--titrage); color: var(--feuille); font-variant-numeric: tabular-nums; }
+.ecran-prix span { font-size: 1.4vw; color: var(--sur-cuve); }
+.ecran-indice { align-self: end; font-size: 1.5vw; font-weight: 600; color: var(--blanc); margin-top: auto; }
 .cadre { position: fixed; inset: 0; z-index: 9; pointer-events: none; opacity: 0; transition: opacity .9s var(--sortie); }
 .cadre::before { content: ''; position: absolute; inset: clamp(5px, .7vw, 10px); border-radius: clamp(14px, 1.8vw, 26px); box-shadow: 0 0 0 60px #03050b, inset 0 0 0 1px rgba(195, 207, 242, .22), inset 0 0 60px rgba(3, 5, 12, .45); }
 .dans-ecran .cadre { opacity: 1; }
@@ -299,6 +319,44 @@ main, footer { position: relative; overflow-x: clip; }
 .fiche-tech li { display: grid; font-size: .9rem; color: var(--sur-cuve); }
 .fiche-tech b { font: 700 clamp(2.4rem, 4.4vw, 3.75rem)/1 var(--titrage); color: var(--blanc); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .van-texte .bouton { margin-top: 1.75rem; }
+
+/* ---------- L'application ---------- */
+.appli { height: 440vh; position: relative; z-index: 3; margin-top: clamp(6rem, 13vw, 11rem); }
+.appli-fixe { position: sticky; top: 0; height: 100svh; display: grid; grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); align-items: center; gap: clamp(2rem, 5vw, 5rem); padding: 5.5rem var(--marge) 2rem; overflow: hidden; }
+.appli .titre { max-width: 14ch; font-size: clamp(2.2rem, 4.4vw, 4.2rem); margin-bottom: clamp(1.5rem, 3.5vh, 2.75rem); }
+.appli-etapes { border-top: 1.5px solid var(--blanc); max-width: 34rem; }
+.appli-etapes li { border-bottom: 1px solid rgba(195, 207, 242, .3); padding: 1.6vh 0; opacity: .42; transition: opacity .6s var(--sortie); }
+.appli-etapes h3 { font: 700 clamp(1.3rem, 2.1vw, 1.9rem)/1.1 var(--titrage); display: flex; align-items: center; gap: .8rem; }
+.appli-etapes h3::before { content: ''; width: 10px; height: 10px; border: 2px solid currentColor; border-radius: 50%; flex: none; transition: background .4s, border-radius .4s, border-color .4s; }
+.appli-etapes li p { color: var(--sur-cuve); max-width: 44ch; padding-left: calc(10px + .8rem); overflow: hidden; max-height: 0; transition: max-height .7s var(--sortie), margin-top .7s var(--sortie); }
+.appli[data-etape="0"] li:nth-child(1), .appli[data-etape="1"] li:nth-child(2), .appli[data-etape="2"] li:nth-child(3), .appli[data-etape="3"] li:nth-child(4), .appli[data-etape="4"] li:nth-child(5) { opacity: 1; }
+.appli[data-etape="0"] li:nth-child(1) p, .appli[data-etape="1"] li:nth-child(2) p, .appli[data-etape="2"] li:nth-child(3) p, .appli[data-etape="3"] li:nth-child(4) p, .appli[data-etape="4"] li:nth-child(5) p { max-height: 6em; margin-top: .5rem; }
+.appli[data-etape="0"] li:nth-child(1) h3::before, .appli[data-etape="1"] li:nth-child(2) h3::before, .appli[data-etape="2"] li:nth-child(3) h3::before, .appli[data-etape="3"] li:nth-child(4) h3::before, .appli[data-etape="4"] li:nth-child(5) h3::before { background: var(--feuille); border-color: var(--feuille); border-radius: 0; }
+.appli-bientot { margin-top: clamp(1.25rem, 3vh, 2rem); font-weight: 600; color: var(--feuille); }
+
+.appli-scene { position: relative; height: 100%; display: grid; place-items: center; perspective: 1600px; }
+.telephone {
+  --l: min(21vw, 37vh, 330px); position: relative; width: var(--l); aspect-ratio: 780 / 1688; border-radius: calc(var(--l) * .15); padding: calc(var(--l) * .032);
+  background: linear-gradient(145deg, #2a2f3e, #05060b 40%, #171a24); transform-style: preserve-3d;
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, .16), 0 60px 80px -30px rgba(0, 0, 0, .75), 0 20px 30px -10px rgba(3, 5, 12, .5);
+}
+.telephone-ecran { position: relative; width: 100%; height: 100%; border-radius: calc(var(--l) * .12); overflow: hidden; background: var(--cuve); }
+.telephone-ecran img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: translateY(7%) scale(1.03); transition: opacity .55s var(--sortie), transform .9s var(--sortie); }
+.telephone-ilot { position: absolute; left: 50%; top: calc(var(--l) * .055); width: 28%; height: calc(var(--l) * .075); translate: -50% 0; border-radius: 99px; background: #05060b; }
+.telephone-reflet { position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(115deg, rgba(255, 255, 255, .16) 0%, transparent 28%, transparent 70%, rgba(255, 255, 255, .06)); }
+.principal {
+  transform: translateY(calc((1 - var(--arrivee, 1)) * 55vh)) rotateY(calc(var(--ry, 0) * 1deg)) rotateX(calc(var(--rx, 4) * 1deg)) rotateZ(calc((1 - var(--arrivee, 1)) * -14deg));
+}
+.fantome {
+  position: absolute; --l: min(15vw, 27vh, 240px); left: 62%; top: 16%; opacity: calc(.5 * var(--arrivee, 1)); filter: blur(2.5px) saturate(.9);
+  transform: translateY(calc(var(--derive, 0) * -22vh + (1 - var(--arrivee, 1)) * 40vh)) rotateY(-24deg) rotateZ(7deg);
+}
+.fantome img { opacity: 1; transform: none; }
+.appli[data-etape="0"] .principal img:nth-child(1), .appli[data-etape="1"] .principal img:nth-child(2), .appli[data-etape="2"] .principal img:nth-child(3),
+.appli[data-etape="3"] .principal img:nth-child(5), .appli[data-etape="4"] .principal img:nth-child(6) { opacity: 1; transform: none; }
+/* L'encre monte : la confirmation recouvre la demande envoyée, du bas vers le haut. */
+.principal img.encre { opacity: 0; transform: none; transition: opacity .3s; clip-path: inset(calc((1 - var(--encre, 0)) * 100%) 0 0 0); }
+.appli[data-etape="2"] .principal img.encre { opacity: 1; }
 
 /* ---------- Tarifs ---------- */
 .grille-tarifs { padding: clamp(1.25rem, 3vw, 2.5rem); overflow-x: auto; }
@@ -419,6 +477,13 @@ details[open] p { animation: entree .7s var(--sortie) both; }
   .mention { right: var(--marge); bottom: .6rem; font-size: .7rem; }
   .pellicule { height: 62vw; }
   .regles { grid-template-columns: 1fr; }
+  .appli { height: auto; }
+  .appli-fixe { position: static; height: auto; grid-template-columns: 1fr; padding-top: 0; overflow: visible; }
+  .appli-etapes li, .appli-etapes li p { opacity: 1; max-height: none; }
+  .appli-etapes li p { margin-top: .5rem; }
+  .appli-scene { height: auto; padding: 2rem 0; }
+  .telephone { --l: min(62vw, 300px); }
+  .fantome { display: none; }
   .liste-prestations li { grid-template-columns: 2.25rem 1fr; }
   .liste-prestations h3, .liste-prestations .ico { grid-row: auto; }
   .liste-prestations p, .liste-prestations span { grid-column: 2; margin-top: .5rem; }

@@ -23,5 +23,9 @@ conducteur pivote sur une charnière calculée au chargement, la caméra suit un
 siège, puis un calque HTML (`#ecran`) est plaqué en perspective sur l'écran central du modèle et grandit
 jusqu'à remplir la fenêtre. Ensuite la page continue normalement, entourée du cadre de l'écran (`.cadre`).
 
+La section « application » (`.appli`) montre les écrans de l'appli dans un téléphone qui pivote au
+défilement ; les écrans de `img/app/` sont découpés dans les planches de `docs/prototype/`.
+L'écran de bord affiche le trajet choisi à l'accueil sur une carte schématique du Tarn.
+
 Aperçu seulement : l'envoi de la demande n'est pas branché, et l'estimation est calculée à vol
 d'oiseau (× 1,25), comme l'application hors ligne. Le prix exact viendra de l'itinéraire routier.

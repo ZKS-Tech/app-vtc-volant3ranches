@@ -109,6 +109,27 @@ function rouler(el, cible, format) {
   requestAnimationFrame(pas);
 }
 
+// L'écran de bord de la Tesla affiche le trajet choisi à l'accueil, sur une carte du Tarn.
+const carte = $('#ec-carte');
+const surCarte = (l) => [430 + ((l.lon - 1.3) / 1.15) * 500, 60 + ((43.95 - l.lat) / 0.78) * 520];
+carte.innerHTML = lieux.filter((l) => l.type === 'ville').map((l) => { const [x, y] = surCarte(l); return `<circle class="ville" cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="5"/><text x="${(x + 12).toFixed(0)}" y="${(y + 6).toFixed(0)}">${l.nom.split(',')[0]}</text>`; }).join('') + '<g id="ec-route"></g>';
+function majEcran(a, b, km, montant) {
+  $('#ec-depart').textContent = a.court || a.nom;
+  $('#ec-arrivee').textContent = b.court || b.nom;
+  const d = new Date((cDate.value || iso(demain)) + 'T12:00');
+  $('#ec-quand').textContent = `${d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à ${(cHeure.value || '09:00').replace(':', 'h')}`;
+  $('#ec-prix').textContent = montant ? euros(montant) : '';
+  $('#ec-km').textContent = km ? `${km.toLocaleString('fr-FR')} km en Tesla · estimation` : 'Choisissez deux lieux différents à l\'accueil';
+  const [x1, y1] = surCarte(a), [x2, y2] = surCarte(b);
+  // Une route légèrement courbe entre les deux points.
+  const mx = (x1 + x2) / 2 - (y2 - y1) * 0.18, my = (y1 + y2) / 2 + (x2 - x1) * 0.18;
+  const chemin = `M${x1.toFixed(0)} ${y1.toFixed(0)} Q${mx.toFixed(0)} ${my.toFixed(0)} ${x2.toFixed(0)} ${y2.toFixed(0)}`;
+  $('#ec-route').innerHTML = km ? `<path class="route-fond" d="${chemin}"/><path class="route" d="${chemin}"/>
+    <circle class="but" cx="${x1.toFixed(0)}" cy="${y1.toFixed(0)}" r="11"/><rect class="but" x="${(x2 - 10).toFixed(0)}" y="${(y2 - 10).toFixed(0)}" width="20" height="20"/>
+    ${[[x1, y1, a, x1 <= x2], [x2, y2, b, x2 < x1]].map(([x, y, l, ouest]) => `<text class="but-nom" text-anchor="${ouest ? 'start' : 'start'}" x="${(ouest ? x - 6 : x + 20).toFixed(0)}" y="${(ouest ? y + 44 : y - 14).toFixed(0)}">${l.court || l.nom}</text>`).join('')}
+    <circle class="auto" r="9"><animateMotion dur="5s" repeatCount="indefinite" path="${chemin}"/></circle>` : '';
+}
+
 function estimer() {
   const a = lieux.find((l) => l.id === sDepart.value), b = lieux.find((l) => l.id === sArrivee.value);
   for (const p of $$('.puce')) p.setAttribute('aria-pressed', String(p.dataset.id === a.id || p.dataset.id === b.id));
@@ -117,6 +138,7 @@ function estimer() {
     detail.textContent = '· choisissez deux lieux différents';
     $('#est-tesla').textContent = $('#est-van').textContent = '–';
     roulements.delete($('#est-tesla')); roulements.delete($('#est-van'));
+    majEcran(a, b, 0, 0);
     return;
   }
   const km = distance(a, b);
@@ -126,6 +148,7 @@ function estimer() {
   const arrondi = (v) => euros(Math.round(v / 0.5) * 0.5);
   rouler($('#est-tesla'), prix(offres.tesla, km, maj.length), arrondi);
   rouler($('#est-van'), prix(offres.van, km, maj.length), arrondi);
+  majEcran(a, b, km, prix(offres.tesla, km, maj.length));
 }
 for (const c of [sDepart, sArrivee, cDate, cHeure]) c.addEventListener('change', estimer);
 $('#inverser').addEventListener('click', () => { [sDepart.value, sArrivee.value] = [sArrivee.value, sDepart.value]; estimer(); });
@@ -171,6 +194,7 @@ for (const el of $$('[data-r]')) vus.observe(el);
 const plongee = $('.plongee'), plongeeFixe = $('.plongee-fixe'), reperes = $$('.reperes li'), pellicule = $('#pellicule'), barre = $('#barre');
 const PART_PLONGEE = 0.54;
 const ecranDom = $('#ecran');
+const appli = $('.appli');
 const etat = { pb: 0, embarquement: false, p: 0, niveau: 0, trouble: 0, fond: 0, souris: [0, 0], dernierY: 0 };
 let enCuve = null;
 
@@ -198,6 +222,18 @@ function mesurer() {
 
   const cuve = etat.niveau > 0.5;
   if (cuve !== enCuve) { enCuve = cuve; document.body.classList.toggle('en-cuve', cuve); }
+
+  // L'application : le téléphone arrive, pivote, et ses écrans défilent avec les étapes.
+  const ra = appli.getBoundingClientRect();
+  if (ra.top < vh * 1.2 && ra.bottom > -vh * 0.2) {
+    const q = borne(-ra.top / Math.max(1, ra.height - vh)), pas = Math.min(4, Math.floor(q * 5)), local = q * 5 - pas;
+    if (appli.dataset.etape !== String(pas)) appli.dataset.etape = pas;
+    appli.style.setProperty('--arrivee', (calme ? 1 : 1 - Math.pow(1 - borne((vh - ra.top) / (vh * 0.95)), 3)).toFixed(3));
+    appli.style.setProperty('--ry', (calme ? -10 : mix(22, -20, q) + etat.souris[0] * 4).toFixed(2));
+    appli.style.setProperty('--rx', (calme ? 3 : 5 - etat.souris[1] * 3).toFixed(2));
+    appli.style.setProperty('--derive', q.toFixed(3));
+    appli.style.setProperty('--encre', (pas === 2 ? lisse(0.3, 0.8, local) : 0).toFixed(3));
+  }
 
   // La pellicule glisse latéralement pendant qu'elle traverse l'écran.
   const pr = pellicule.getBoundingClientRect();
@@ -665,7 +701,8 @@ function creerScene() {
     const dansPlongee = rp.top < H * 1.2 && plongee.getBoundingClientRect().bottom > 0 && rh.bottom <= 0;
     const r = dansPlongee ? rp : rh;
     if (r.bottom < -H * 0.3 || r.top > H * 1.3) {
-      if (!propre) { rendu.clear(); propre = true; }
+      // Hors de la séquence : plus de voiture ni d'écran de bord par-dessus la page.
+      if (!propre) { rendu.clear(); propre = true; ecranDom.style.visibility = 'hidden'; toile.style.opacity = '1'; lisseVue.pb = etat.pb > 0.5 ? 1 : 0; }
       return;
     }
     propre = false;
