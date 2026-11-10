@@ -90,6 +90,7 @@ if (process.argv[4]) {
     await db.exec(readFileSync(process.argv[15], 'utf8'));
     ok(true, 'migration 13 (droits serveur) appliquée sans erreur');
   }
+  if (process.argv[16]) { await db.exec(readFileSync(process.argv[16], 'utf8')); ok(true, 'migration 14 (arrondi) appliquée sans erreur'); }
 }
 
 
@@ -770,4 +771,26 @@ if (process.argv[15]) {
   await db.exec(`reset role; drop table public.table_future`);
   await en(client);
   await echoue(() => q(`select public.prendre_emails(1)`), 'un client n\'a toujours aucun accès aux fonctions du serveur');
+}
+
+if (process.argv[16]) {
+  console.log('--- ligne d\'arrondi');
+  const srv = async (sql) => { await db.exec('reset role'); return (await db.query(sql)).rows; };
+  await srv(`update public.parametres set acompte_pourcent = 0, paiements_test = false`);
+  await en(fabrice);
+  const m = (await q(`select * from public.creer_course_manuelle(null, 'Arrondi Test', '06 12 12 12 12', null,
+    '{"ref":"lavaur","libelle":"Lavaur","lat":43.6989,"lon":1.8191,"type":"ville"}',
+    '{"ref":"tls","libelle":"Aéroport Toulouse-Blagnac","lat":43.6293,"lon":1.3638,"type":"aeroport"}',
+    now() + interval '9 days' + interval '3 hours', false, 1, 1, null, 'tesla', 50, 45, null, 'telephone', null)`))[0];
+  const bc = (await srv(`select contenu from public.documents where course_id = '${m.id}' and type = 'commande'`))[0].contenu;
+  const l0 = bc.lignes[0];
+  ok(Number(l0.prix_unitaire_ht) === Math.round(Number(m.prix_km) / 1.1 * 1000) / 1000, `prix au km HT au millième (${l0.prix_unitaire_ht} € pour ${m.prix_km} € TTC)`);
+  const somme = bc.lignes.reduce((t, l) => t + Number(l.total_ht), 0);
+  ok(Math.abs(somme - Number(bc.total_ht)) < 0.001, `les lignes font toujours le total HT (${bc.lignes.map((l) => `${l.libelle} ${l.total_ht}`).join(' + ')} = ${bc.total_ht})`);
+  ok(bc.lignes.length === 1 || bc.lignes[1].libelle.startsWith('Arrondi tarifaire à 0,50 €') || bc.lignes[1].libelle.startsWith('Complément'), `libellé explicite (${bc.lignes[1]?.libelle ?? 'aucune ligne d\'arrondi'})`);
+  // Le cas du bon BC-2026-0003 : 63,5 km à 1,80 € TTC = 114,30 € arrondi à 114,50 €.
+  await srv(`update public.courses set distance_km = 63.5, prix_km = 1.80, montant = 114.50, prix_ajuste = false, aller_retour = false where id = '${m.id}'`);
+  const c2 = (await srv(`select public.contenu_document('${m.id}', 'commande', 'BC-X', null) as c`))[0].c;
+  ok(Number(c2.lignes[0].prix_unitaire_ht) === 1.636 && c2.lignes[1]?.libelle === 'Arrondi tarifaire à 0,50 €' && Number(c2.lignes[1].total_ht) === 0.2 && Number(c2.total_ht) === 104.09,
+    `cas réel : ${c2.lignes.map((l) => `${l.libelle} ${l.total_ht}`).join(' + ')} = ${c2.total_ht} HT`);
 }

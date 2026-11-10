@@ -12,8 +12,8 @@ const base = {
   client: { numero: 'C-0012', nom: 'Sophie Laurent', entreprise: 'Laurent Conseil', adresse: '3 rue des Lices', code_postal: '81000', ville: 'Albi', telephone: '06 44 55 66 77', email: 'sophie@exemple.fr' },
   course: { date: '12/11/2026', heure: '06h15', passagers: 2, offre: 'Offre Confort', offre_id: 'tesla', vehicule: 'Tesla Model 3 Performance', depart: 'Albi, Place du Vigan, 81000 Albi', arrivee: 'Aéroport Toulouse-Blagnac, Terminal, 31700 Blagnac', aller_retour: false, numero_vol_train: 'AF 6127' },
   lignes: [
-    { libelle: 'Transfert : Offre Confort', detail: 'Véhicule avec chauffeur · Tesla Model 3 Performance', quantite: 85.4, unite: 'km', prix_unitaire_ht: 1.64, total_ht: 140.06 },
-    { libelle: 'Arrondi', detail: null, quantite: null, unite: null, prix_unitaire_ht: null, total_ht: 0.08 },
+    { libelle: 'Transfert : Offre Confort', detail: 'Véhicule avec chauffeur · Tesla Model 3 Performance', quantite: 85.4, unite: 'km', prix_unitaire_ht: 1.636, total_ht: 139.71 },
+    { libelle: 'Arrondi tarifaire à 0,50 €', detail: null, quantite: null, unite: null, prix_unitaire_ht: null, total_ht: 0.43 },
   ],
   total_ht: 140.14, taux_tva: 10, tva: 14.01, total_ttc: 154.15,
 };

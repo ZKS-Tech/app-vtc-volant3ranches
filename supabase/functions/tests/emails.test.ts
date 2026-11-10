@@ -71,6 +71,7 @@ Deno.test('confirmation : envoyée par Brevo avec le bon de commande en PDF', as
   assertEquals(atob(c.attachment[0].content), '%PDF-1.7 faux pdf de test');
   assert(!c.htmlContent.includes('<b>Martin'), 'aucun HTML injecté par le nom du client');
   assert(c.htmlContent.includes('17,30 €') && c.htmlContent.includes('155,70 €'), 'acompte et reste à payer');
+  assert(c.htmlContent.includes('src="http://supabase.test/functions/v1/emails?logo=1"'), 'logo dans le bandeau');
   const fin = appels.find((a) => a.url.includes('email_resultat'))!;
   assertEquals((fin.corps as Record<string, unknown>).p_ok, true);
   const sortie = Deno.env.get('EMAILS_SORTIE');
@@ -121,6 +122,17 @@ Deno.test('chaque type d’email a un contenu complet', async () => {
     if (sortie) await Deno.writeTextFile(`${sortie}/${type}.html`, html);
   }
   assertEquals(module.quand('2026-11-12T08:00:00Z'), 'jeudi 12 novembre à 9h00');
+  assertEquals(module.de('Evan Legouez'), 'd’Evan Legouez');
+  assertEquals(module.de('Léa Martin'), 'de Léa Martin');
 });
 
 globalThis.addEventListener('unload', () => { globalThis.fetch = avant; });
+
+Deno.test('le logo du bandeau est servi en PNG, mis en cache, sans toucher à la file', async () => {
+  appels = [];
+  const r = await envoyer(new Request('http://local/functions/v1/emails?logo=1'));
+  assertEquals(r.headers.get('Content-Type'), 'image/png');
+  const octets = new Uint8Array(await r.arrayBuffer());
+  assertEquals([...octets.slice(1, 4)].map((b) => String.fromCharCode(b)).join(''), 'PNG');
+  assertEquals(appels.length, 0);
+});

@@ -50,6 +50,8 @@ const euros = (n: number) => {
   return `${n < 0 ? '-' : ''}${e.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')},${c} €`;
 };
 const nombre = (n: number, dec = 2) => n.toFixed(dec).replace('.', ',');
+// Prix au km HT : au millième quand il le faut (1,636 €), sinon au centime.
+const prixUnitaire = (n: number) => (Math.round(n * 100) === Math.round(n * 1000) / 10 ? euros(n) : `${nombre(n, 3)} €`);
 // Polices standard du PDF : on remplace les rares caractères qu'elles ne savent pas écrire.
 const propre = (t: string | null | undefined) => (t ?? '').replace(/[  ]/g, ' ').replace(/[→]/g, '>').replace(/[^\x20-\x7E -ÿ€’'«»…·–—]/g, '');
 
@@ -142,7 +144,7 @@ export async function rendrePdf(c: Contenu): Promise<Uint8Array> {
     t(page, lignesTexte[0], cols[0] + 5, y + h - 12, { f: g, size: 8.5, max: cols[1] - cols[0] - 10 });
     lignesTexte.slice(1).forEach((d, k) => t(page, d, cols[0] + 5, y + h - 22 - k * 10, { size: 7.5, color: GRIS }));
     if (l.quantite !== null) t(page, `${nombre(Number(l.quantite), 1)} ${l.unite ?? ''}`, 0, y + h - 12, { size: 9, droite: cols[2] - 6 });
-    if (l.prix_unitaire_ht !== null) t(page, euros(Number(l.prix_unitaire_ht)), 0, y + h - 12, { size: 9, droite: cols[3] - 6 });
+    if (l.prix_unitaire_ht !== null) t(page, prixUnitaire(Number(l.prix_unitaire_ht)), 0, y + h - 12, { size: 9, droite: cols[3] - 6 });
     t(page, euros(Number(l.total_ht)), 0, y + h - 12, { size: 9, droite: cols[4] - 6 });
   }
   for (const [lib, val] of [['Lieu de prise en charge :', c.course.depart], ['Lieu de destination :', c.course.arrivee]] as const) {

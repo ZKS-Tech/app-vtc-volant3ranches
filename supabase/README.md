@@ -178,6 +178,10 @@ Mise en place :
    [`functions/document-pdf/index.ts`](functions/document-pdf/index.ts), **Deploy**, puis désactiver
    « Verify JWT ». Le PDF est créé à la première ouverture puis conservé.
 
+Ligne d'arrondi (migration 14, [`migrations/20261117000000_arrondi.sql`](migrations/20261117000000_arrondi.sql)) :
+le prix au km HT est affiché au millième, et la seule différence restante est l'« Arrondi tarifaire
+à 0,50 € » (les écarts d'un centime sont intégrés à la ligne principale).
+
 Les informations de l'entreprise (raison sociale, siège, SIREN, n° de TVA, taux de TVA) sont dans
 **Table Editor** › `parametres` ; elles sont recopiées dans chaque pièce au moment de l'émission.
 
@@ -279,7 +283,7 @@ Les règles de prix et de sécurité sont vérifiées sur un PostgreSQL local, s
 cd supabase/tests && npm install && npm test
 ```
 
-Les 173 vérifications doivent afficher « OK ».
+Les 178 vérifications doivent afficher « OK ».
 
 Fonctions serveur (SumUp et la base simulés, aucun appel réel) :
 
