@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.sumup-webhook]
 verify_jwt = false
+
+[functions.emails]
+verify_jwt = false

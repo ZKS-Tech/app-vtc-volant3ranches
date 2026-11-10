@@ -215,14 +215,17 @@ Deno.serve(async (req) => {
     const url = Deno.env.get('SUPABASE_URL')!;
     const jeton = (req.headers.get('Authorization') ?? '').replace(/^Bearer\s+/i, '');
     const { document_id } = await req.json().catch(() => ({}));
-    if (!jeton || typeof document_id !== 'string') return reponse({ erreur: 'Requête invalide' }, 400);
+    if (typeof document_id !== 'string') return reponse({ erreur: 'Requête invalide' }, 400);
+    const admin = createClient(url, cleProjet('secrete'));
+    // Appel interne (fonction « emails ») : authentifié par la clé secrète du projet, jamais exposée.
+    const interne = req.headers.get('x-cle-interne') === cleProjet('secrete');
+    if (!interne && !jeton) return reponse({ erreur: 'Requête invalide' }, 400);
 
-    // Lecture avec la session de l'utilisateur : la base vérifie qu'il a le droit de voir ce document.
-    const utilisateur = createClient(url, cleProjet('publique'), { global: { headers: { Authorization: `Bearer ${jeton}` } } });
-    const { data: doc } = await utilisateur.from('documents').select('id, numero, type, contenu, pdf_chemin').eq('id', document_id).maybeSingle();
+    // Sinon, lecture avec la session de l'utilisateur : la base vérifie qu'il a le droit de voir ce document.
+    const lecteur = interne ? admin : createClient(url, cleProjet('publique'), { global: { headers: { Authorization: `Bearer ${jeton}` } } });
+    const { data: doc } = await lecteur.from('documents').select('id, numero, type, contenu, pdf_chemin').eq('id', document_id).maybeSingle();
     if (!doc) return reponse({ erreur: 'Document introuvable' }, 404);
 
-    const admin = createClient(url, cleProjet('secrete'));
     let chemin = doc.pdf_chemin as string | null;
     if (!chemin) {
       chemin = `${doc.type === 'facture' ? 'factures' : 'bons-de-commande'}/${doc.numero}.pdf`;
