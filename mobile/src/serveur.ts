@@ -491,3 +491,50 @@ export async function majProfil(nom: string, telephone: string): Promise<Profil>
   if (error) throw new Error(messageAuth(error.message));
   return data as Profil;
 }
+
+// ——— Emails (migration 12 et fonction emails) ———
+export type EmailEnvoye = {
+  id: string; type: string; destinataire: string; statut: 'a_envoyer' | 'envoi' | 'envoye' | 'erreur';
+  erreur: string | null; tentatives: number; cree_le: string; envoye_le: string | null; course_id: string | null;
+};
+export type ReglagesEmails = { emails_actifs: boolean; emails_copie_chauffeur: boolean; email_chauffeur: string | null };
+
+export async function chargerReglagesEmails(): Promise<ReglagesEmails | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase.from('parametres').select('emails_actifs, emails_copie_chauffeur, email_chauffeur').eq('id', 1).maybeSingle();
+  if (error) return null; // migration 12 pas encore faite
+  return data as ReglagesEmails;
+}
+export async function majReglagesEmails(v: Partial<ReglagesEmails>) {
+  if (!supabase) throw new Error('Serveur non configuré');
+  verifier(await supabase.from('parametres').update(v).eq('id', 1));
+}
+export async function chargerEmails(): Promise<EmailEnvoye[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase.from('emails').select('id, type, destinataire, statut, erreur, tentatives, cree_le, envoye_le, course_id')
+    .order('cree_le', { ascending: false }).limit(60);
+  if (error) return [];
+  return data as EmailEnvoye[];
+}
+export const renvoyerEmail = (id: string) => rpc<null>('renvoyer_email', { p_email: id });
+
+// ——— Mot de passe oublié : code à 6 chiffres reçu par email ———
+export async function envoyerCodeConnexion(email: string) {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const { error } = await supabase.auth.signInWithOtp({ email: email.trim().toLowerCase(), options: { shouldCreateUser: false } });
+  if (error) throw new Error(/signups? not allowed|not found|user/i.test(error.message) ? 'Aucun compte avec cet email.' : messageAuth(error.message));
+}
+// Vérifie le code, connecte le compte (les courses de l'invité le suivent) et change le mot de passe.
+export async function reinitialiserMotDePasse(email: string, code: string, motDePasse: string): Promise<{ uid: string; chauffeur: boolean; rattachees: number }> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const avant = await sessionActuelle();
+  let jeton: string | null = null;
+  if (avant?.anonyme) jeton = ((await supabase.rpc('preparer_fusion')).data as string | null) ?? null;
+  const { data, error } = await supabase.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code.trim(), type: 'email' });
+  if (error || !data.user) throw new Error(/expired|invalid/i.test(error?.message ?? '') ? 'Code incorrect ou expiré.' : messageAuth(error?.message));
+  const r = await supabase.auth.updateUser({ password: motDePasse });
+  if (r.error) throw new Error(messageAuth(r.error.message));
+  let rattachees = 0;
+  if (jeton) rattachees = Number((await supabase.rpc('fusionner_compte', { p_jeton: jeton })).data ?? 0);
+  return { uid: data.user.id, chauffeur: await estChauffeur(), rattachees };
+}

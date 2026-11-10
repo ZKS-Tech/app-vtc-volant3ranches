@@ -75,8 +75,8 @@ export default function Profil() {
         <LigneNotifications sous="Confirmation, refus, messages de Fabrice et rappel la veille" />
         <View style={[s.ligne, s.trait]}>
           <View style={{ flex: 1 }}>
-            <Text style={type.body}>Email récapitulatif</Text>
-            <Text style={type.small}>Bientôt : pratique pour les notes de frais</Text>
+            <Text style={type.body}>Emails</Text>
+            <Text style={type.small}>Confirmation avec bon de commande, puis facture en PDF : envoyés à l’adresse de vos réservations</Text>
           </View>
         </View>
       </View>

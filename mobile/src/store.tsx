@@ -3,7 +3,7 @@ import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useSt
 import { OffreId, appliquerTarifs, lieu, offre, prix, trajet } from './data';
 import {
   annulerCourse, chargerTarifs, lienAcompte, payerAcompteTest, rembourserTout,
-  Profil, connecterClient as connecterClientServeur, creerCompte as creerCompteServeur, majProfil as majProfilServeur, monProfil, sessionActuelle, connexionChauffeur, connexionInvite, creerDemande, deconnexion, ecouterMesCourses,
+  Profil, reinitialiserMotDePasse as reinitialiserServeur, connecterClient as connecterClientServeur, creerCompte as creerCompteServeur, majProfil as majProfilServeur, monProfil, sessionActuelle, connexionChauffeur, connexionInvite, creerDemande, deconnexion, ecouterMesCourses,
   estChauffeur, mesCourses, supabase,
 } from './serveur';
 
@@ -134,6 +134,8 @@ type Store = {
   compte: (Profil & { email: string | null }) | null;
   creerCompte: (p: { nom: string; telephone: string; email: string; motDePasse: string }) => Promise<'ok' | 'confirmation'>;
   connecterClient: (email: string, motDePasse: string) => Promise<number>;
+  /** Mot de passe oublié : code reçu par email + nouveau mot de passe ; connecte le compte. */
+  reinitialiserMotDePasse: (email: string, code: string, motDePasse: string) => Promise<number>;
   deconnecterClient: () => Promise<void>;
   majProfil: (nom: string, telephone: string) => Promise<void>;
   /** Change à chaque changement de compte (sert à réenregistrer le téléphone pour les notifications). */
@@ -290,6 +292,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         await chargerProfil();
         activerNotifications();
         return r;
+      },
+      reinitialiserMotDePasse: async (email, code, motDePasse) => {
+        const r = await reinitialiserServeur(email, code, motDePasse);
+        if (r.chauffeur) { canal.current?.unsubscribe(); setCourses([]); setRole('chauffeur'); activerNotifications(); return 0; }
+        setBrouillon((b) => ({ ...b, nom: '', telephone: '', email: '' }));
+        await demarrerClient(r.uid);
+        await chargerProfil();
+        activerNotifications();
+        return r.rattachees;
       },
       connecterClient: async (email, motDePasse) => {
         const r = await connecterClientServeur(email, motDePasse);

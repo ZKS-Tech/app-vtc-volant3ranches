@@ -151,5 +151,8 @@ règles sont vérifiées par un jeu de 21 tests exécutés sur un PostgreSQL loc
 - ✅ **Mode test (faux argent)** (migration 10) : paiements et remboursements simulés pour essayer tout
   le parcours ; pièces numérotées à part (TEST-…), effaçables, sans toucher aux vrais numéros.
 
+- ✅ **Emails** (Brevo ; migration 12, fonction `emails`) : file d'attente en base, envoi avec PDF
+  (bon de commande, facture), relances automatiques, journal pour Fabrice ; mot de passe oublié par code.
+
 **Ensuite :** SMS, suivi de Fabrice en approche, version anglaise, paiement en ligne, factures
 entreprise, formulaire du site branché sur la même base.

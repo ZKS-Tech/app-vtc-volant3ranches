@@ -18,7 +18,7 @@ export default function Gestion() {
   const [sortie, setSortie] = useState(false);
   useEffect(() => { if (!demo) emailConnecte().then(setEmail); }, [demo]);
 
-  const Lien = ({ icone, titre, sous, vers, trait }: { icone: IconName; titre: string; sous: string; vers: '/chiffre-affaires' | '/tarifs' | '/annonces' | '/documents'; trait?: boolean }) => (
+  const Lien = ({ icone, titre, sous, vers, trait }: { icone: IconName; titre: string; sous: string; vers: '/chiffre-affaires' | '/tarifs' | '/annonces' | '/documents' | '/emails'; trait?: boolean }) => (
     <Pressable onPress={() => router.push(vers)} style={({ pressed }) => [s.lien, trait && s.trait, pressed && { opacity: 0.6 }]} accessibilityRole="button">
       <Ionicons name={icone} size={22} color={c.accent} />
       <View style={{ flex: 1 }}>
@@ -36,6 +36,7 @@ export default function Gestion() {
         <Lien icone="stats-chart-outline" titre="Chiffre d'affaires" sous="Recettes, courses, kilomètres, annulations" vers="/chiffre-affaires" trait />
         <Lien icone="pricetags-outline" titre="Tarifs et jours fériés" sous="Prix au km, minimums, nuit, week-end, attentes" vers="/tarifs" trait />
         <Lien icone="megaphone-outline" titre="Annonces et absences" sous="Vacances, indisponibilités, informations aux clients" vers="/annonces" trait />
+        <Lien icone="mail-outline" titre="Emails" sous="Activer, copie pour vous, journal des envois" vers="/emails" trait />
       </View>
 
       <Titre>Être prévenu</Titre>

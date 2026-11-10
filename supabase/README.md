@@ -207,6 +207,52 @@ Réglage Supabase à faire une fois : **Authentication** › **Sign In / Provide
   qu'aux membres de l'équipe et quelques messages par heure. On le réactivera avec l'envoi d'emails
   par Brevo (prochaine étape), en même temps que « mot de passe oublié ».
 
+## Emails avec Brevo (migration 12 et fonction emails)
+
+Envoyés au client : demande reçue, acompte à régler, confirmation avec le **bon de commande en PDF**,
+refus, acompte non réglé, annulation, remboursement, **facture en PDF**. À Fabrice (copie, désactivable) :
+nouvelle demande, annulation par un client. La base met chaque email en file d'attente ; la fonction
+`emails` les envoie par Brevo, réessaie en cas d'échec (5 tentatives) et ne renvoie jamais deux fois
+le même. Journal et réglages : espace chauffeur › Gestion › **Emails**.
+
+1. **SQL Editor** › coller [`migrations/20261115000000_emails.sql`](migrations/20261115000000_emails.sql) › **Run**.
+   Les emails restent désactivés tant qu'on ne les active pas dans l'appli.
+2. **Compte Brevo** (brevo.com, offre gratuite : 300 emails par jour) créé avec l'email de l'entreprise.
+3. **Expéditeur**, dans Brevo › *Senders, Domains & Dedicated IPs* :
+   - pour tester tout de suite : ajouter une adresse d'expéditeur et la valider avec le lien reçu ;
+   - pour de vrai : **ajouter le domaine** `volant3ranches-vtc.fr`. Brevo donne 3 ou 4 enregistrements
+     DNS (code Brevo, DKIM, DMARC) à ajouter chez l'hébergeur du domaine, puis « Authenticate ». Sans
+     cela, les emails risquent d'arriver dans les spams.
+4. **Clé API** : Brevo › *SMTP & API* › *API Keys* › Generate. Dans Supabase › Edge Functions ›
+   **Secrets**, ajouter :
+   - `BREVO_API_KEY` = la clé (`xkeysib-…`) — secrète, à ne jamais envoyer par message ;
+   - `EMAIL_EXPEDITEUR` = l'adresse d'expéditeur validée (ex. `reservation@volant3ranches-vtc.fr`) ;
+   - facultatif : `EMAIL_NOM` (par défaut « Volant3ranches VTC ») et `EMAIL_REPONSE` (adresse des réponses).
+5. **Fonctions** : redéployer `document-pdf` (nouveau code : elle fournit les PDF à la fonction
+   d'emails), puis déployer **`emails`** ([`functions/emails/index.ts`](functions/emails/index.ts)),
+   « Verify JWT » désactivé.
+6. **Dans l'appli** (Fabrice) : Gestion › Emails › activer, et indiquer son email pour les copies.
+
+### Mot de passe oublié (code par email)
+
+Les clients reçoivent un **code à 6 chiffres** (pas de lien à ouvrir). Ces emails-là sont envoyés par
+Supabase lui-même, il faut donc lui donner Brevo comme serveur d'envoi :
+
+1. Brevo › *SMTP & API* › onglet **SMTP** : noter le serveur (`smtp-relay.brevo.com`), le port (587),
+   l'identifiant, et générer une **clé SMTP**.
+2. Supabase › **Authentication** › **Emails** (ou Settings › SMTP) › **Enable custom SMTP** : ces valeurs,
+   l'expéditeur (même adresse que ci-dessus) et le nom « Volant3ranches VTC ».
+3. Supabase › Authentication › **Emails** › modèle **Magic Link** : remplacer le contenu par
+
+   ```html
+   <h2>Votre code Volant3ranches</h2>
+   <p>Pour choisir un nouveau mot de passe, saisissez ce code dans l'application :</p>
+   <p style="font-size:28px;font-weight:bold;letter-spacing:4px">{{ .Token }}</p>
+   <p>Il est valable une heure. Si vous n'avez rien demandé, ignorez cet email.</p>
+   ```
+
+   et le sujet par « Votre code Volant3ranches ».
+
 ## Tester la confirmation en temps réel
 
 Avec deux téléphones (ou un téléphone et le navigateur) : envoyez une demande côté client, puis
@@ -226,7 +272,7 @@ Les règles de prix et de sécurité sont vérifiées sur un PostgreSQL local, s
 cd supabase/tests && npm install && npm test
 ```
 
-Les 148 vérifications doivent afficher « OK ».
+Les 167 vérifications doivent afficher « OK ».
 
 Fonctions serveur (SumUp et la base simulés, aucun appel réel) :
 

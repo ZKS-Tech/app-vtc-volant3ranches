@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { EcranAvecClavier } from '../src/Clavier';
+import { envoyerCodeConnexion } from '../src/serveur';
 import { useStore } from '../src/store';
 import { space } from '../src/theme';
 import { Bouton, Champ, Note, Segment } from '../src/ui';
@@ -12,8 +13,11 @@ import { useTheme } from '../src/useTheme';
 export default function Compte() {
   const { c, type } = useTheme();
   const params = useLocalSearchParams<{ mode?: string }>();
-  const { brouillon, creerCompte, connecterClient, serveur } = useStore();
+  const { brouillon, creerCompte, connecterClient, reinitialiserMotDePasse, serveur } = useStore();
   const [mode, setMode] = useState<'creer' | 'connexion'>(params.mode === 'connexion' ? 'connexion' : 'creer');
+  // Mot de passe oublié : null, puis « code » (email envoyé), le formulaire passe à code + nouveau mot de passe.
+  const [oubli, setOubli] = useState<'email' | 'code' | null>(null);
+  const [code, setCode] = useState('');
   const [f, setF] = useState({ nom: brouillon.nom, telephone: brouillon.telephone, email: brouillon.email, motDePasse: '' });
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState('');
@@ -50,6 +54,43 @@ export default function Compte() {
     );
   }
 
+  if (oubli) {
+    const envoyerCode = async () => {
+      setEnvoi(true); setErreur('');
+      try { await envoyerCodeConnexion(f.email); setOubli('code'); } catch (e) { setErreur(e instanceof Error ? e.message : String(e)); } finally { setEnvoi(false); }
+    };
+    const changer = async () => {
+      setEnvoi(true); setErreur('');
+      try {
+        const n = await reinitialiserMotDePasse(f.email, code, f.motDePasse);
+        setFait(`Mot de passe changé, vous êtes connecté.${n > 0 ? ` ${n} course${n > 1 ? 's' : ''} de ce téléphone ajoutée${n > 1 ? 's' : ''} à votre compte.` : ''}`);
+      } catch (e) { setErreur(e instanceof Error ? e.message : String(e)); } finally { setEnvoi(false); }
+    };
+    return (
+      <EcranAvecClavier style={{ backgroundColor: c.sol }}>
+        <ScrollView contentContainerStyle={{ padding: space.l, paddingBottom: space.xxl }} keyboardShouldPersistTaps="handled">
+          <Text style={[type.h2, { marginBottom: space.s }]}>Mot de passe oublié</Text>
+          <Text style={[type.small, { marginBottom: space.l }]}>
+            {oubli === 'email' ? 'Indiquez l’email de votre compte : vous allez recevoir un code à 6 chiffres.' : `Code envoyé à ${f.email.trim()}. Il est valable une heure ; pensez à regarder dans les spams.`}
+          </Text>
+          <Champ libelle="Email" value={f.email} onChangeText={(v) => maj({ email: v })} keyboardType="email-address" autoCapitalize="none" autoComplete="email" editable={oubli === 'email'} />
+          {oubli === 'code' ? (
+            <>
+              <Champ libelle="Code reçu par email" value={code} onChangeText={(v) => setCode(v.replace(/\D/g, '').slice(0, 8))} keyboardType="number-pad" autoComplete="one-time-code" textContentType="oneTimeCode" placeholder="123456" />
+              <Champ libelle="Nouveau mot de passe" value={f.motDePasse} onChangeText={(v) => maj({ motDePasse: v })} secureTextEntry autoComplete="new-password" textContentType="newPassword" placeholder="6 caractères au moins" />
+            </>
+          ) : null}
+          {erreur ? <View style={{ marginBottom: space.l }}><Note ton="erreur">{erreur}</Note></View> : null}
+          {oubli === 'email'
+            ? <Bouton titre="Recevoir un code" desactive={!emailOk} chargement={envoi} onPress={envoyerCode} />
+            : <Bouton titre="Changer le mot de passe" desactive={code.length < 6 || f.motDePasse.length < 6} chargement={envoi} onPress={changer} />}
+          {oubli === 'code' ? <Bouton titre="Renvoyer un code" variante="texte" onPress={envoyerCode} style={{ marginTop: space.s, alignSelf: 'center' }} /> : null}
+          <Bouton titre="Retour à la connexion" variante="texte" onPress={() => { setOubli(null); setErreur(''); }} style={{ marginTop: space.s, alignSelf: 'center' }} />
+        </ScrollView>
+      </EcranAvecClavier>
+    );
+  }
+
   return (
     <EcranAvecClavier style={{ backgroundColor: c.sol }}>
       <ScrollView contentContainerStyle={{ padding: space.l, paddingBottom: space.xxl }} keyboardShouldPersistTaps="handled">
@@ -71,7 +112,7 @@ export default function Compte() {
         {erreur ? <View style={{ marginBottom: space.l }}><Note ton="erreur">{erreur}</Note></View> : null}
         <Bouton titre={mode === 'creer' ? 'Créer mon compte' : 'Se connecter'} desactive={!valide} chargement={envoi} onPress={valider} />
         {mode === 'connexion' ? (
-          <Text style={[type.small, { marginTop: space.l }]}>Mot de passe oublié ? Appelez Fabrice en attendant la réinitialisation par email (bientôt).</Text>
+          <Bouton titre="Mot de passe oublié ?" variante="texte" onPress={() => { setOubli('email'); setErreur(''); }} style={{ marginTop: space.m, alignSelf: 'center' }} />
         ) : null}
       </ScrollView>
     </EcranAvecClavier>

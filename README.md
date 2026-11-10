@@ -250,6 +250,7 @@ publication.
 
 - ~~Messagerie client ↔ chauffeur~~ : faite (détail d'une course › « Écrire à Fabrice » ; côté Fabrice,
   onglet « Messages » de l'espace chauffeur).
+- ~~Emails (Brevo)~~ : faits (migration 12 et fonction `emails` ; mise en place dans `supabase/README.md`).
 - ~~Comptes clients~~ : faits (Profil › Créer un compte ; migration 11). Mot de passe oublié : avec les emails.
 - ~~Factures et bons de commande~~ : faits (migration 9 et fonction `document-pdf` ; voir `supabase/README.md`).
 - ~~Acompte de 10 % (SumUp)~~ : fait (migration 8 et fonctions serveur ; mise en place dans `supabase/README.md`).
