@@ -1,12 +1,12 @@
 import { activerNotifications, oublierTelephone } from './notifications';
-import { evenement } from './stats';
+import { evenement, oublierIdentifiant } from './stats';
 import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { OffreId, appliquerTarifs, lieu, offre, prix, trajet } from './data';
 import {
   annulerCourse, chargerTarifs, lienAcompte, payerAcompteTest, rembourserTout,
-  Profil, reinitialiserMotDePasse as reinitialiserServeur, connecterClient as connecterClientServeur, creerCompte as creerCompteServeur, majProfil as majProfilServeur, monProfil, sessionActuelle, connexionChauffeur, connexionInvite, creerDemande, deconnexion, ecouterMesCourses,
+  Profil, reinitialiserMotDePasse as reinitialiserServeur, connecterClient as connecterClientServeur, creerCompte as creerCompteServeur, majProfil as majProfilServeur, monProfil, sessionActuelle, connexionChauffeur, connexionInvite, creerDemande, deconnexion, supprimerCompte as supprimerCompteServeur, ecouterMesCourses,
   estChauffeur, mesCourses, supabase,
 } from './serveur';
 
@@ -140,6 +140,8 @@ type Store = {
   /** Mot de passe oublié : code reçu par email + nouveau mot de passe ; connecte le compte. */
   reinitialiserMotDePasse: (email: string, code: string, motDePasse: string) => Promise<number>;
   deconnecterClient: () => Promise<void>;
+  /** Supprime le compte (ou les données de l'invité) et repart en invité tout neuf. */
+  supprimerCompte: () => Promise<number>;
   majProfil: (nom: string, telephone: string) => Promise<void>;
   /** Recharge les courses du client depuis le serveur. */
   rafraichir: () => Promise<void>;
@@ -366,6 +368,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setBrouillon((b) => ({ ...b, nom: '', telephone: '', email: '' }));
         await demarrerClient(uid);
         setCleSession(uid);
+      },
+      supprimerCompte: async () => {
+        const { uid, courses: n } = await supprimerCompteServeur();
+        await oublierIdentifiant();
+        canal.current?.unsubscribe();
+        setCompte(null);
+        setCourses([]);
+        setBrouillon(brouillonVide());
+        await demarrerClient(uid);
+        setCleSession(uid);
+        return n;
       },
       majProfil: async (nom, telephone) => {
         await majProfilServeur(nom, telephone);

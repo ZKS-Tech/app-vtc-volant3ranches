@@ -16,13 +16,13 @@ export type IconName = React.ComponentProps<typeof Ionicons>['name'];
 export function Bouton({
   titre, onPress, variante = 'plein', icone, desactive, chargement, style, surFonce,
 }: {
-  titre: string; onPress?: () => void; variante?: 'plein' | 'contour' | 'texte' | 'clair';
+  titre: string; onPress?: () => void; variante?: 'plein' | 'contour' | 'texte' | 'clair' | 'danger';
   icone?: IconName; desactive?: boolean; chargement?: boolean; style?: ViewStyle; surFonce?: boolean;
 }) {
   const { c, type, s } = useTheme(creerStyles);
   const plein = variante === 'plein';
   const clair = variante === 'clair';
-  const couleurTexte = plein || surFonce ? c.blanc : clair ? c.fort : c.accent;
+  const couleurTexte = variante === 'danger' ? c.erreur : plein || surFonce ? c.blanc : clair ? c.fort : c.accent;
   return (
     <Pressable
       accessibilityRole="button"
@@ -34,6 +34,7 @@ export function Bouton({
         plein && { backgroundColor: pressed ? c.actionPress : c.action },
         clair && { backgroundColor: pressed ? c.bain2 : c.surface },
         variante === 'contour' && { borderWidth: 1.5, borderColor: c.accent, backgroundColor: pressed ? c.bain1 : 'transparent' },
+        variante === 'danger' && { borderWidth: 1.5, borderColor: c.erreur, backgroundColor: pressed ? c.bain1 : 'transparent' },
         variante === 'texte' && { minHeight: 44, paddingHorizontal: space.s, backgroundColor: pressed ? (surFonce ? 'rgba(255,255,255,0.12)' : c.bain1) : 'transparent' },
         desactive && { opacity: 0.4 },
         style,

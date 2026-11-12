@@ -115,8 +115,9 @@ règles sont vérifiées par un jeu de 21 tests exécutés sur un PostgreSQL loc
    autre téléphone ; adresses favorites.
 6. ✅ **Statistiques et confidentialité** : GA4 avec consentement (fonction `stats`, relais côté
    serveur, sans IP ni donnée personnelle) ; texte de politique de confidentialité prêt
-   (`docs/politique-confidentialite.md`) à publier sur le site. Reste avant les stores : suppression de
-   compte depuis l'appli, purge automatique des données anciennes.
+   (`docs/politique-confidentialite.md`) à publier sur le site. Suppression du compte depuis l'appli
+   (fonction `supprimer-compte`) et effacement automatique chaque nuit des données anciennes
+   (migration 15, `purger_donnees`).
 7. **Publication** : version de développement (EAS), test par Fabrice et quelques clients, stores.
 
 **Messagerie client ↔ chauffeur** ✅ (demande de Fabrice) : une conversation par course, en temps réel

@@ -57,6 +57,13 @@ export function useConsentement() {
   return { consentement: c, pret, definir: definirConsentement };
 }
 
+// Après la suppression du compte : nouvel identifiant de statistiques, sans lien avec l'ancien.
+export async function oublierIdentifiant() {
+  clientId = null;
+  file = [];
+  try { await AsyncStorage.removeItem(CLE_CLIENT); } catch { /* rien à oublier */ }
+}
+
 // Appelé par la navigation : suivi seulement pour l'interface client reliée au serveur.
 export function activerSuivi(oui: boolean) {
   const etait = actif;

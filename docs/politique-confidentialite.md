@@ -3,10 +3,9 @@
 Texte de la page à publier sur le site (version HTML prête à coller : `docs/politique-confidentialite.html`).
 Il décrit ce que fait réellement l'application au 12 novembre 2026 ; à mettre à jour si elle évolue.
 
-> **Avant publication** : faire relire et valider par Fabrice. Les durées de conservation sont des
-> propositions usuelles : leur effacement automatique dans la base reste à programmer, ainsi que la
-> suppression du compte depuis l'appli (en attendant, la demande se fait par email). Les deux sont
-> obligatoires avant la publication sur les stores.
+> **Avant publication** : faire relire et valider par Fabrice. Les durées ci-dessous sont appliquées
+> automatiquement par la base chaque nuit (migration 15, `purger_donnees`), et la suppression du
+> compte se fait depuis l'appli (Profil › Confidentialité).
 
 ---
 
@@ -109,10 +108,11 @@ Framework) ou par les clauses contractuelles types de la Commission européenne.
 
 | Données | Durée |
 |---|---|
-| Réservations, coordonnées, messages | 3 ans après votre dernière course |
+| Réservations, coordonnées, messages | 3 ans après la course, puis anonymisées (seuls restent la date, le trajet en ville/aéroport/gare et le prix, pour la comptabilité) |
 | Compte | Jusqu'à sa suppression, ou 3 ans sans utilisation |
+| Identifiant invité sans aucune réservation | 30 jours |
 | Bons de commande et factures | 10 ans (obligation comptable) |
-| Identifiant de notification | Jusqu'à la déconnexion ou la désinstallation |
+| Identifiant de notification | Jusqu'à la déconnexion, ou 1 an sans utilisation |
 | Emails envoyés (journal d'envoi) | 1 an |
 | Statistiques | 14 mois |
 
@@ -122,9 +122,12 @@ Vous pouvez demander à **accéder** à vos données, les **corriger**, les **su
 dans un format lisible, **limiter** leur utilisation ou vous y **opposer**, et retirer à tout moment
 votre consentement aux statistiques (Profil › Statistiques d'utilisation) ou aux notifications.
 
-Pour **supprimer votre compte** et vos données : écrivez à contact@volant3ranches-vtc.fr depuis
-l'adresse de votre compte [ou, quand ce sera disponible : Profil › Supprimer mon compte]. Les
-factures sont conservées 10 ans, comme la loi l'impose.
+Pour **supprimer votre compte** et vos données : dans l'application, **Profil › Confidentialité ›
+Supprimer mon compte** (sans compte : **Effacer mes données**). La suppression est immédiate et
+définitive : coordonnées, messages, identifiant de notification et compte sont effacés, et vos
+courses passées sont anonymisées. Une course encore prévue doit d'abord être annulée. Les bons de
+commande et factures déjà émis sont conservés 10 ans, comme la loi l'impose. Vous pouvez aussi en
+faire la demande à contact@volant3ranches-vtc.fr depuis l'adresse de votre compte.
 
 Pour toute demande : contact@volant3ranches-vtc.fr ou 06 16 53 14 91. Nous répondons sous un mois.
 Si vous estimez que vos droits ne sont pas respectés, vous pouvez saisir la **CNIL** (www.cnil.fr).

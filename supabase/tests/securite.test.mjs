@@ -91,6 +91,15 @@ if (process.argv[4]) {
     ok(true, 'migration 13 (droits serveur) appliquée sans erreur');
   }
   if (process.argv[16]) { await db.exec(readFileSync(process.argv[16], 'utf8')); ok(true, 'migration 14 (arrondi) appliquée sans erreur'); }
+  if (process.argv[17]) {
+    // Colonnes de auth.users utilisées par l'effacement automatique.
+    await db.exec(`alter table auth.users add column created_at timestamptz not null default now(),
+      add column last_sign_in_at timestamptz, add column is_anonymous boolean not null default false;
+      create table auth.sessions (id uuid primary key default gen_random_uuid(), user_id uuid references auth.users (id) on delete cascade,
+        created_at timestamptz default now(), updated_at timestamptz default now(), refreshed_at timestamp without time zone)`);
+    await db.exec(readFileSync(process.argv[17], 'utf8'));
+    ok(true, 'migration 15 (effacement) appliquée sans erreur');
+  }
 }
 
 
@@ -793,4 +802,83 @@ if (process.argv[16]) {
   const c2 = (await srv(`select public.contenu_document('${m.id}', 'commande', 'BC-X', null) as c`))[0].c;
   ok(Number(c2.lignes[0].prix_unitaire_ht) === 1.636 && c2.lignes[1]?.libelle === 'Arrondi tarifaire à 0,50 €' && Number(c2.lignes[1].total_ht) === 0.2 && Number(c2.total_ht) === 104.09,
     `cas réel : ${c2.lignes.map((l) => `${l.libelle} ${l.total_ht}`).join(' + ')} = ${c2.total_ht} HT`);
+}
+
+if (process.argv[17]) {
+  console.log('--- suppression de compte et effacement');
+  const srv = async (sql) => { await db.exec('reset role'); return (await db.query(sql)).rows; };
+  const parti = '77777777-7777-7777-7777-777777777777';
+  await srv(`insert into auth.users (id) values ('${parti}')`);
+  await srv(`insert into public.profils (id, nom, telephone, email) values ('${parti}', 'Claire Partie', '06 70 70 70 70', 'claire@exemple.fr')`);
+  const nouvelle = async (quand, statut) => (await srv(`insert into public.courses (client_id, depart_libelle, depart_type, depart_detail, depart_lat, depart_lon,
+      arrivee_libelle, arrivee_type, arrivee_lat, arrivee_lon, date_heure, passagers, bagages, offre_id, distance_km, montant, prix_km,
+      nom, telephone, email, commentaire, numero_vol_train, statut, source)
+    values ('${parti}', '3 rue des Lilas, Lavaur', 'adresse', 'Portail vert', 43.7, 1.8, 'Aéroport Toulouse-Blagnac', 'aeroport', 43.63, 1.36,
+      ${quand}, 1, 1, 'tesla', 50, 90, 1.8, 'Claire Partie', '06 70 70 70 70', 'claire@exemple.fr', 'Siège bébé', 'AF123', '${statut}', 'telephone')
+    returning id, fiche_id`))[0];
+  const passee = await nouvelle(`now() - interval '20 days'`, 'terminee');
+  const future = await nouvelle(`now() + interval '5 days'`, 'confirmee');
+  await srv(`insert into public.messages (course_id, auteur_id, texte) values ('${passee.id}', '${parti}', 'Je suis devant la gare')`);
+  await en(parti);
+  await echoue(() => q(`select public.supprimer_mes_donnees()`), 'impossible de supprimer son compte avec une course à venir');
+  await srv(`update public.courses set statut = 'annulee', annulee_le = now() where id = '${future.id}'`);
+  const voisin = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
+  await srv(`insert into auth.users (id) values ('${voisin}')`);
+  await en(voisin);
+  r = await q(`select public.supprimer_mes_donnees() n`);
+  ok(r[0].n === 0, 'un autre client ne supprime que ses propres données');
+  r = await srv(`select count(*)::int n from public.courses where client_id = '${parti}'`);
+  ok(r[0].n === 2, 'les courses de Claire sont intactes après la suppression d\'un autre compte');
+  await en(parti);
+  r = await q(`select public.supprimer_mes_donnees() n`);
+  ok(r[0].n === 2, `suppression demandée par le client : ${r[0].n} courses anonymisées`);
+  const c = (await srv(`select * from public.courses where id = '${passee.id}'`))[0];
+  ok(c.nom === 'Client supprimé' && c.telephone === '' && c.email === null && c.commentaire === null && c.numero_vol_train === null && c.client_id === null,
+    'nom, téléphone, email, commentaire et vol effacés');
+  ok(c.depart_libelle === 'Adresse effacée' && c.depart_lat === null && c.depart_detail === null, 'adresse personnelle effacée');
+  ok(c.arrivee_libelle === 'Aéroport Toulouse-Blagnac' && Number(c.montant) === 90 && c.statut === 'terminee', 'aéroport, prix et statut gardés (chiffre d\'affaires)');
+  r = await srv(`select count(*)::int n from public.messages where course_id = '${passee.id}'`);
+  ok(r[0].n === 0, 'messages effacés');
+  r = await srv(`select count(*)::int n from public.profils where id = '${parti}'`);
+  ok(r[0].n === 0, 'profil effacé');
+  if (passee.fiche_id) {
+    const f = (await srv(`select * from public.fiches_clients where id = '${passee.fiche_id}'`))[0];
+    ok(f.nom === 'Client supprimé' && f.telephone === null && f.email === null, 'fiche client anonymisée');
+  }
+  await srv(`delete from auth.users where id = '${parti}'`);
+  r = await srv(`select count(*)::int n from public.courses where id in ('${passee.id}', '${future.id}')`);
+  ok(r[0].n === 2, 'supprimer l\'accès ne supprime plus les courses (chiffre d\'affaires, factures)');
+  await en(fabrice);
+  await echoue(() => q(`select public.supprimer_mes_donnees()`), 'le compte de Fabrice ne se supprime pas depuis l\'appli');
+  await en(null);
+  await echoue(() => q(`select public.supprimer_mes_donnees()`), 'sans connexion : refusé');
+  await en(client);
+  await echoue(() => q(`select public.purger_donnees()`), 'un client ne lance pas l\'effacement automatique');
+
+  // Effacement automatique.
+  const vieux = '88888888-8888-8888-8888-888888888888';
+  const invite = 'cccccccc-cccc-cccc-cccc-cccccccccccc';
+  const recent = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+  const fidele = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'; // invité créé il y a 2 mois, appli toujours utilisée
+  await srv(`insert into auth.users (id, created_at, last_sign_in_at) values ('${vieux}', now() - interval '5 years', now() - interval '4 years')`);
+  await srv(`insert into auth.users (id, created_at, is_anonymous) values ('${invite}', now() - interval '40 days', true), ('${recent}', now() - interval '2 days', true), ('${fidele}', now() - interval '60 days', true)`);
+  await srv(`insert into auth.sessions (user_id, created_at, updated_at, refreshed_at) values ('${fidele}', now() - interval '60 days', now() - interval '60 days', (now() - interval '1 day')::timestamp)`);
+  const ancienne = (await srv(`insert into public.courses (client_id, depart_libelle, arrivee_libelle, date_heure, passagers, bagages, offre_id, distance_km, montant, prix_km, nom, telephone, email, statut, source)
+    values ('${vieux}', '5 place du Marché', 'Gare de Toulouse', now() - interval '4 years', 1, 0, 'tesla', 30, 54, 1.8, 'Ancien Client', '06 01 01 01 01', 'ancien@exemple.fr', 'terminee', 'telephone') returning id`))[0];
+  await srv(`insert into public.emails (type, course_id, destinataire, cree_le, statut) values ('facture', null, 'x@exemple.fr', now() - interval '2 years', 'envoye')`);
+  r = await srv(`select public.purger_donnees() p`);
+  ok(r[0].p.courses_anonymisees >= 1, `courses de plus de 3 ans anonymisées (${JSON.stringify(r[0].p)})`);
+  r = await srv(`select nom from public.courses where id = '${ancienne.id}'`);
+  ok(r[0].nom === 'Client supprimé', 'la course de 4 ans est anonymisée');
+  r = await srv(`select id from auth.users where id in ('${vieux}', '${invite}', '${recent}', '${fidele}', '${fabrice}', '${client}') order by id`);
+  const restants = r.map((x) => x.id);
+  ok(!restants.includes(vieux) && !restants.includes(invite), 'compte inactif depuis 3 ans et invité vide de 40 jours supprimés');
+  ok(restants.includes(recent) && restants.includes(fabrice) && restants.includes(client), 'invité récent, clients actifs et Fabrice gardés');
+  ok(restants.includes(fidele), 'invité ancien mais qui utilise encore l\'appli (session rafraîchie hier) gardé');
+  r = await srv(`select count(*)::int n from public.emails where cree_le < now() - interval '1 year'`);
+  ok(r[0].n === 0, 'journal des emails de plus d\'un an effacé');
+  r = await srv(`select count(*)::int n from public.courses where nom <> 'Client supprimé' and date_heure > now() - interval '3 years'`);
+  ok(r[0].n > 0, 'les courses récentes ne sont pas touchées');
+  r = await srv(`select count(*)::int n from cron.taches where nom = 'volant3ranches-effacement'`);
+  ok(r[0].n === 1, 'effacement programmé chaque nuit');
 }

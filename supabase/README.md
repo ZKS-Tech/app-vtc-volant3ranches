@@ -296,6 +296,31 @@ téléphone, ni nom, téléphone, email ou adresse. Événements : `ouverture_ap
 
 Sans les secrets, la fonction ignore simplement les événements : l'appli n'est jamais gênée.
 
+## Suppression de compte et effacement automatique (migration 15 et fonction supprimer-compte)
+
+Obligatoire pour les stores (Google Play et Apple exigent la suppression du compte depuis l'appli) et
+pour respecter les durées annoncées dans la politique de confidentialité.
+
+1. SQL Editor : exécuter [`20261118000000_effacement.sql`](migrations/20261118000000_effacement.sql).
+2. Edge Functions › Deploy a new function › **`supprimer-compte`**, coller
+   [`functions/supprimer-compte/index.ts`](functions/supprimer-compte/index.ts), **« Verify JWT »
+   désactivé**. Aucun secret à ajouter (elle utilise les clés du projet, déjà présentes).
+3. Essai : dans l'appli, en invité, faire une demande puis l'annuler ; Profil › Confidentialité ›
+   **Effacer mes données** › Supprimer. Dans Table Editor › `courses`, la course porte maintenant
+   « Client supprimé » ; dans Authentication › Users, l'ancien invité a disparu (un nouveau l'a remplacé).
+
+Ce que fait la suppression : refus s'il reste une course à venir (à annuler d'abord) ; courses
+passées anonymisées (nom, téléphone, email, adresses personnelles, commentaire, vol/train) mais
+gardées pour le chiffre d'affaires (date, offre, km, prix, villes, aéroports, gares) ; messages,
+téléphone (notifications), profil, fiche client et accès effacés. Bons de commande et factures déjà
+émis : conservés 10 ans (ils sont figés). Le compte de Fabrice ne peut pas être supprimé ainsi.
+
+Chaque nuit à 3 h 17 (`purger_donnees`, tâche `volant3ranches-effacement`) : courses de plus de 3 ans
+et fiches clients sans course depuis 3 ans anonymisées ; journal des emails de plus d'un an effacé ;
+téléphones inactifs depuis un an oubliés ; invités sans aucune course après 30 jours et comptes
+inactifs depuis 3 ans supprimés ; pièces comptables et paiements de plus de 10 ans effacés. Pour
+lancer l'effacement à la main et voir le bilan : `select public.purger_donnees();`
+
 ## Tester la confirmation en temps réel
 
 Avec deux téléphones (ou un téléphone et le navigateur) : envoyez une demande côté client, puis

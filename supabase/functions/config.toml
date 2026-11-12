@@ -1,3 +1,6 @@
 
 [functions.document-pdf]
 verify_jwt = false
+
+[functions.supprimer-compte]
+verify_jwt = false

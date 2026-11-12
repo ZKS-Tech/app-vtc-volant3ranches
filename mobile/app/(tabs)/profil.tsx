@@ -56,6 +56,57 @@ function BlocCompte() {
   );
 }
 
+// Suppression du compte (ou, pour un invité, de ses données) : expliquée, puis confirmée.
+function SuppressionCompte() {
+  const { c, type, s } = useTheme(creerStyles);
+  const { compte, courses, supprimerCompte } = useStore();
+  const [ouvert, setOuvert] = useState(false);
+  const [envoi, setEnvoi] = useState(false);
+  const [erreur, setErreur] = useState('');
+  const [fait, setFait] = useState(false);
+  const titre = compte ? 'Supprimer mon compte' : 'Effacer mes données';
+  const aVenir = courses.filter((x) => ['envoyee', 'acompte_attendu', 'confirmee'].includes(x.statut) && x.date.getTime() > Date.now());
+  if (fait) {
+    return (
+      <View style={[s.ligne, s.trait]}>
+        <Note ton="feuille" icone="checkmark-circle-outline">
+          C’est fait : vos données ont été effacées. Vous pouvez continuer à réserver en invité.
+        </Note>
+      </View>
+    );
+  }
+  if (!ouvert) {
+    return (
+      <Text onPress={() => setOuvert(true)} style={[type.body, s.lien, s.trait, { color: c.erreur }]} accessibilityRole="button">
+        {titre}
+      </Text>
+    );
+  }
+  return (
+    <View style={[s.trait, { paddingVertical: space.l, gap: space.m }]}>
+      <Text style={type.h3}>{titre} ?</Text>
+      <Text style={type.small}>
+        {compte ? 'Votre compte, vos coordonnées, vos messages et l’historique de vos courses seront effacés. ' : 'Vos coordonnées, vos messages et l’historique de vos courses sur ce téléphone seront effacés. '}
+        Les bons de commande et factures déjà émis sont conservés 10 ans, comme la loi l’impose. C’est définitif.
+      </Text>
+      {aVenir.length ? (
+        <Note ton="alerte" icone="calendar-outline">
+          {`Vous avez ${aVenir.length > 1 ? `${aVenir.length} courses prévues` : 'une course prévue'} : annulez-la d’abord (Mes courses), ou appelez Fabrice.`}
+        </Note>
+      ) : null}
+      {erreur ? <Note ton="erreur">{erreur}</Note> : null}
+      <View style={{ flexDirection: 'row', gap: space.s }}>
+        <Bouton titre="Annuler" variante="contour" onPress={() => { setOuvert(false); setErreur(''); }} style={{ flex: 1 }} />
+        <Bouton titre="Supprimer" variante="danger" icone="trash-outline" chargement={envoi} desactive={aVenir.length > 0} style={{ flex: 1.4 }}
+          onPress={async () => {
+            setEnvoi(true); setErreur('');
+            try { await supprimerCompte(); setFait(true); } catch (e) { setErreur(e instanceof Error ? e.message : String(e)); } finally { setEnvoi(false); }
+          }} />
+      </View>
+    </View>
+  );
+}
+
 export default function Profil() {
   const { consentement, definir: definirConsentement } = useConsentement();
   const { c, type, s } = useTheme(creerStyles);
@@ -91,6 +142,7 @@ export default function Profil() {
           valeur={consentement === 'oui'}
           onChange={(v) => definirConsentement(v ? 'oui' : 'non')}
         />
+        {serveur.etat === 'connecte' ? <SuppressionCompte /> : null}
       </View>
 
       <Titre>Informations</Titre>

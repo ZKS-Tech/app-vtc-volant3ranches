@@ -27,7 +27,13 @@ export const supabase: SupabaseClient | null =
 export async function connexionInvite(): Promise<string> {
   if (!supabase) throw new Error('Serveur non configuré');
   const { data } = await supabase.auth.getSession();
-  if (data.session) return data.session.user.id;
+  if (data.session) {
+    // Compte effacé entre-temps (suppression, ou invité inactif effacé automatiquement) : on repart
+    // en invité tout neuf. Sans réseau, on garde la session telle quelle.
+    const { error: e } = await supabase.auth.getUser();
+    if (!e || !('status' in e) || ![401, 403, 404].includes(Number(e.status))) return data.session.user.id;
+    await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+  }
   const { data: d, error } = await supabase.auth.signInAnonymously();
   if (error || !d.user) throw new Error(error?.message ?? 'Connexion impossible');
   return d.user.id;
@@ -194,6 +200,16 @@ export async function deconnexion(): Promise<string> {
   if (!supabase) throw new Error('Serveur non configuré');
   await supabase.auth.signOut();
   return connexionInvite();
+}
+
+// Suppression du compte (ou des données d'un invité) : la fonction serveur « supprimer-compte »
+// efface les données puis l'accès. On repart ensuite en invité tout neuf.
+export async function supprimerCompte(): Promise<{ uid: string; courses: number }> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const r = await fonction<{ ok: boolean; courses: number }>('supprimer-compte', {},
+    'Suppression impossible pour le moment. Réessayez, ou écrivez à contact@volant3ranches-vtc.fr.');
+  await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+  return { uid: await connexionInvite(), courses: r.courses };
 }
 
 export async function emailConnecte(): Promise<string | null> {
