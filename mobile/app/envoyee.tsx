@@ -4,7 +4,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import Reanimated, { FadeOut, LinearTransition } from 'react-native-reanimated';
 import { CuveIndigo } from '../src/CuveIndigo';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { dateCourte, euros, itineraireEnCache, lieu, offre } from '../src/data';
+import { dateCourte, euros, heureAffichee, itineraireEnCache, lieu, offre } from '../src/data';
 import { useStore } from '../src/store';
 import { Couleurs, f, radius, space } from '../src/theme';
 import { CartePlan } from '../src/CartePlan';
@@ -12,6 +12,7 @@ import { DelaiConfirmation } from '../src/DelaiConfirmation';
 import { BlocAcompte } from '../src/Acompte';
 import { useTheme } from '../src/useTheme';
 import { Bouton, Itineraire, Teinture, appelerFabrice } from '../src/ui';
+import { t } from '../src/i18n';
 
 export default function Envoyee() {
   const { c, type, s } = useTheme(creerStyles);
@@ -28,8 +29,8 @@ export default function Envoyee() {
   // Filet de sécurité si le rendu 3D n'est pas disponible : bascule après 1,6 s.
   const [fonce, setFonce] = useState(confirmee);
   useEffect(() => {
-    const t = setTimeout(() => setFonce(confirmee), 1600);
-    return () => clearTimeout(t);
+    const minuterie = setTimeout(() => setFonce(confirmee), 1600);
+    return () => clearTimeout(minuterie);
   }, [confirmee]);
 
   if (!course) return null;
@@ -48,31 +49,31 @@ export default function Envoyee() {
       <ScrollView contentContainerStyle={{ padding: space.l, paddingTop: insets.top + space.xxl, paddingBottom: insets.bottom + space.xl }}>
         {ferme ? (
           <View style={[s.pastille, { backgroundColor: c.erreurFond }]}>
-            <Text style={[type.label, { color: c.erreur }]}>{refusee ? 'Refusée par Fabrice' : 'Acompte non réglé'}</Text>
+            <Text style={[type.label, { color: c.erreur }]}>{refusee ? t('Refusée par Fabrice') : t('Acompte non réglé')}</Text>
           </View>
         ) : (
           <Teinture statut={course.statut} surFonce={fonce} />
         )}
         <Text accessibilityRole="header" accessibilityLiveRegion="polite" style={[s.titre, { color: texte }]}>
-          {refusee ? 'Demande refusée' : expiree ? 'Demande expirée' : fonce ? 'Course confirmée' : acompte ? 'Fabrice peut vous conduire' : 'Demande envoyée'}
+          {refusee ? t('Demande refusée') : expiree ? t('Demande expirée') : fonce ? t('Course confirmée') : acompte ? t('Fabrice peut vous conduire') : t('Demande envoyée')}
         </Text>
         <Text style={[type.body, { color: texte, fontSize: 18, lineHeight: 25 }]}>
           {refusee
-            ? `Fabrice ne peut pas assurer cette course du ${dateCourte(course.date)} à ${course.heure.replace(':', 'h')}. Rien ne vous sera facturé.`
+            ? t('Fabrice ne peut pas assurer cette course du {date} à {heure}. Rien ne vous sera facturé.', { date: dateCourte(course.date), heure: heureAffichee(course.heure) })
             : expiree
-            ? "L'acompte n'a pas été réglé à temps : la course n'est pas réservée et rien ne vous a été facturé."
+            ? t("L'acompte n'a pas été réglé à temps : la course n'est pas réservée et rien ne vous a été facturé.")
             : fonce
-            ? `Fabrice sera là ${dateCourte(course.date)} à ${course.heure.replace(':', 'h')}. Vous recevrez un rappel la veille.`
+            ? t('Fabrice sera là {date} à {heure}. Vous recevrez un rappel la veille.', { date: dateCourte(course.date), heure: heureAffichee(course.heure) })
             : acompte
-            ? 'Il a accepté votre demande. Réglez l’acompte pour confirmer la réservation.'
-            : 'Fabrice vous répond sous 30 minutes. Vous serez prévenu par notification.'}
+            ? t('Il a accepté votre demande. Réglez l’acompte pour confirmer la réservation.')
+            : t('Fabrice vous répond sous 30 minutes. Vous serez prévenu par notification.')}
         </Text>
         {refusee ? (
           <View style={[s.motif, { backgroundColor: c.surface }]}>
-            <Text style={type.label}>Motif indiqué par Fabrice</Text>
-            <Text style={[type.body, { fontSize: 18, marginTop: 4 }]}>{course.motifRefus || 'Non précisé'}</Text>
+            <Text style={type.label}>{t('Motif indiqué par Fabrice')}</Text>
+            <Text style={[type.body, { fontSize: 18, marginTop: 4 }]}>{course.motifRefus || t('Non précisé')}</Text>
             <Text style={[type.small, { marginTop: space.s }]}>
-              Essayez un autre horaire, ou appelez-le : il pourra peut-être vous proposer une solution.
+              {t('Essayez un autre horaire, ou appelez-le : il pourra peut-être vous proposer une solution.')}
             </Text>
           </View>
         ) : null}
@@ -99,34 +100,34 @@ export default function Envoyee() {
         />
         <View style={[s.recap, { borderColor: fonce ? 'rgba(255,255,255,0.22)' : c.bain2 }]}>
           <Text style={[s.date, { color: texte }]}>
-            {dateCourte(course.date)} · {course.heure.replace(':', 'h')}
+            {dateCourte(course.date)} · {heureAffichee(course.heure)}
           </Text>
           <View style={{ marginVertical: space.l }}>
             <Itineraire departId={course.departId} arriveeId={course.arriveeId} couleur={texte} couleur2={texte2} />
           </View>
           <Text style={[type.small, { color: texte2 }]}>
-            {offre(course.offreId).nom} · {offre(course.offreId).vehicule} · {euros(course.montant)}
+            {t(offre(course.offreId).nom)} · {t(offre(course.offreId).vehicule)} · {euros(course.montant)}
           </Text>
         </View>
 
         <View style={{ gap: space.m, marginTop: space.xl }}>
           {ferme ? (
-            <Bouton titre={refusee ? 'Choisir un autre horaire' : 'Refaire une demande'} icone="time-outline" onPress={() => router.dismissTo('/trajet')} />
+            <Bouton titre={refusee ? t('Choisir un autre horaire') : t('Refaire une demande')} icone="time-outline" onPress={() => router.dismissTo('/trajet')} />
           ) : (
-            <Bouton titre="Voir mes courses" variante={fonce ? 'clair' : 'plein'} onPress={() => terminer('/courses')} />
+            <Bouton titre={t('Voir mes courses')} variante={fonce ? 'clair' : 'plein'} onPress={() => terminer('/courses')} />
           )}
-          <Bouton titre="Appeler Fabrice" variante={fonce ? 'clair' : 'contour'} icone="call-outline" onPress={appelerFabrice} />
-          <Bouton titre="Retour à l'accueil" variante="texte" surFonce={fonce} onPress={() => terminer('/')} />
+          <Bouton titre={t('Appeler Fabrice')} variante={fonce ? 'clair' : 'contour'} icone="call-outline" onPress={appelerFabrice} />
+          <Bouton titre={t("Retour à l'accueil")} variante="texte" surFonce={fonce} onPress={() => terminer('/')} />
         </View>
         </Reanimated.View>
 
         {!fonce && !ferme && !compte ? (
           <View style={s.compte}>
-            <Text style={type.h3}>Retrouver vos courses sur tous vos appareils</Text>
+            <Text style={type.h3}>{t('Retrouver vos courses sur tous vos appareils')}</Text>
             <Text style={[type.small, { marginTop: 4, marginBottom: space.m }]}>
-              Créez un compte avec votre email : vos coordonnées seront préremplies la prochaine fois.
+              {t('Créez un compte avec votre email : vos coordonnées seront préremplies la prochaine fois.')}
             </Text>
-            <Bouton titre="Créer un compte" variante="contour" onPress={() => router.push({ pathname: '/compte', params: { mode: 'creer' } })} />
+            <Bouton titre={t('Créer un compte')} variante="contour" onPress={() => router.push({ pathname: '/compte', params: { mode: 'creer' } })} />
           </View>
         ) : null}
 

@@ -2,20 +2,21 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { dateCourte, estTransfert, lieu, majoration, offres } from '../src/data';
+import { dateCourte, estTransfert, heureAffichee, lieu, majoration, offres } from '../src/data';
 import { periode, retourLe, useAnnonces } from '../src/annonces';
 import { dansJours, useStore } from '../src/store';
 import { Couleurs, f, radius, space } from '../src/theme';
 import { useTheme } from '../src/useTheme';
 import { Bouton, Champ, Compteur, Itineraire, Note, Segment, Titre } from '../src/ui';
+import { t } from '../src/i18n';
 
 // Deux mois de dates : une absence de Fabrice ne doit pas empêcher de réserver après son retour.
 const jours = Array.from({ length: 60 }, (_, i) => dansJours(i));
 
 const decaler = (heure: string, minutes: number) => {
   const [h, m] = heure.split(':').map(Number);
-  const t = (((h * 60 + m + minutes) % 1440) + 1440) % 1440;
-  return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`;
+  const x = (((h * 60 + m + minutes) % 1440) + 1440) % 1440;
+  return `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`;
 };
 
 export default function Trajet() {
@@ -39,7 +40,7 @@ export default function Trajet() {
           <Itineraire departId={b.departId} arriveeId={b.arriveeId} />
         </View>
 
-        <Titre>Date</Titre>
+        <Titre>{t('Date')}</Titre>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -space.l }} contentContainerStyle={{ paddingHorizontal: space.l, gap: space.s }}>
           {jours.map((j, i) => {
             const actif = j.getTime() === b.jour.getTime();
@@ -47,10 +48,10 @@ export default function Trajet() {
             const [nomJour, num, mois] = dateCourte(j).split(' ');
             return (
               <Pressable key={i} onPress={() => maj({ jour: j })} style={[s.jour, ferme && s.jourFerme, actif && s.jourActif, actif && ferme && { backgroundColor: c.pierre, borderColor: c.pierre }]}
-                accessibilityState={{ selected: actif }} accessibilityLabel={`${dateCourte(j)}${ferme ? ', Fabrice absent' : ''}`}>
-                <Text style={[type.label, actif && { color: c.surCuve2 }]}>{i === 0 ? 'auj.' : i === 1 ? 'demain' : nomJour}</Text>
+                accessibilityState={{ selected: actif }} accessibilityLabel={`${dateCourte(j)}${ferme ? t(', Fabrice absent') : ''}`}>
+                <Text style={[type.label, actif && { color: c.surCuve2 }]}>{i === 0 ? t('auj.') : i === 1 ? t('demain') : nomJour}</Text>
                 <Text style={[s.jourNum, ferme && s.jourNumFerme, actif && { color: c.blanc }]}>{num}</Text>
-                <Text style={[type.label, actif && { color: c.surCuve2 }]}>{ferme ? 'absent' : mois}</Text>
+                <Text style={[type.label, actif && { color: c.surCuve2 }]}>{ferme ? t('absent') : mois}</Text>
               </Pressable>
             );
           })}
@@ -59,64 +60,64 @@ export default function Trajet() {
         {absence ? (
           <View style={{ marginTop: space.m }}>
             <Note ton="alerte" icone="calendar-outline">
-              Fabrice est absent {periode(absence)}. Choisissez un jour à partir du {retourLe(absence)}, ou appelez-le.
+              {t('Fabrice est absent {periode}. Choisissez un jour à partir du {retour}, ou appelez-le.', { periode: periode(absence), retour: retourLe(absence) })}
             </Note>
           </View>
         ) : null}
 
-        <Titre>Heure de prise en charge</Titre>
+        <Titre>{t('Heure de prise en charge')}</Titre>
         <View style={s.heure}>
-          <Pressable onPress={() => maj({ heure: decaler(b.heure, -15) })} style={s.heureBtn} accessibilityLabel="15 minutes plus tôt">
+          <Pressable onPress={() => maj({ heure: decaler(b.heure, -15) })} style={s.heureBtn} accessibilityLabel={t('15 minutes plus tôt')}>
             <Ionicons name="remove" size={26} color={c.accent} />
           </Pressable>
-          <Text style={s.heureTexte} accessibilityLiveRegion="polite">{b.heure.replace(':', 'h')}</Text>
-          <Pressable onPress={() => maj({ heure: decaler(b.heure, 15) })} style={s.heureBtn} accessibilityLabel="15 minutes plus tard">
+          <Text style={s.heureTexte} accessibilityLiveRegion="polite">{heureAffichee(b.heure)}</Text>
+          <Pressable onPress={() => maj({ heure: decaler(b.heure, 15) })} style={s.heureBtn} accessibilityLabel={t('15 minutes plus tard')}>
             <Ionicons name="add" size={26} color={c.accent} />
           </Pressable>
         </View>
         {majo.length ? (
           <View style={{ marginTop: space.m }}>
-            <Note ton="alerte">Tarif majoré : {majo.join(' + ')}.</Note>
+            <Note ton="alerte">{t('Tarif majoré : {raisons}.', { raisons: majo.join(' + ') })}</Note>
           </View>
         ) : (
-          <Text style={[type.small, { marginTop: space.s, textAlign: 'center' }]}>Tarif de jour (6h–22h, du lundi au vendredi).</Text>
+          <Text style={[type.small, { marginTop: space.s, textAlign: 'center' }]}>{t('Tarif de jour (6h–22h, du lundi au vendredi).')}</Text>
         )}
 
-        <Titre>Type de trajet</Titre>
+        <Titre>{t('Type de trajet')}</Titre>
         <Segment
-          options={[{ id: 'aller', titre: 'Aller simple' }, { id: 'ar', titre: 'Aller-retour' }]}
+          options={[{ id: 'aller', titre: t('Aller simple') }, { id: 'ar', titre: t('Aller-retour') }]}
           valeur={b.allerRetour ? 'ar' : 'aller'}
           onChange={(v) => maj({ allerRetour: v === 'ar' })}
         />
-        {b.allerRetour ? <Text style={[type.small, { marginTop: space.s }]}>Aller-retour : -5 % sur le prix des deux trajets.</Text> : null}
+        {b.allerRetour ? <Text style={[type.small, { marginTop: space.s }]}>{t('Aller-retour : -5 % sur le prix des deux trajets.')}</Text> : null}
 
-        <Titre>Passagers et bagages</Titre>
+        <Titre>{t('Passagers et bagages')}</Titre>
         <View style={s.bloc}>
-          <Compteur libelle="Passagers" icone="people-outline" valeur={b.passagers} min={1} max={maxPassagers} onChange={(n) => maj({ passagers: n, offreId: n > 3 ? 'van' : b.offreId })} />
+          <Compteur libelle={t('Passagers')} icone="people-outline" valeur={b.passagers} min={1} max={maxPassagers} onChange={(n) => maj({ passagers: n, offreId: n > 3 ? 'van' : b.offreId })} />
           <View style={s.trait} />
-          <Compteur libelle="Bagages" icone="briefcase-outline" valeur={b.bagages} min={0} max={8} onChange={(n) => maj({ bagages: n, offreId: n > 3 ? 'van' : b.offreId })} />
+          <Compteur libelle={t('Bagages')} icone="briefcase-outline" valeur={b.bagages} min={0} max={8} onChange={(n) => maj({ bagages: n, offreId: n > 3 ? 'van' : b.offreId })} />
         </View>
 
         {transfert ? (
           <>
-            <Titre>{aeroport ? 'Votre vol' : 'Votre train'}</Titre>
+            <Titre>{aeroport ? t('Votre vol') : t('Votre train')}</Titre>
             <Champ
-              libelle={aeroport ? 'Numéro de vol (facultatif)' : 'Numéro de train (facultatif)'}
-              placeholder={aeroport ? 'Ex. AF 6127' : 'Ex. TER 873402'}
+              libelle={aeroport ? t('Numéro de vol (facultatif)') : t('Numéro de train (facultatif)')}
+              placeholder={aeroport ? t('Ex. AF 6127') : t('Ex. TER 873402')}
               autoCapitalize="characters"
               value={b.numero}
-              onChangeText={(t) => maj({ numero: t })}
+              onChangeText={(v) => maj({ numero: v })}
             />
             <Note ton="feuille">
               {aeroport
-                ? 'Fabrice suit votre vol : en cas de retard, il ajuste la prise en charge sans frais. Attente gratuite : 30 min après l’atterrissage.'
-                : 'Fabrice suit votre train : en cas de retard, il ajuste la prise en charge sans frais. Attente gratuite : 15 min en gare.'}
+                ? t('Fabrice suit votre vol : en cas de retard, il ajuste la prise en charge sans frais. Attente gratuite : 30 min après l’atterrissage.')
+                : t('Fabrice suit votre train : en cas de retard, il ajuste la prise en charge sans frais. Attente gratuite : 15 min en gare.')}
             </Note>
           </>
         ) : null}
       </ScrollView>
       <View style={[s.pied, { paddingBottom: insets.bottom + space.m }]}>
-        <Bouton titre={absence ? 'Fabrice est absent ce jour-là' : 'Voir les prix'} icone={absence ? undefined : 'arrow-forward'} desactive={!!absence} onPress={() => router.push('/offre')} />
+        <Bouton titre={absence ? t('Fabrice est absent ce jour-là') : t('Voir les prix')} icone={absence ? undefined : 'arrow-forward'} desactive={!!absence} onPress={() => router.push('/offre')} />
       </View>
     </View>
   );

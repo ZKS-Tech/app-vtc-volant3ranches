@@ -321,6 +321,21 @@ téléphones inactifs depuis un an oubliés ; invités sans aucune course après
 inactifs depuis 3 ans supprimés ; pièces comptables et paiements de plus de 10 ans effacés. Pour
 lancer l'effacement à la main et voir le bilan : `select public.purger_donnees();`
 
+## Version anglaise (migration 16)
+
+L'appli client s'affiche en anglais quand le téléphone n'est pas en français (modifiable dans
+Profil › Langue). Ses notifications et ses emails suivent la langue du client ; Fabrice reçoit tout
+en français, avec la mention « anglais » sur la demande. Bons de commande et factures : en français.
+
+1. SQL Editor : exécuter [`20261119000000_langue.sql`](migrations/20261119000000_langue.sql).
+2. Edge Functions › **`emails`** › remplacer le code par
+   [`functions/emails/index.ts`](functions/emails/index.ts) › Deploy (« Verify JWT » toujours désactivé).
+3. Essai : téléphone réglé en anglais (ou Profil › Langue › English), faire une demande : la
+   notification de confirmation et l'email arrivent en anglais.
+
+Ajouter un texte dans l'appli : l'écrire en français dans `t('…')`, puis sa traduction dans
+`mobile/src/traductions.ts` ; `node scripts/verifier-traductions.mjs` (dans `mobile/`) liste les oublis.
+
 ## Tester la confirmation en temps réel
 
 Avec deux téléphones (ou un téléphone et le navigateur) : envoyez une demande côté client, puis

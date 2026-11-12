@@ -8,6 +8,7 @@ import { photos } from '../src/data';
 import { useStore } from '../src/store';
 import { Couleurs, clair, f, space } from '../src/theme';
 import { useTheme } from '../src/useTheme';
+import { t } from '../src/i18n';
 
 // Le panneau nominatif, sur le téléphone du client : il sait quoi chercher dans le hall.
 // À l'ouverture, la pancarte se retourne comme celle que Fabrice tient à la main.
@@ -17,7 +18,7 @@ export default function Panneau() {
   const { courses } = useStore();
   const insets = useSafeAreaInsets();
   const course = courses.find((x) => x.id === id);
-  const nom = course?.nom || 'Votre nom';
+  const nom = course?.nom || t('Votre nom');
   const tour = useRef(new Animated.Value(0)).current;
 
   const retourner = (calme = false) => {
@@ -48,12 +49,12 @@ export default function Panneau() {
 
   return (
     <View style={[s.fond, { paddingTop: insets.top + space.l, paddingBottom: insets.bottom + space.l }]}>
-      <Pressable onPress={() => router.back()} accessibilityLabel="Fermer le panneau" style={s.fermer}>
+      <Pressable onPress={() => router.back()} accessibilityLabel={t('Fermer le panneau')} style={s.fermer}>
         <Ionicons name="close" size={26} color={c.blanc} />
       </Pressable>
       <View style={s.centre}>
-        <Text style={s.consigne}>Fabrice vous attendra avec ce panneau</Text>
-        <Pressable onPress={() => retourner()} accessibilityLabel={`Panneau au nom de ${nom}. Toucher pour le retourner.`}>
+        <Text style={s.consigne}>{t('Fabrice vous attendra avec ce panneau')}</Text>
+        <Pressable onPress={() => retourner()} accessibilityLabel={t('Panneau au nom de {nom}. Toucher pour le retourner.', { nom })}>
           <View>
             <Animated.View style={[s.panneau, s.dos, dos]}>
               <Image source={photos.logoBlanc} style={{ width: 64, height: 64 }} contentFit="contain" />
@@ -68,7 +69,7 @@ export default function Panneau() {
             </Animated.View>
           </View>
         </Pressable>
-        <Text style={s.aide}>Hall des arrivées · attente gratuite 30 min après l’atterrissage</Text>
+        <Text style={s.aide}>{t('Hall des arrivées · attente gratuite 30 min après l’atterrissage')}</Text>
       </View>
     </View>
   );

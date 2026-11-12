@@ -126,6 +126,26 @@ Deno.test('chaque type d’email a un contenu complet', async () => {
   assertEquals(module.de('Léa Martin'), 'de Léa Martin');
 });
 
+Deno.test('client anglophone : emails en anglais, Fabrice reste en français', async () => {
+  const sortie = Deno.env.get('EMAILS_SORTIE');
+  for (const type of ['demande_recue', 'acompte', 'confirmation', 'refus', 'expiree', 'annulation', 'remboursement', 'facture']) {
+    const x = { type, course: { ...COURSE, nom: 'John Smith', langue: 'en', motif_refus: 'Not available at that time', frais_annulation: 0 }, offre: 'Offre Confort · Tesla Model 3',
+      donnees: { montant: 17.3, par_chauffeur: false }, document: { numero: 'F-2026-0004', type: 'facture', total_ttc: 173 },
+      vendeur: { raison_sociale: 'Volant3ranches', siege: 'Viterbe', siren: '932 513 443', telephone: '+33616531491' }, test: false };
+    const e = module.composer(x);
+    assert(e.paragraphes[0] === 'Hello John,', type);
+    const { html, texte } = module.assembler(e, x);
+    assert(html.includes('lang="en"') && html.includes('+33 6 16 53 14 91') && html.includes('€173.00 incl. VAT'), type);
+    assert(html.includes('Castres station') && html.includes('Toulouse-Blagnac Airport'), type);
+    assert(!/Bonjour|Départ|Véhicule/.test(texte), `${type} : reste du français`);
+    if (sortie) await Deno.writeTextFile(`${sortie}/en-${type}.html`, html);
+  }
+  assertEquals(module.quandEn('2026-11-12T08:00:00Z'), 'Thursday 12 November at 09:00');
+  const pourFabrice = { type: 'chauffeur_demande', course: { ...COURSE, nom: 'John Smith', langue: 'en' }, offre: 'Offre Confort · Tesla Model 3',
+    donnees: {}, document: null, vendeur: { raison_sociale: 'V', siege: 'S', siren: '1', telephone: '+33616531491' }, test: false };
+  assert(module.composer(pourFabrice).titre.startsWith('Nouvelle demande'));
+});
+
 globalThis.addEventListener('unload', () => { globalThis.fetch = avant; });
 
 Deno.test('le logo du bandeau est servi en PNG, mis en cache, sans toucher à la file', async () => {

@@ -4,7 +4,7 @@ import { router } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { dateCourte, duree, euros, lieu, offre as getOffre, offres, prix } from '../src/data';
+import { dateCourte, duree, euros, heureAffichee, kilometres, lieu, offre as getOffre, offres, prix } from '../src/data';
 import { useStore } from '../src/store';
 import { Couleurs, f, radius, space } from '../src/theme';
 import { CartePlan } from '../src/CartePlan';
@@ -12,6 +12,7 @@ import { useTheme } from '../src/useTheme';
 import { Bouton, Note, appelerFabrice } from '../src/ui';
 import { useItineraire } from '../src/geo';
 import { evenement } from '../src/stats';
+import { t } from '../src/i18n';
 
 export default function Offre() {
   const { c, type, s } = useTheme(creerStyles);
@@ -20,13 +21,13 @@ export default function Offre() {
   // Distance et durée réelles par la route (IGN). Pas de prix tant qu'elles ne sont pas connues.
   const it = useItineraire(b.departId ? lieu(b.departId) : undefined, b.arriveeId ? lieu(b.arriveeId) : undefined);
   const pret = it.etat === 'ok';
-  const t = pret ? { km: it.itineraire.km, minutes: it.itineraire.minutes } : { km: 0, minutes: 0 };
+  const dist = pret ? { km: it.itineraire.km, minutes: it.itineraire.minutes } : { km: 0, minutes: 0 };
   const choisie = getOffre(b.offreId);
-  const prixChoisi = prix(choisie, t.km, b.jour, b.heure, b.allerRetour);
+  const prixChoisi = prix(choisie, dist.km, b.jour, b.heure, b.allerRetour);
   // Les hooks restent avant tout « return » anticipé : React exige qu'ils soient appelés à chaque affichage.
   useEffect(() => {
-    if (pret && b.departId && b.arriveeId) evenement('estimation_affichee', { offre: choisie.id, km: t.km, prix: prixChoisi.montant, majoration: prixChoisi.raisons.join(', ') || 'aucune', aller_retour: b.allerRetour, passagers: b.passagers });
-  }, [pret, t.km]);
+    if (pret && b.departId && b.arriveeId) evenement('estimation_affichee', { offre: choisie.id, km: dist.km, prix: prixChoisi.montant, majoration: prixChoisi.raisons.join(', ') || 'aucune', aller_retour: b.allerRetour, passagers: b.passagers });
+  }, [pret, dist.km]);
   if (!b.departId || !b.arriveeId) return null;
 
   return (
@@ -38,16 +39,16 @@ export default function Offre() {
           ) : (
             <View style={[s.attente, { height: 210 }]}>
               {it.etat === 'erreur' ? <Ionicons name="cloud-offline-outline" size={30} color={c.pierre} /> : <ActivityIndicator color={c.accent} />}
-              <Text style={type.small}>{it.etat === 'erreur' ? 'Itinéraire indisponible' : 'Calcul de l’itinéraire par la route…'}</Text>
+              <Text style={type.small}>{it.etat === 'erreur' ? t('Itinéraire indisponible') : t('Calcul de l’itinéraire par la route…')}</Text>
             </View>
           )}
           <View style={{ padding: space.l, paddingTop: space.s }}>
           <Text style={s.bandeauRoute} numberOfLines={2}>
-            {lieu(b.departId).nom} → {lieu(b.arriveeId).nom}
+            {t(lieu(b.departId).nom)} → {t(lieu(b.arriveeId).nom)}
           </Text>
           <Text style={type.small}>
-            {dateCourte(b.jour)} à {b.heure.replace(':', 'h')}{pret ? ` · ${t.km.toLocaleString('fr-FR')} km · ${duree(t.minutes)}` : ''}
-            {b.allerRetour ? ' · aller-retour' : ''}
+            {dateCourte(b.jour)} {t('à')} {heureAffichee(b.heure)}{pret ? ` · ${kilometres(dist.km)} · ${duree(dist.minutes)}` : ''}
+            {b.allerRetour ? ` · ${t('aller-retour')}` : ''}
           </Text>
           </View>
         </View>
@@ -55,18 +56,17 @@ export default function Offre() {
         {it.etat === 'erreur' ? (
           <View style={{ gap: space.s, marginBottom: space.l }}>
             <Note ton="erreur">
-              Le calcul de l'itinéraire n'a pas abouti. Sans la distance réelle, nous ne pouvons pas vous donner de prix :
-              réessayez dans un instant, ou appelez Fabrice.
+              {t("Le calcul de l'itinéraire n'a pas abouti. Sans la distance réelle, nous ne pouvons pas vous donner de prix : réessayez dans un instant, ou appelez Fabrice.")}
             </Note>
-            <Text style={[type.small, { fontSize: 11 }]} selectable>Détail technique : {it.message}</Text>
+            <Text style={[type.small, { fontSize: 11 }]} selectable>{t('Détail technique :')} {it.message}</Text>
             <View style={{ flexDirection: 'row', gap: space.s }}>
-              <Bouton titre="Réessayer" variante="contour" icone="refresh" onPress={it.reessayer} style={{ flex: 1 }} />
-              <Bouton titre="Appeler" variante="contour" icone="call-outline" onPress={appelerFabrice} style={{ flex: 1 }} />
+              <Bouton titre={t('Réessayer')} variante="contour" icone="refresh" onPress={it.reessayer} style={{ flex: 1 }} />
+              <Bouton titre={t('Appeler')} variante="contour" icone="call-outline" onPress={appelerFabrice} style={{ flex: 1 }} />
             </View>
           </View>
         ) : null}
         {offres.map((o) => {
-          const p = prix(o, t.km, b.jour, b.heure, b.allerRetour);
+          const p = prix(o, dist.km, b.jour, b.heure, b.allerRetour);
           const tropPassagers = b.passagers > o.passagersMax;
           const tropBagages = b.bagages > o.bagagesMax;
           const indispo = tropPassagers || tropBagages;
@@ -80,30 +80,30 @@ export default function Offre() {
               accessibilityState={{ checked: actif, disabled: indispo }}
               style={[s.offre, actif && s.offreActive, indispo && { opacity: 0.55 }]}
             >
-              <Image source={o.photo} style={s.photo} contentFit="cover" accessibilityLabel={o.vehicule} />
+              <Image source={o.photo} style={s.photo} contentFit="cover" accessibilityLabel={t(o.vehicule)} />
               <View style={{ padding: space.l }}>
                 <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: space.m }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={type.h3}>{o.nom}</Text>
-                    <Text style={type.small}>{o.vehicule}</Text>
+                    <Text style={type.h3}>{t(o.nom)}</Text>
+                    <Text style={type.small}>{t(o.vehicule)}</Text>
                   </View>
                   <Text style={[s.prix, !pret && { color: c.bain3 }]}>{pret ? euros(p.montant) : '— €'}</Text>
                 </View>
                 <View style={s.capacites}>
-                  <Capacite icone="people-outline" texte={`${o.passagersMax} passagers`} />
-                  <Capacite icone="briefcase-outline" texte={`${o.bagagesMax} bagages`} />
-                  <Capacite icone="flash-outline" texte={o.id === 'tesla' ? '100 % électrique' : 'Clim. arrière'} />
+                  <Capacite icone="people-outline" texte={t('{n} passagers', { n: o.passagersMax })} />
+                  <Capacite icone="briefcase-outline" texte={t('{n} bagages', { n: o.bagagesMax })} />
+                  <Capacite icone="flash-outline" texte={o.id === 'tesla' ? t('100 % électrique') : t('Clim. arrière')} />
                 </View>
                 {indispo ? (
                   <Text style={[type.small, { color: c.erreur, marginTop: space.m }]}>
-                    Jusqu'à {tropPassagers ? `${o.passagersMax} passagers` : `${o.bagagesMax} bagages`} : choisissez l'Offre Premium.
+                    {t("Jusqu'à {capacite} : choisissez l'Offre Premium.", { capacite: tropPassagers ? t('{n} passagers', { n: o.passagersMax }) : t('{n} bagages', { n: o.bagagesMax }) })}
                   </Text>
                 ) : !pret ? null : (
                   <Text style={[type.small, { marginTop: space.m }]}>
                     {p.auMinimum
-                      ? `Course minimum : ${euros(o.minimum)}`
-                      : `${t.km.toLocaleString('fr-FR')} km × ${euros(p.prixKm)}${b.allerRetour ? ' × 2 (-5 %)' : ''}`}
-                    {p.raisons.length ? ` · tarif majoré (${p.raisons.join(', ')})` : ''}
+                      ? t('Course minimum : {prix}', { prix: euros(o.minimum) })
+                      : `${kilometres(dist.km)} × ${euros(p.prixKm)}${b.allerRetour ? ' × 2 (-5 %)' : ''}`}
+                    {p.raisons.length ? ` · ${t('tarif majoré ({raisons})', { raisons: p.raisons.join(', ') })}` : ''}
                   </Text>
                 )}
               </View>
@@ -117,16 +117,15 @@ export default function Offre() {
         })}
 
         <Text style={[type.small, { marginTop: space.s }]}>
-          Prix calculé sur la distance réelle par la route (IGN), sans frais cachés. Suppléments possibles : attente
-          prolongée, arrêt supplémentaire, bagages volumineux. Paiement à bord ou sur facture.
+          {t('Prix calculé sur la distance réelle par la route (IGN), sans frais cachés. Suppléments possibles : attente prolongée, arrêt supplémentaire, bagages volumineux. Paiement à bord ou sur facture.')}
         </Text>
       </ScrollView>
       <View style={[s.pied, { paddingBottom: insets.bottom + space.m }]}>
         <Bouton
-          titre={pret ? `Continuer · ${euros(prixChoisi.montant)}` : it.etat === 'erreur' ? 'Itinéraire indisponible' : 'Calcul du prix…'}
+          titre={pret ? `${t('Continuer')} · ${euros(prixChoisi.montant)}` : it.etat === 'erreur' ? t('Itinéraire indisponible') : t('Calcul du prix…')}
           icone={pret ? 'arrow-forward' : undefined}
           desactive={!pret}
-          onPress={() => { evenement('offre_choisie', { offre: choisie.id, prix: prixChoisi.montant, km: t.km }); router.push('/coordonnees'); }}
+          onPress={() => { evenement('offre_choisie', { offre: choisie.id, prix: prixChoisi.montant, km: dist.km }); router.push('/coordonnees'); }}
         />
       </View>
     </View>

@@ -5,11 +5,12 @@ import {
   ActivityIndicator, Linking, Pressable, StyleSheet, Text, TextInput, TextInputProps, View,
   ViewStyle,
 } from 'react-native';
-import { contact, dateCourte, euros, lieu, offre } from './data';
+import { contact, dateCourte, euros, heureAffichee, lieu, offre } from './data';
 import type { Course, Statut } from './store';
 import { Couleurs, f, radius, sansContourWeb, space } from './theme';
 import { useTheme } from './useTheme';
 import { evenement } from './stats';
+import { t, L } from './i18n';
 
 export type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -105,11 +106,11 @@ export function Compteur({ libelle, valeur, min, max, onChange, icone }: {
     <View style={s.compteur}>
       <Ionicons name={icone} size={22} color={c.accent} />
       <Text style={[type.body, { flex: 1 }]}>{libelle}</Text>
-      <Pressable accessibilityLabel={`Moins de ${libelle.toLowerCase()}`} disabled={valeur <= min} onPress={() => onChange(valeur - 1)} style={[s.rond, valeur <= min && { opacity: 0.35 }]}>
+      <Pressable accessibilityLabel={`${t('Moins de')} ${libelle.toLowerCase()}`} disabled={valeur <= min} onPress={() => onChange(valeur - 1)} style={[s.rond, valeur <= min && { opacity: 0.35 }]}>
         <Ionicons name="remove" size={22} color={c.accent} />
       </Pressable>
       <Text style={s.compteurValeur}>{valeur}</Text>
-      <Pressable accessibilityLabel={`Plus de ${libelle.toLowerCase()}`} disabled={valeur >= max} onPress={() => onChange(valeur + 1)} style={[s.rond, valeur >= max && { opacity: 0.35 }]}>
+      <Pressable accessibilityLabel={`${t('Plus de')} ${libelle.toLowerCase()}`} disabled={valeur >= max} onPress={() => onChange(valeur + 1)} style={[s.rond, valeur >= max && { opacity: 0.35 }]}>
         <Ionicons name="add" size={22} color={c.accent} />
       </Pressable>
     </View>
@@ -139,23 +140,23 @@ export function Segment<T extends string>({ options, valeur, onChange }: {
 // ——— Signature : la course se teinte ———
 // Chaque statut est un bain de teinture plus ou moins foncé.
 export const teintesDe = (c: Couleurs): Record<Statut, { fond: string; texte: string; texte2: string; libelle: string; niveau: number }> => ({
-  envoyee: { fond: c.bain1, texte: c.fort, texte2: c.accent, libelle: 'Demande envoyée', niveau: 1 },
-  acompte_attendu: { fond: c.bain2, texte: c.fort, texte2: c.accent, libelle: 'Acompte à régler', niveau: 1 },
-  confirmee: { fond: c.action, texte: c.blanc, texte2: c.surCuve2, libelle: 'Confirmée par Fabrice', niveau: 2 },
-  terminee: { fond: c.delaveFond, texte: c.encre, texte2: c.pierre, libelle: 'Terminée', niveau: 3 },
-  annulee: { fond: c.surface, texte: c.pierre, texte2: c.pierre, libelle: 'Annulée', niveau: 0 },
-  refusee: { fond: c.surface, texte: c.pierre, texte2: c.pierre, libelle: 'Refusée par Fabrice', niveau: 0 },
-  expiree: { fond: c.surface, texte: c.pierre, texte2: c.pierre, libelle: 'Non confirmée : acompte non réglé', niveau: 0 },
+  envoyee: { fond: c.bain1, texte: c.fort, texte2: c.accent, libelle: t('Demande envoyée'), niveau: 1 },
+  acompte_attendu: { fond: c.bain2, texte: c.fort, texte2: c.accent, libelle: t('Acompte à régler'), niveau: 1 },
+  confirmee: { fond: c.action, texte: c.blanc, texte2: c.surCuve2, libelle: t('Confirmée par Fabrice'), niveau: 2 },
+  terminee: { fond: c.delaveFond, texte: c.encre, texte2: c.pierre, libelle: t('Terminée'), niveau: 3 },
+  annulee: { fond: c.surface, texte: c.pierre, texte2: c.pierre, libelle: t('Annulée'), niveau: 0 },
+  refusee: { fond: c.surface, texte: c.pierre, texte2: c.pierre, libelle: t('Refusée par Fabrice'), niveau: 0 },
+  expiree: { fond: c.surface, texte: c.pierre, texte2: c.pierre, libelle: t('Non confirmée : acompte non réglé'), niveau: 0 },
 });
 
 // Course qui n'aura pas lieu (affichée barrée, sans barre de teinture).
 export const estFermee = (s: Statut) => s === 'annulee' || s === 'refusee' || s === 'expiree';
-export const heureCourte = (d: Date) => `${d.getHours()}h${String(d.getMinutes()).padStart(2, '0')}`;
+export const heureCourte = (d: Date) => `${d.getHours()}${L('h', ':')}${String(d.getMinutes()).padStart(2, '0')}`;
 
 const bainsDe = (c: Couleurs) => [
-  { titre: 'Envoyée', couleur: c.bain3 },
-  { titre: 'Confirmée', couleur: c.action },
-  { titre: 'Terminée', couleur: c.delave },
+  { titre: t('Envoyée'), couleur: c.bain3 },
+  { titre: t('Confirmée'), couleur: c.action },
+  { titre: t('Terminée'), couleur: c.delave },
 ];
 
 export function Teinture({ statut, surFonce }: { statut: Statut; surFonce?: boolean }) {
@@ -164,7 +165,7 @@ export function Teinture({ statut, surFonce }: { statut: Statut; surFonce?: bool
   const bains = bainsDe(c);
   const vide = surFonce ? 'rgba(255,255,255,0.18)' : c.trait;
   return (
-    <View accessibilityLabel={`Statut : ${teintesDe(c)[statut].libelle}`} style={{ flexDirection: 'row', gap: 4 }}>
+    <View accessibilityLabel={`${t('Statut :')} ${teintesDe(c)[statut].libelle}`} style={{ flexDirection: 'row', gap: 4 }}>
       {bains.map((b, i) => (
         <View key={b.titre} style={{ flex: 1 }}>
           <Bain rempli={i < niveau} retard={i * 140} couleur={surFonce && i === 1 ? c.blanc : b.couleur} vide={vide} />
@@ -201,7 +202,7 @@ export function Itineraire({ departId, arriveeId, couleur: couleurP, couleur2: c
   const couleur2 = couleur2P ?? c.pierre;
   const a = lieu(departId);
   const b = lieu(arriveeId);
-  const t = grand ? { fontSize: 18, fontWeight: '600' as const } : { fontSize: 16, fontWeight: '600' as const };
+  const taille = grand ? { fontSize: 18, fontWeight: '600' as const } : { fontSize: 16, fontWeight: '600' as const };
   return (
     <View style={{ flexDirection: 'row', gap: space.m }}>
       <View style={{ alignItems: 'center', paddingTop: 7 }}>
@@ -211,12 +212,12 @@ export function Itineraire({ departId, arriveeId, couleur: couleurP, couleur2: c
       </View>
       <View style={{ flex: 1, gap: 10 }}>
         <View>
-          <Text style={[t, { color: couleur }]}>{a.nom}</Text>
-          <Text style={[type.small, { color: couleur2 }]}>{a.detail}</Text>
+          <Text style={[taille, { color: couleur }]}>{t(a.nom)}</Text>
+          <Text style={[type.small, { color: couleur2 }]}>{t(a.detail)}</Text>
         </View>
         <View>
-          <Text style={[t, { color: couleur }]}>{b.nom}</Text>
-          <Text style={[type.small, { color: couleur2 }]}>{b.detail}</Text>
+          <Text style={[taille, { color: couleur }]}>{t(b.nom)}</Text>
+          <Text style={[type.small, { color: couleur2 }]}>{t(b.detail)}</Text>
         </View>
       </View>
     </View>
@@ -225,42 +226,44 @@ export function Itineraire({ departId, arriveeId, couleur: couleurP, couleur2: c
 
 export function CarteCourse({ course, onPress }: { course: Course; onPress?: () => void }) {
   const { c, type, s } = useTheme(creerStyles);
-  const t = teintesDe(c)[course.statut];
+  const tt = teintesDe(c)[course.statut];
   const fonce = course.statut === 'confirmee';
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${t.libelle}, ${dateCourte(course.date)} à ${course.heure}, ${lieu(course.departId).nom} vers ${lieu(course.arriveeId).nom}`}
+      accessibilityLabel={`${tt.libelle}, ${dateCourte(course.date)} ${t('à')} ${course.heure}, ${t(lieu(course.departId).nom)} ${t('vers')} ${t(lieu(course.arriveeId).nom)}`}
       style={({ pressed }) => [
         s.carteCourse,
-        { backgroundColor: t.fond },
+        { backgroundColor: tt.fond },
         estFermee(course.statut) && { borderWidth: 1, borderColor: c.trait, borderStyle: 'dashed' },
         pressed && { opacity: 0.9 },
       ]}
     >
       <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
-        <Text style={{ fontFamily: f.display, fontSize: 26, color: t.texte, textDecorationLine: estFermee(course.statut) ? 'line-through' : 'none' }}>
-          {dateCourte(course.date)} · {course.heure.replace(':', 'h')}
+        <Text style={{ fontFamily: f.display, fontSize: 26, color: tt.texte, textDecorationLine: estFermee(course.statut) ? 'line-through' : 'none' }}>
+          {dateCourte(course.date)} · {heureAffichee(course.heure)}
         </Text>
-        <Text style={{ fontFamily: f.displayMedium, fontSize: 20, color: t.texte }}>{euros(course.montant)}</Text>
+        <Text style={{ fontFamily: f.displayMedium, fontSize: 20, color: tt.texte }}>{euros(course.montant)}</Text>
       </View>
       <View style={{ marginVertical: space.l }}>
-        <Itineraire departId={course.departId} arriveeId={course.arriveeId} couleur={t.texte} couleur2={t.texte2} />
+        <Itineraire departId={course.departId} arriveeId={course.arriveeId} couleur={tt.texte} couleur2={tt.texte2} />
       </View>
-      <Text style={[type.small, { color: t.texte2, marginBottom: space.m }]}>
-        {offre(course.offreId).nom} · {offre(course.offreId).vehicule}
+      <Text style={[type.small, { color: tt.texte2, marginBottom: space.m }]}>
+        {t(offre(course.offreId).nom)} · {t(offre(course.offreId).vehicule)}
         {course.numero ? ` · ${course.numero}` : ''}
       </Text>
       {course.statut === 'acompte_attendu' && course.acompteMontant ? (
         <Text style={[type.small, { color: c.fort, fontWeight: '700', marginBottom: space.s }]}>
-          Acompte de {euros(course.acompteMontant)} à régler{course.acompteLimite ? ` avant ${heureCourte(course.acompteLimite)}` : ''} pour confirmer
+          {course.acompteLimite
+            ? t('Acompte de {montant} à régler avant {heure} pour confirmer', { montant: euros(course.acompteMontant), heure: heureCourte(course.acompteLimite) })
+            : t('Acompte de {montant} à régler pour confirmer', { montant: euros(course.acompteMontant) })}
         </Text>
       ) : null}
       {estFermee(course.statut) ? (
         <View>
           <Text style={[type.label, { color: course.statut === 'refusee' ? c.erreur : c.pierre }]}>{teintesDe(c)[course.statut].libelle}</Text>
-          {course.statut === 'refusee' && course.motifRefus ? <Text style={[type.small, { marginTop: 2 }]}>Motif : {course.motifRefus}</Text> : null}
+          {course.statut === 'refusee' && course.motifRefus ? <Text style={[type.small, { marginTop: 2 }]}>{t('Motif :')} {course.motifRefus}</Text> : null}
         </View>
       ) : (
         <Teinture statut={course.statut} surFonce={fonce} />

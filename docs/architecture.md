@@ -118,6 +118,10 @@ règles sont vérifiées par un jeu de 21 tests exécutés sur un PostgreSQL loc
    (`docs/politique-confidentialite.md`) à publier sur le site. Suppression du compte depuis l'appli
    (fonction `supprimer-compte`) et effacement automatique chaque nuit des données anciennes
    (migration 15, `purger_donnees`).
+6 bis. ✅ **Version anglaise** (migration 16) : interface client en anglais selon la langue du téléphone
+   ou le choix du client, notifications et emails dans sa langue ; espace chauffeur toujours en
+   français. Fabrice se connecte avec ses identifiants depuis Profil › J'ai déjà un compte et arrive
+   directement dans son espace (plus de lien « Espace chauffeur » chez les clients).
 7. **Publication** : version de développement (EAS), test par Fabrice et quelques clients, stores.
 
 **Messagerie client ↔ chauffeur** ✅ (demande de Fabrice) : une conversation par course, en temps réel

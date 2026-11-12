@@ -8,10 +8,11 @@ import { Course, useStore } from './store';
 import { Couleurs, f, radius, space } from './theme';
 import { Bouton, Note, heureCourte } from './ui';
 import { useTheme } from './useTheme';
+import { t, traduireErreur } from './i18n';
 
 function useMinute() {
   const [maintenant, setMaintenant] = useState(() => new Date());
-  useEffect(() => { const t = setInterval(() => setMaintenant(new Date()), 15000); return () => clearInterval(t); }, []);
+  useEffect(() => { const id = setInterval(() => setMaintenant(new Date()), 15000); return () => clearInterval(id); }, []);
   return maintenant;
 }
 
@@ -38,7 +39,7 @@ export function BlocAcompte({ course, surFonce }: { course: Course; surFonce?: b
       const url = await payerAcompte(course.id);
       if (url) { await Linking.openURL(url); setEtat('ouvert'); } else setEtat(null);
     } catch (e) {
-      setErreur(e instanceof Error ? e.message : String(e));
+      setErreur(traduireErreur(e instanceof Error ? e.message : String(e)));
       setEtat(null);
     }
   };
@@ -46,18 +47,18 @@ export function BlocAcompte({ course, surFonce }: { course: Course; surFonce?: b
   return (
     <View style={[s.carte, surFonce && { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
       <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: space.s }}>
-        <Text style={[type.label, { flex: 1, color: surFonce ? c.surCuve2 : c.pierre }]}>Acompte pour confirmer</Text>
+        <Text style={[type.label, { flex: 1, color: surFonce ? c.surCuve2 : c.pierre }]}>{t('Acompte pour confirmer')}</Text>
         <Text style={[s.montant, { color: surFonce ? c.blanc : c.fort }]}>{euros(montant)}</Text>
       </View>
       <Text style={[type.small, { color: surFonce ? c.surCuve2 : c.encre, marginTop: space.xs }]}>
         {depasse
-          ? 'Le délai est dépassé : la demande va expirer. Refaites une demande ou appelez Fabrice.'
-          : `À régler avant ${course.acompteLimite ? heureCourte(course.acompteLimite) : 'le départ'}${minutes !== null && minutes <= 60 ? ` (reste ${minutes} min)` : ''}. Le reste, ${euros(reste)}, se règle à bord par carte ou en espèces.`}
+          ? t('Le délai est dépassé : la demande va expirer. Refaites une demande ou appelez Fabrice.')
+          : `${t('À régler avant {limite}', { limite: course.acompteLimite ? heureCourte(course.acompteLimite) : t('le départ') })}${minutes !== null && minutes <= 60 ? ` (${t('reste {n} min', { n: minutes })})` : ''}. ${t('Le reste, {montant}, se règle à bord par carte ou en espèces.', { montant: euros(reste) })}`}
       </Text>
       {erreur ? <View style={{ marginTop: space.m }}><Note ton="erreur">{erreur}</Note></View> : null}
       {!depasse ? (
         <Bouton
-          titre={etat === 'ouvert' ? 'Rouvrir la page de paiement' : `Payer ${euros(montant)}`}
+          titre={etat === 'ouvert' ? t('Rouvrir la page de paiement') : t('Payer {montant}', { montant: euros(montant) })}
           icone="card-outline"
           chargement={etat === 'ouverture'}
           variante={surFonce ? 'clair' : 'plein'}
@@ -67,13 +68,13 @@ export function BlocAcompte({ course, surFonce }: { course: Course; surFonce?: b
       ) : null}
       {etat === 'ouvert' ? (
         <Text style={[type.small, { marginTop: space.s, color: surFonce ? c.surCuve2 : c.pierre }]}>
-          Une fois le paiement validé, revenez ici : la course se confirme toute seule.
+          {t('Une fois le paiement validé, revenez ici : la course se confirme toute seule.')}
         </Text>
       ) : null}
       <View style={s.securite}>
         <Ionicons name="lock-closed-outline" size={14} color={surFonce ? c.surCuve2 : c.pierre} />
         <Text style={[type.label, { color: surFonce ? c.surCuve2 : c.pierre, flex: 1 }]}>
-          {regles.paiementsTest ? 'Mode test : paiement simulé, aucun argent réel.' : 'Paiement sécurisé par SumUp. Remboursé si vous annulez plus de 24 h avant (CGV).'}
+          {regles.paiementsTest ? t('Mode test : paiement simulé, aucun argent réel.') : t('Paiement sécurisé par SumUp. Remboursé si vous annulez plus de 24 h avant (CGV).')}
         </Text>
       </View>
     </View>
@@ -86,7 +87,7 @@ export function ResteAPayer({ course }: { course: Course }) {
   if (!course.acomptePaye || !course.acompteMontant) return null;
   return (
     <Note ton="feuille" icone="checkmark-circle-outline">
-      Acompte de {euros(course.acompteMontant)} réglé. Reste à payer à bord : {euros(Math.max(0, course.montant - course.acompteMontant))}.
+      {t('Acompte de {acompte} réglé. Reste à payer à bord : {reste}.', { acompte: euros(course.acompteMontant), reste: euros(Math.max(0, course.montant - course.acompteMontant)) })}
     </Note>
   );
 }

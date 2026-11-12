@@ -7,6 +7,7 @@ import { Couleurs, radius, space } from './theme';
 import { Bouton, Note } from './ui';
 import { useTheme } from './useTheme';
 import { evenement } from './stats';
+import { t, traduireErreur } from './i18n';
 
 // Documents d'une course (bon de commande, facture), mis à jour en temps réel.
 export function useDocumentsCourse(courseId: string, actif = true) {
@@ -38,19 +39,19 @@ export function LigneDocument({ d, trait, detail }: { d: DocumentEmis; trait?: b
   return (
     <View>
       <Pressable
-        onPress={async () => { setOuverture(true); setErreur(''); try { await ouvrirPdf(d); } catch (e) { setErreur(e instanceof Error ? e.message : String(e)); } finally { setOuverture(false); } }}
+        onPress={async () => { setOuverture(true); setErreur(''); try { await ouvrirPdf(d); } catch (e) { setErreur(traduireErreur(e instanceof Error ? e.message : String(e))); } finally { setOuverture(false); } }}
         style={({ pressed }) => [s.ligne, trait && s.trait, pressed && { opacity: 0.6 }]}
         accessibilityRole="button"
-        accessibilityLabel={`${facture ? 'Facture' : 'Bon de commande'} ${d.numero}, ${euros(d.total_ttc)}, ouvrir le PDF`}
+        accessibilityLabel={`${facture ? t('Facture') : t('Bon de commande')} ${d.numero}, ${euros(d.total_ttc)}, ${t('ouvrir le PDF')}`}
       >
         <View style={[s.icone, { backgroundColor: facture ? c.action : c.bain1 }]}>
           <Ionicons name={facture ? 'receipt-outline' : 'document-text-outline'} size={18} color={facture ? c.blanc : c.accent} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={[type.body, { fontWeight: '600' }]}>{facture ? 'Facture' : 'Bon de commande'} {d.numero}</Text>
+          <Text style={[type.body, { fontWeight: '600' }]}>{facture ? t('Facture') : t('Bon de commande')} {d.numero}</Text>
           <Text style={type.small} numberOfLines={1}>
             {detail && d.contenu.client?.nom ? `${d.contenu.client.entreprise || d.contenu.client.nom} · ` : ''}
-            {dateCourte(new Date(d.emis_le))} · {euros(d.total_ttc)} TTC{d.mode_paiement ? ` · ${libelleMode[d.mode_paiement]}` : ''}
+            {dateCourte(new Date(d.emis_le))} · {euros(d.total_ttc)} {t('TTC')}{d.mode_paiement ? ` · ${t(libelleMode[d.mode_paiement])}` : ''}
           </Text>
         </View>
         {ouverture ? <ActivityIndicator color={c.accent} /> : <Ionicons name="download-outline" size={20} color={c.accent} />}

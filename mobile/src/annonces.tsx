@@ -3,6 +3,7 @@ import { isoJour } from './data';
 import {
   AnnonceServeur, chargerAnnonces, ecouterAnnonces, enregistrerAnnonceServeur, supabase, supprimerAnnonceServeur,
 } from './serveur';
+import { anglais, t, L } from './i18n';
 
 // Annonces de Fabrice : indisponibilités (vacances…) et informations, visibles côté client.
 // Les dates sont des jours « AAAA-MM-JJ », bornes incluses.
@@ -11,17 +12,21 @@ export type AnnonceSaisie = Omit<Annonce, 'id' | 'cree_le'> & { id?: string };
 
 const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 export const jourEnDate = (iso: string) => new Date(`${iso}T12:00:00`);
-const jourLong = (iso: string) => { const d = jourEnDate(iso); return `${d.getDate() === 1 ? '1er' : d.getDate()} ${MOIS[d.getMonth()]}`; };
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const jourLong = (iso: string) => {
+  const d = jourEnDate(iso);
+  return anglais() ? `${d.getDate()} ${MONTHS[d.getMonth()]}` : `${d.getDate() === 1 ? '1er' : d.getDate()} ${MOIS[d.getMonth()]}`;
+};
 
 // « du 16 au 26 novembre », « du 28 décembre au 4 janvier », « le 11 novembre ».
 export function periode(a: Pick<Annonce, 'debut' | 'fin'>) {
-  if (a.debut === a.fin) return `le ${jourLong(a.debut)}`;
+  if (a.debut === a.fin) return `${L('le', 'on')} ${jourLong(a.debut)}`;
   const d = jourEnDate(a.debut), f = jourEnDate(a.fin);
-  const debut = d.getMonth() === f.getMonth() && d.getFullYear() === f.getFullYear() ? (d.getDate() === 1 ? '1er' : String(d.getDate())) : jourLong(a.debut);
-  return `du ${debut} au ${jourLong(a.fin)}`;
+  const debut = d.getMonth() === f.getMonth() && d.getFullYear() === f.getFullYear() ? (d.getDate() === 1 && !anglais() ? '1er' : String(d.getDate())) : jourLong(a.debut);
+  return L(`du ${debut} au ${jourLong(a.fin)}`, `from ${debut} to ${jourLong(a.fin)}`);
 }
 
-export const titreAnnonce = (a: Annonce) => (a.bloquer ? `Fabrice est absent ${periode(a)}` : 'Information de Fabrice');
+export const titreAnnonce = (a: Annonce) => (a.bloquer ? t('Fabrice est absent {periode}', { periode: periode(a) }) : t('Information de Fabrice'));
 
 // Le jour qui suit la fin : « de retour le … ».
 export function retourLe(a: Annonce) {

@@ -12,6 +12,7 @@ import { CuveIndigo } from '../../src/CuveIndigo';
 import { useTheme } from '../../src/useTheme';
 import { Bouton, CarteCourse, Titre, appelerFabrice } from '../../src/ui';
 import { evenement } from '../../src/stats';
+import { t } from '../../src/i18n';
 
 const raccourcis = lieux.filter((l) => l.type !== 'ville');
 
@@ -38,20 +39,20 @@ export default function Accueil() {
         <View style={s.marque}>
           <Image source={photos.logoBlanc} style={{ width: 34, height: 34 }} contentFit="contain" accessibilityLabel="Logo Volant3ranches" />
           <Text style={s.marqueTexte}>Volant3ranches</Text>
-          <Pressable onPress={appelerFabrice} accessibilityLabel="Appeler Fabrice" style={s.appel}>
+          <Pressable onPress={appelerFabrice} accessibilityLabel={t('Appeler Fabrice')} style={s.appel}>
             <Ionicons name="call" size={20} color={c.blanc} />
           </Pressable>
         </View>
-        <Text style={s.question}>Où allez-vous ?</Text>
-        <Text style={s.sousTitre}>Votre chauffeur privé dans le Tarn, 24h/24.</Text>
+        <Text style={s.question}>{t('Où allez-vous ?')}</Text>
+        <Text style={s.sousTitre}>{t('Votre chauffeur privé dans le Tarn, 24h/24.')}</Text>
       </View>
 
       <View style={s.fiche}>
-        <ChampLieu libelle="Départ" lieu={depart} marque="rond" onPress={() => router.push({ pathname: '/adresse', params: { champ: 'depart' } })} />
+        <ChampLieu libelle={t('Départ')} depart lieu={depart} marque="rond" onPress={() => router.push({ pathname: '/adresse', params: { champ: 'depart' } })} />
         <View style={s.separateur} />
-        <ChampLieu libelle="Arrivée" lieu={arrivee} marque="carre" onPress={() => router.push({ pathname: '/adresse', params: { champ: 'arrivee' } })} />
+        <ChampLieu libelle={t('Arrivée')} lieu={arrivee} marque="carre" onPress={() => router.push({ pathname: '/adresse', params: { champ: 'arrivee' } })} />
         <Pressable
-          accessibilityLabel="Inverser départ et arrivée"
+          accessibilityLabel={t('Inverser départ et arrivée')}
           onPress={() => maj({ departId: brouillon.arriveeId, arriveeId: brouillon.departId })}
           style={s.inverser}
         >
@@ -67,10 +68,10 @@ export default function Accueil() {
           <DemandeConsentement />
         </View>
         {depart && arrivee ? (
-          <Bouton titre="Choisir la date et l'heure" icone="arrow-forward" onPress={() => router.push('/trajet')} style={{ marginTop: space.l }} />
+          <Bouton titre={t("Choisir la date et l'heure")} icone="arrow-forward" onPress={() => router.push('/trajet')} style={{ marginTop: space.l }} />
         ) : null}
 
-        <Titre>Aéroport et gares</Titre>
+        <Titre>{t('Aéroport et gares')}</Titre>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: space.l, gap: space.s }}>
         {raccourcis.map((l) => {
@@ -78,53 +79,53 @@ export default function Accueil() {
           return (
             <Pressable key={l.id} onPress={() => choisirRaccourci(l)} style={[s.puce, actif && s.puceActive]} accessibilityState={{ selected: actif }}>
               <Ionicons name={l.type === 'aeroport' ? 'airplane' : 'train'} size={18} color={actif ? c.blanc : c.accent} />
-              <Text style={[s.puceTexte, actif && { color: c.blanc }]}>{l.nom}</Text>
+              <Text style={[s.puceTexte, actif && { color: c.blanc }]}>{t(l.nom)}</Text>
             </Pressable>
           );
         })}
       </ScrollView>
       <Text style={[type.small, { paddingHorizontal: space.l, marginTop: space.s }]}>
-        Vol ou train suivi en temps réel, accueil avec panneau à votre nom.
+        {t('Vol ou train suivi en temps réel, accueil avec panneau à votre nom.')}
       </Text>
 
       <View style={{ paddingHorizontal: space.l }}>
         {prochaine ? (
           <>
-            <Titre>Votre prochaine course</Titre>
+            <Titre>{t('Votre prochaine course')}</Titre>
             <CarteCourse course={prochaine} onPress={() => router.push(`/course/${prochaine.id}`)} />
           </>
         ) : null}
 
-        <Titre>Votre chauffeur</Titre>
+        <Titre>{t('Votre chauffeur')}</Titre>
         <View style={s.fabrice}>
-          <Image source={photos.fabrice} style={s.fabricePhoto} contentFit="cover" contentPosition="top" accessibilityLabel="Photo de Fabrice" />
+          <Image source={photos.fabrice} style={s.fabricePhoto} contentFit="cover" contentPosition="top" accessibilityLabel={t('Photo de Fabrice')} />
           <View style={{ flex: 1 }}>
             <Text style={type.h3}>{fabrice.prenom}</Text>
-            <Text style={type.small}>Chauffeur VTC certifié, basé à Viterbe. Toulouse, Albi, Castres et toute la France.</Text>
+            <Text style={type.small}>{t('Chauffeur VTC certifié, basé à Viterbe. Toulouse, Albi, Castres et toute la France.')}</Text>
           </View>
         </View>
-        <Bouton titre="Appeler Fabrice" variante="contour" icone="call-outline" onPress={appelerFabrice} style={{ marginTop: space.m }} />
+        <Bouton titre={t('Appeler Fabrice')} variante="contour" icone="call-outline" onPress={appelerFabrice} style={{ marginTop: space.m }} />
       </View>
 
       <Pressable onPress={() => router.push('/decouvrir')} style={s.flotte} accessibilityRole="link">
-        <Image source={photos.flotte} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityLabel="La Tesla et le Van dans les collines du Lauragais" />
+        <Image source={photos.flotte} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityLabel={t('La Tesla et le Van dans les collines du Lauragais')} />
         <View style={s.flotteVoile} />
-        <Text style={s.flotteTitre}>Tesla Model 3 et Van 9 places</Text>
-        <Text style={[type.small, { color: c.surCuve2 }]}>Découvrir les véhicules et les prestations</Text>
+        <Text style={s.flotteTitre}>{t('Tesla Model 3 et Van 9 places')}</Text>
+        <Text style={[type.small, { color: c.surCuve2 }]}>{t('Découvrir les véhicules et les prestations')}</Text>
       </Pressable>
     </ScrollView>
   );
 }
 
-function ChampLieu({ libelle, lieu: l, onPress, marque }: { libelle: string; lieu?: Lieu; onPress: () => void; marque: 'rond' | 'carre' }) {
+function ChampLieu({ libelle, lieu: l, onPress, marque, depart }: { libelle: string; lieu?: Lieu; onPress: () => void; marque: 'rond' | 'carre'; depart?: boolean }) {
   const { c, type, s } = useTheme(creerStyles);
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [s.champLieu, pressed && { backgroundColor: c.bain1 }]} accessibilityRole="button" accessibilityLabel={`${libelle} : ${l ? l.nom : 'à choisir'}`}>
+    <Pressable onPress={onPress} style={({ pressed }) => [s.champLieu, pressed && { backgroundColor: c.bain1 }]} accessibilityRole="button" accessibilityLabel={`${libelle} : ${l ? t(l.nom) : t('à choisir')}`}>
       <View style={marque === 'rond' ? s.marqueRond : s.marqueCarre} />
       <View style={{ flex: 1 }}>
         <Text style={type.label}>{libelle}</Text>
         <Text style={[type.body, { fontWeight: '600', color: l ? c.encre : c.pierre }]} numberOfLines={1}>
-          {l ? l.nom : libelle === 'Départ' ? 'Adresse de prise en charge' : 'Destination'}
+          {l ? t(l.nom) : depart ? t('Adresse de prise en charge') : t('Destination')}
         </Text>
       </View>
     </Pressable>

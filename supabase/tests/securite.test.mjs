@@ -100,6 +100,7 @@ if (process.argv[4]) {
     await db.exec(readFileSync(process.argv[17], 'utf8'));
     ok(true, 'migration 15 (effacement) appliquée sans erreur');
   }
+  if (process.argv[18]) { await db.exec(readFileSync(process.argv[18], 'utf8')); ok(true, 'migration 16 (langue) appliquée sans erreur'); }
 }
 
 
@@ -881,4 +882,44 @@ if (process.argv[17]) {
   ok(r[0].n > 0, 'les courses récentes ne sont pas touchées');
   r = await srv(`select count(*)::int n from cron.taches where nom = 'volant3ranches-effacement'`);
   ok(r[0].n === 1, 'effacement programmé chaque nuit');
+}
+
+if (process.argv[18]) {
+  console.log('--- langue du client');
+  const srv = async (sql) => { await db.exec('reset role'); return (await db.query(sql)).rows; };
+  const john = 'f0f0f0f0-f0f0-f0f0-f0f0-f0f0f0f0f0f0';
+  await srv(`insert into auth.users (id) values ('${john}')`);
+  await srv(`update public.parametres set acompte_pourcent = 0, paiements_test = false`);
+  await en(john);
+  await echoue(() => q(`select public.definir_langue('de')`), 'langue inconnue refusée');
+  await q(`select public.definir_langue('en')`);
+  await q(`select public.enregistrer_appareil('ExponentPushToken[john-tel]', 'ios')`);
+  await srv(`delete from net.envois`);
+  await en(john);
+  const c = (await demande(john))[0];
+  r = await srv(`select langue from public.courses where id = '${c.id}'`);
+  ok(r[0].langue === 'en', 'la course prend la langue du client');
+  const envoisJ = async () => (await srv(`select body from net.envois order by id`)).map((x) => x.body).flat();
+  let e = await envoisJ();
+  ok(e.some((m) => m.title.startsWith('Nouvelle demande') && m.title.endsWith('(anglais)')), 'Fabrice est prévenu en français, avec la mention « anglais »');
+  await srv(`delete from net.envois`);
+  await en(fabrice);
+  await q(`select * from public.repondre_demande('${c.id}', true)`);
+  e = await envoisJ();
+  const conf = e.find((m) => m.to === 'ExponentPushToken[john-tel]');
+  ok(conf?.title === 'Ride confirmed' && /^Fabrice will be there on \w{3} \d{1,2} \w{3} at \d{2}:\d{2} · Castres station → Toulouse-Blagnac Airport$/.test(conf.body), `notification du client en anglais (« ${conf?.title} : ${conf?.body} »)`);
+  await srv(`delete from net.envois`);
+  await srv(`update public.courses set date_heure = now() + interval '5 hours', rappel_le = null where id = '${c.id}'`);
+  await srv(`select public.relances_notifications()`);
+  e = await envoisJ();
+  ok(e.some((m) => m.to === 'ExponentPushToken[john-tel]' && m.title === 'Reminder: your ride'), 'rappel de la veille en anglais');
+  await en(john);
+  await q(`select public.definir_langue('fr')`);
+  r = await srv(`select langue from public.courses where id = '${c.id}'`);
+  ok(r[0].langue === 'fr', 'changer de langue met à jour les courses à venir');
+  r = await srv(`select langue from public.courses where client_id is null and source = 'telephone' limit 1`);
+  ok(!r.length || r[0].langue === 'fr', 'courses saisies par Fabrice : en français');
+  await en(fabrice);
+  r = await q(`select public.fusionner_compte(gen_random_uuid()) n`);
+  ok(r[0].n === 0, 'Fabrice ne récupère jamais les courses d\'un invité');
 }

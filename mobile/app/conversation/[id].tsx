@@ -12,12 +12,16 @@ import { Couleurs, radius, sansContourWeb, space } from '../../src/theme';
 import { appelerFabrice } from '../../src/ui';
 import { EcranAvecClavier } from '../../src/Clavier';
 import { useTheme } from '../../src/useTheme';
+import { t, L, anglais, traduireErreur } from '../../src/i18n';
 
 // Réponses toutes prêtes : un geste suffit, même pour un voyageur qui parle peu français.
 const rapidesClient = ['Mon vol a du retard', 'Je suis arrivé(e)', 'Où êtes-vous ?', 'J’ai un bagage en plus', 'Merci !'];
 const rapidesChauffeur = ['Je suis arrivé', 'J’ai 10 min de retard', 'Je vous attends à la sortie', 'Bien reçu', 'Merci, à bientôt !'];
 
-const heure = (iso: string) => { const d = new Date(iso); return `${d.getHours()}h${String(d.getMinutes()).padStart(2, '0')}`; };
+const heure = (iso: string) => { const d = new Date(iso); return `${d.getHours()}${L('h', ':')}${String(d.getMinutes()).padStart(2, '0')}`; };
+// Réponse rapide d'un client anglophone : affichée en anglais, envoyée avec le français entre
+// parenthèses pour que Fabrice la comprenne.
+const rapideEnvoye = (fr: string) => (anglais() ? `${t(fr)} (${fr})` : fr);
 
 // Conversation d'une course, côté client comme côté Fabrice.
 export default function Conversation() {
@@ -50,7 +54,7 @@ export default function Conversation() {
     const propre = t.trim();
     if (!propre || envoi) return;
     setEnvoi(true); setErreur('');
-    try { await envoyer(id, propre); setTexte(''); } catch (e) { setErreur(e instanceof Error ? e.message : String(e)); } finally { setEnvoi(false); }
+    try { await envoyer(id, propre); setTexte(''); } catch (e) { setErreur(traduireErreur(e instanceof Error ? e.message : String(e))); } finally { setEnvoi(false); }
   };
 
   return (
@@ -59,7 +63,7 @@ export default function Conversation() {
         options={{
           title: interlocuteur,
           headerRight: () => (
-            <Pressable onPress={() => (cote === 'chauffeur' ? appeler(telephone) : appelerFabrice())} hitSlop={10} accessibilityLabel={`Appeler ${interlocuteur}`} style={{ padding: 6 }}>
+            <Pressable onPress={() => (cote === 'chauffeur' ? appeler(telephone) : appelerFabrice())} hitSlop={10} accessibilityLabel={`${t('Appeler')} ${interlocuteur}`} style={{ padding: 6 }}>
               <Ionicons name="call-outline" size={22} color={c.accent} />
             </Pressable>
           ),
@@ -80,7 +84,7 @@ export default function Conversation() {
                 <Text style={[type.body, { color: moi ? c.blanc : c.encre }]}>{m.texte}</Text>
               </View>
               <Text style={[type.label, { fontSize: 11, marginTop: 3, marginHorizontal: 4 }]}>
-                {heure(m.envoye_le)}{moi && m.id === dernierAMoi?.id && m.lu_le ? ' · Lu' : ''}
+                {heure(m.envoye_le)}{moi && m.id === dernierAMoi?.id && m.lu_le ? ` · ${t('Lu')}` : ''}
               </Text>
             </View>
           );
@@ -91,7 +95,7 @@ export default function Conversation() {
             <Text style={[type.small, { textAlign: 'center' }]}>
               {cote === 'chauffeur'
                 ? 'Messages gratuits avec votre client, sans SMS. Pour une urgence, appelez-le.'
-                : 'Écrivez à Fabrice pour un imprévu : retard, terminal, bagage… Gratuit, sans SMS. Pour une urgence, appelez-le.'}
+                : t('Écrivez à Fabrice pour un imprévu : retard, terminal, bagage… Gratuit, sans SMS. Pour une urgence, appelez-le.')}
               {demo ? '\nDémonstration : les messages restent sur ce téléphone.' : ''}
             </Text>
           </View>
@@ -99,8 +103,8 @@ export default function Conversation() {
       />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ paddingHorizontal: space.l, gap: space.s, paddingBottom: space.s }} keyboardShouldPersistTaps="handled">
         {(cote === 'chauffeur' ? rapidesChauffeur : rapidesClient).map((r) => (
-          <Pressable key={r} onPress={() => envoyerTexte(r)} style={({ pressed }) => [s.rapide, pressed && { backgroundColor: c.bain2 }]} disabled={envoi}>
-            <Text style={[type.small, { color: c.fort, fontWeight: '600' }]}>{r}</Text>
+          <Pressable key={r} onPress={() => envoyerTexte(cote === 'chauffeur' ? r : rapideEnvoye(r))} style={({ pressed }) => [s.rapide, pressed && { backgroundColor: c.bain2 }]} disabled={envoi}>
+            <Text style={[type.small, { color: c.fort, fontWeight: '600' }]}>{cote === 'chauffeur' ? r : t(r)}</Text>
           </Pressable>
         ))}
       </ScrollView>
@@ -109,18 +113,18 @@ export default function Conversation() {
         <TextInput
           value={texte}
           onChangeText={setTexte}
-          placeholder="Votre message"
+          placeholder={t('Votre message')}
           placeholderTextColor={c.placeholder}
           multiline
           maxLength={1000}
           style={s.champ}
-          accessibilityLabel="Votre message"
+          accessibilityLabel={t('Votre message')}
         />
         <Pressable
           onPress={() => envoyerTexte(texte)}
           disabled={!texte.trim() || envoi}
           accessibilityRole="button"
-          accessibilityLabel="Envoyer"
+          accessibilityLabel={t('Envoyer')}
           style={[s.envoyer, (!texte.trim() || envoi) && { opacity: 0.4 }]}
         >
           <Ionicons name="send" size={20} color={c.blanc} />

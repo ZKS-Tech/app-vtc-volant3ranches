@@ -3,20 +3,21 @@ import { libelleNotifications, pushPossible, useEtatNotifications } from './noti
 import { space } from './theme';
 import { Bouton } from './ui';
 import { useTheme } from './useTheme';
+import { t } from './i18n';
 
 // « Notifications » dans les réglages : état réel sur ce téléphone et action utile.
 export function LigneNotifications({ sous }: { sous: string }) {
   const { c, type } = useTheme();
   const { etat, agir } = useEtatNotifications();
-  const action = etat === 'a-demander' ? 'Activer' : etat === 'refusees' ? 'Réglages' : etat === 'indisponibles' && pushPossible ? 'Réessayer' : null;
+  const action = etat === 'a-demander' ? t('Activer') : etat === 'refusees' ? t('Réglages') : etat === 'indisponibles' && pushPossible ? t('Réessayer') : null;
   return (
     <View style={styles.ligne}>
       <View style={{ flex: 1 }}>
-        <Text style={type.body}>Notifications</Text>
+        <Text style={type.body}>{t('Notifications')}</Text>
         <Text style={type.small}>{sous}</Text>
         {etat ? (
           <Text style={[type.small, { marginTop: 2, fontWeight: '600', color: etat === 'actives' ? c.accent : etat === 'refusees' ? c.alerte : c.pierre }]}>
-            {libelleNotifications(etat)}
+            {t(libelleNotifications(etat))}
           </Text>
         ) : null}
       </View>

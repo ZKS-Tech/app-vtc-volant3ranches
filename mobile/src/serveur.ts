@@ -58,6 +58,8 @@ export type LigneCourse = {
   arrivee_ref: string | null; arrivee_libelle: string; arrivee_detail: string | null; arrivee_type: string | null;
   arrivee_lat: number | null; arrivee_lon: number | null;
   date_heure: string; aller_retour: boolean;
+  /** Langue du client (migration 16) : 'en' pour un client anglophone. */
+  langue?: 'fr' | 'en';
   passagers: number; bagages: number; numero_vol_train: string | null; offre_id: string; montant: number;
   prix_ajuste: boolean; prix_km: number; majorations: string[];
   distance_km: number; duree_min: number | null; nom: string; telephone: string; email: string | null;
@@ -178,6 +180,13 @@ export async function estChauffeur(): Promise<boolean> {
   const { data, error } = await supabase.rpc('est_chauffeur');
   if (error) return false;
   return !!data;
+}
+
+// Langue du client (fr ou en) : notifications, emails, et signalée à Fabrice sur la course.
+export async function envoyerLangue(langue: 'fr' | 'en') {
+  if (!supabase) return;
+  const { error } = await supabase.rpc('definir_langue', { p_langue: langue });
+  if (error) throw new Error(error.message);
 }
 
 export async function deconnexion(): Promise<string> {

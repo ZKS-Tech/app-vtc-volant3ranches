@@ -1,5 +1,6 @@
 import { activerNotifications, oublierTelephone } from './notifications';
 import { evenement, oublierIdentifiant } from './stats';
+import { langueClient, useLangue } from './i18n';
 import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
@@ -7,7 +8,7 @@ import { OffreId, appliquerTarifs, lieu, offre, prix, trajet } from './data';
 import {
   annulerCourse, chargerTarifs, lienAcompte, payerAcompteTest, rembourserTout,
   Profil, reinitialiserMotDePasse as reinitialiserServeur, connecterClient as connecterClientServeur, creerCompte as creerCompteServeur, majProfil as majProfilServeur, monProfil, sessionActuelle, connexionInvite, creerDemande, deconnexion, supprimerCompte as supprimerCompteServeur, ecouterMesCourses,
-  estChauffeur, mesCourses, supabase,
+  envoyerLangue, estChauffeur, mesCourses, supabase,
 } from './serveur';
 
 export type Statut = 'envoyee' | 'acompte_attendu' | 'confirmee' | 'refusee' | 'expiree' | 'terminee' | 'annulee';
@@ -205,6 +206,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   // L'appli en arrière-plan ou l'écran verrouillé coupent le temps réel : au retour, on recharge.
+  // Langue du client transmise au serveur : notifications et emails dans sa langue.
+  useLangue();
+  const langue = langueClient();
+  useEffect(() => {
+    if (serveur.etat !== 'connecte' || role !== 'client' || !cleSession) return;
+    envoyerLangue(langue).catch(() => {});
+  }, [serveur.etat, role, cleSession, langue]);
+
   useEffect(() => {
     const abo = AppState.addEventListener('change', (etat) => {
       if (etat === 'active' && role === 'client' && !demoChauffeur) rafraichirClient().catch(() => {});

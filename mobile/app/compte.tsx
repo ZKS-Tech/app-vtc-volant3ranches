@@ -7,6 +7,7 @@ import { useStore } from '../src/store';
 import { space } from '../src/theme';
 import { Bouton, Champ, Note, Segment } from '../src/ui';
 import { useTheme } from '../src/useTheme';
+import { t, traduireErreur } from '../src/i18n';
 
 // Créer un compte (le compte invité du téléphone devient permanent : rien n'est perdu) ou se
 // connecter (les courses réservées en invité sur ce téléphone suivent le compte).
@@ -33,14 +34,14 @@ export default function Compte() {
     try {
       if (mode === 'creer') {
         const r = await creerCompte(f);
-        if (r === 'confirmation') { setFait('Un email de confirmation vous a été envoyé. Ouvrez le lien qu’il contient, puis revenez ici et touchez à nouveau « Créer mon compte » avec le même email pour choisir votre mot de passe.'); return; }
+        if (r === 'confirmation') { setFait(t('Un email de confirmation vous a été envoyé. Ouvrez le lien qu’il contient, puis revenez ici et touchez à nouveau « Créer mon compte » avec le même email pour choisir votre mot de passe.')); return; }
         router.back();
       } else {
         const n = await connecterClient(f.email, f.motDePasse);
-        if (n > 0) setFait(`Connecté. ${n} course${n > 1 ? 's' : ''} réservée${n > 1 ? 's' : ''} sur ce téléphone ${n > 1 ? 'ont été ajoutées' : 'a été ajoutée'} à votre compte.`);
+        if (n > 0) setFait(n > 1 ? t('Connecté. {n} courses réservées sur ce téléphone ont été ajoutées à votre compte.', { n }) : t('Connecté. 1 course réservée sur ce téléphone a été ajoutée à votre compte.'));
         else router.back();
       }
-    } catch (e) { setErreur(e instanceof Error ? e.message : String(e)); } finally { setEnvoi(false); }
+    } catch (e) { setErreur(traduireErreur(e instanceof Error ? e.message : String(e))); } finally { setEnvoi(false); }
   };
 
   if (serveur.etat !== 'connecte') {
@@ -55,7 +56,7 @@ export default function Compte() {
     return (
       <View style={{ flex: 1, backgroundColor: c.sol, padding: space.l, gap: space.l }}>
         <Note ton="feuille" icone="checkmark-circle-outline">{fait}</Note>
-        <Bouton titre="Continuer" onPress={() => router.back()} />
+        <Bouton titre={t('Continuer')} onPress={() => router.back()} />
       </View>
     );
   }
@@ -63,35 +64,35 @@ export default function Compte() {
   if (oubli) {
     const envoyerCode = async () => {
       setEnvoi(true); setErreur('');
-      try { await envoyerCodeConnexion(f.email); setOubli('code'); } catch (e) { setErreur(e instanceof Error ? e.message : String(e)); } finally { setEnvoi(false); }
+      try { await envoyerCodeConnexion(f.email); setOubli('code'); } catch (e) { setErreur(traduireErreur(e instanceof Error ? e.message : String(e))); } finally { setEnvoi(false); }
     };
     const changer = async () => {
       setEnvoi(true); setErreur('');
       try {
         const n = await reinitialiserMotDePasse(f.email, code, f.motDePasse);
-        setFait(`Mot de passe changé, vous êtes connecté.${n > 0 ? ` ${n} course${n > 1 ? 's' : ''} de ce téléphone ajoutée${n > 1 ? 's' : ''} à votre compte.` : ''}`);
-      } catch (e) { setErreur(e instanceof Error ? e.message : String(e)); } finally { setEnvoi(false); }
+        setFait(`${t('Mot de passe changé, vous êtes connecté.')}${n > 0 ? ` ${t('{n} course(s) de ce téléphone ajoutée(s) à votre compte.', { n })}` : ''}`);
+      } catch (e) { setErreur(traduireErreur(e instanceof Error ? e.message : String(e))); } finally { setEnvoi(false); }
     };
     return (
       <EcranAvecClavier style={{ backgroundColor: c.sol }}>
         <ScrollView contentContainerStyle={{ padding: space.l, paddingBottom: space.xxl }} keyboardShouldPersistTaps="handled">
-          <Text style={[type.h2, { marginBottom: space.s }]}>Mot de passe oublié</Text>
+          <Text style={[type.h2, { marginBottom: space.s }]}>{t('Mot de passe oublié')}</Text>
           <Text style={[type.small, { marginBottom: space.l }]}>
-            {oubli === 'email' ? 'Indiquez l’email de votre compte : vous allez recevoir un code à 6 chiffres.' : `Code envoyé à ${f.email.trim()}. Il est valable une heure ; pensez à regarder dans les spams.`}
+            {oubli === 'email' ? t('Indiquez l’email de votre compte : vous allez recevoir un code à 6 chiffres.') : t('Code envoyé à {email}. Il est valable une heure ; pensez à regarder dans les spams.', { email: f.email.trim() })}
           </Text>
-          <Champ libelle="Email" value={f.email} onChangeText={(v) => maj({ email: v })} keyboardType="email-address" autoCapitalize="none" autoComplete="email" editable={oubli === 'email'} />
+          <Champ libelle={t('Email')} value={f.email} onChangeText={(v) => maj({ email: v })} keyboardType="email-address" autoCapitalize="none" autoComplete="email" editable={oubli === 'email'} />
           {oubli === 'code' ? (
             <>
-              <Champ libelle="Code reçu par email" value={code} onChangeText={(v) => setCode(v.replace(/\D/g, '').slice(0, 8))} keyboardType="number-pad" autoComplete="one-time-code" textContentType="oneTimeCode" placeholder="123456" />
-              <Champ libelle="Nouveau mot de passe" value={f.motDePasse} onChangeText={(v) => maj({ motDePasse: v })} secureTextEntry autoComplete="new-password" textContentType="newPassword" placeholder="6 caractères au moins" />
+              <Champ libelle={t('Code reçu par email')} value={code} onChangeText={(v) => setCode(v.replace(/\D/g, '').slice(0, 8))} keyboardType="number-pad" autoComplete="one-time-code" textContentType="oneTimeCode" placeholder="123456" />
+              <Champ libelle={t('Nouveau mot de passe')} value={f.motDePasse} onChangeText={(v) => maj({ motDePasse: v })} secureTextEntry autoComplete="new-password" textContentType="newPassword" placeholder={t('6 caractères au moins')} />
             </>
           ) : null}
           {erreur ? <View style={{ marginBottom: space.l }}><Note ton="erreur">{erreur}</Note></View> : null}
           {oubli === 'email'
-            ? <Bouton titre="Recevoir un code" desactive={!emailOk} chargement={envoi} onPress={envoyerCode} />
-            : <Bouton titre="Changer le mot de passe" desactive={code.length < 6 || f.motDePasse.length < 6} chargement={envoi} onPress={changer} />}
-          {oubli === 'code' ? <Bouton titre="Renvoyer un code" variante="texte" onPress={envoyerCode} style={{ marginTop: space.s, alignSelf: 'center' }} /> : null}
-          <Bouton titre="Retour à la connexion" variante="texte" onPress={() => { setOubli(null); setErreur(''); }} style={{ marginTop: space.s, alignSelf: 'center' }} />
+            ? <Bouton titre={t('Recevoir un code')} desactive={!emailOk} chargement={envoi} onPress={envoyerCode} />
+            : <Bouton titre={t('Changer le mot de passe')} desactive={code.length < 6 || f.motDePasse.length < 6} chargement={envoi} onPress={changer} />}
+          {oubli === 'code' ? <Bouton titre={t('Renvoyer un code')} variante="texte" onPress={envoyerCode} style={{ marginTop: space.s, alignSelf: 'center' }} /> : null}
+          <Bouton titre={t('Retour à la connexion')} variante="texte" onPress={() => { setOubli(null); setErreur(''); }} style={{ marginTop: space.s, alignSelf: 'center' }} />
         </ScrollView>
       </EcranAvecClavier>
     );
@@ -100,25 +101,25 @@ export default function Compte() {
   return (
     <EcranAvecClavier style={{ backgroundColor: c.sol }}>
       <ScrollView contentContainerStyle={{ padding: space.l, paddingBottom: space.xxl }} keyboardShouldPersistTaps="handled">
-        <Segment options={[{ id: 'creer', titre: 'Créer un compte' }, { id: 'connexion', titre: 'Se connecter' }]} valeur={mode} onChange={(m) => { setMode(m); setErreur(''); }} />
+        <Segment options={[{ id: 'creer', titre: t('Créer un compte') }, { id: 'connexion', titre: t('Se connecter') }]} valeur={mode} onChange={(m) => { setMode(m); setErreur(''); }} />
         <Text style={[type.small, { marginVertical: space.l }]}>
           {mode === 'creer'
-            ? 'Vos coordonnées seront préremplies à chaque réservation, et vous retrouverez vos courses sur tous vos appareils. Les courses déjà réservées sur ce téléphone sont conservées.'
-            : 'Les courses réservées sur ce téléphone sans compte seront ajoutées à votre compte.'}
+            ? t('Vos coordonnées seront préremplies à chaque réservation, et vous retrouverez vos courses sur tous vos appareils. Les courses déjà réservées sur ce téléphone sont conservées.')
+            : t('Les courses réservées sur ce téléphone sans compte seront ajoutées à votre compte.')}
         </Text>
         {mode === 'creer' ? (
           <>
-            <Champ libelle="Nom et prénom" value={f.nom} onChangeText={(v) => maj({ nom: v })} placeholder="Claire Martin" autoComplete="name" textContentType="name" />
-            <Champ libelle="Téléphone" value={f.telephone} onChangeText={(v) => maj({ telephone: v })} placeholder="06 12 34 56 78" keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" />
+            <Champ libelle={t('Nom et prénom')} value={f.nom} onChangeText={(v) => maj({ nom: v })} placeholder="Claire Martin" autoComplete="name" textContentType="name" />
+            <Champ libelle={t('Téléphone')} value={f.telephone} onChangeText={(v) => maj({ telephone: v })} placeholder="06 12 34 56 78" keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" />
           </>
         ) : null}
-        <Champ libelle="Email" value={f.email} onChangeText={(v) => maj({ email: v })} placeholder="claire.martin@email.fr" keyboardType="email-address" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" />
-        <Champ libelle="Mot de passe" value={f.motDePasse} onChangeText={(v) => maj({ motDePasse: v })} placeholder={mode === 'creer' ? '6 caractères au moins' : ''} secureTextEntry
+        <Champ libelle={t('Email')} value={f.email} onChangeText={(v) => maj({ email: v })} placeholder="claire.martin@email.fr" keyboardType="email-address" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" />
+        <Champ libelle={t('Mot de passe')} value={f.motDePasse} onChangeText={(v) => maj({ motDePasse: v })} placeholder={mode === 'creer' ? t('6 caractères au moins') : ''} secureTextEntry
           autoComplete={mode === 'creer' ? 'new-password' : 'current-password'} textContentType={mode === 'creer' ? 'newPassword' : 'password'} />
         {erreur ? <View style={{ marginBottom: space.l }}><Note ton="erreur">{erreur}</Note></View> : null}
-        <Bouton titre={mode === 'creer' ? 'Créer mon compte' : 'Se connecter'} desactive={!valide} chargement={envoi} onPress={valider} />
+        <Bouton titre={mode === 'creer' ? t('Créer mon compte') : t('Se connecter')} desactive={!valide} chargement={envoi} onPress={valider} />
         {mode === 'connexion' ? (
-          <Bouton titre="Mot de passe oublié ?" variante="texte" onPress={() => { setOubli('email'); setErreur(''); }} style={{ marginTop: space.m, alignSelf: 'center' }} />
+          <Bouton titre={t('Mot de passe oublié ?')} variante="texte" onPress={() => { setOubli('email'); setErreur(''); }} style={{ marginTop: space.m, alignSelf: 'center' }} />
         ) : null}
       </ScrollView>
     </EcranAvecClavier>

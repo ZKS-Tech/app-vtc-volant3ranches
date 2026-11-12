@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Tabs } from 'expo-router';
 import { useTheme } from '../../src/useTheme';
+import { t } from '../../src/i18n';
 
 const icone = (nom: React.ComponentProps<typeof Ionicons>['name']) =>
   ({ color, size }: { color: import("react-native").ColorValue; size: number }) => <Ionicons name={nom} color={color as string} size={size} />;
@@ -20,10 +21,10 @@ export default function Onglets() {
         sceneStyle: { backgroundColor: c.sol },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Réserver', headerShown: false, tabBarIcon: icone('car-sport-outline') }} />
-      <Tabs.Screen name="courses" options={{ title: 'Mes courses', tabBarIcon: icone('receipt-outline') }} />
-      <Tabs.Screen name="decouvrir" options={{ title: 'Volant3ranches', tabBarLabel: 'Découvrir', tabBarIcon: icone('compass-outline') }} />
-      <Tabs.Screen name="profil" options={{ title: 'Profil', tabBarIcon: icone('person-circle-outline') }} />
+      <Tabs.Screen name="index" options={{ title: t('Réserver'), headerShown: false, tabBarIcon: icone('car-sport-outline') }} />
+      <Tabs.Screen name="courses" options={{ title: t('Mes courses'), tabBarIcon: icone('receipt-outline') }} />
+      <Tabs.Screen name="decouvrir" options={{ title: 'Volant3ranches', tabBarLabel: t('Découvrir'), tabBarIcon: icone('compass-outline') }} />
+      <Tabs.Screen name="profil" options={{ title: t('Profil'), tabBarIcon: icone('person-circle-outline') }} />
     </Tabs>
   );
 }

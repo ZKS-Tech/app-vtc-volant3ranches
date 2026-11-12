@@ -5,6 +5,7 @@ import { useStore } from '../../src/store';
 import { space } from '../../src/theme';
 import { useTheme } from '../../src/useTheme';
 import { Bouton, CarteCourse, Segment } from '../../src/ui';
+import { t } from '../../src/i18n';
 
 export default function Courses() {
   const { c, type } = useTheme();
@@ -14,7 +15,7 @@ export default function Courses() {
   const maintenant = new Date();
   const liste = courses
     .filter((x) => {
-      const active = (x.statut === 'envoyee' || x.statut === 'confirmee') && x.date >= maintenant;
+      const active = (x.statut === 'envoyee' || x.statut === 'acompte_attendu' || x.statut === 'confirmee') && x.date >= maintenant;
       return onglet === 'avenir' ? active : !active;
     })
     .sort((a, b) => (onglet === 'avenir' ? +a.date - +b.date : +b.date - +a.date));
@@ -24,7 +25,7 @@ export default function Courses() {
       refreshControl={<RefreshControl refreshing={actualisation} tintColor={c.accent}
         onRefresh={async () => { setActualisation(true); try { await rafraichir(); } finally { setActualisation(false); } }} />}>
       <Segment
-        options={[{ id: 'avenir', titre: 'À venir' }, { id: 'passees', titre: 'Passées' }]}
+        options={[{ id: 'avenir', titre: t('À venir') }, { id: 'passees', titre: t('Passées') }]}
         valeur={onglet}
         onChange={setOnglet}
       />
@@ -32,16 +33,15 @@ export default function Courses() {
         liste.map((x) => <CarteCourse key={x.id} course={x} onPress={() => router.push(`/course/${x.id}`)} />)
       ) : (
         <View style={{ paddingVertical: space.xxl, gap: space.m }}>
-          <Text style={type.h2}>{onglet === 'avenir' ? 'Aucune course prévue' : 'Pas encore de course passée'}</Text>
+          <Text style={type.h2}>{onglet === 'avenir' ? t('Aucune course prévue') : t('Pas encore de course passée')}</Text>
           <Text style={type.small}>
             {onglet === 'avenir'
-              ? 'Réservez votre prochain transfert : Fabrice vous confirme sous 30 minutes.'
-              : 'Vos courses terminées apparaîtront ici, avec leur montant.'}
+              ? t('Réservez votre prochain transfert : Fabrice vous confirme sous 30 minutes.')
+              : t('Vos courses terminées apparaîtront ici, avec leur montant.')}
           </Text>
-          {onglet === 'avenir' ? <Bouton titre="Réserver une course" onPress={() => router.navigate('/')} /> : null}
+          {onglet === 'avenir' ? <Bouton titre={t('Réserver une course')} onPress={() => router.navigate('/')} /> : null}
         </View>
       )}
-      <Text style={type.small}>Prototype : les courses de Claire Martin sont des exemples.</Text>
     </ScrollView>
   );
 }

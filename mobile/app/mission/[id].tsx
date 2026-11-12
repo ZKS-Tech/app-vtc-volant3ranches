@@ -56,6 +56,7 @@ export default function Mission() {
           <Pressable onPress={() => fi && router.push(`/fiche/${fi.id}`)} disabled={!fi} style={s.client}>
             <View style={{ flex: 1 }}>
               <Text style={type.h3}>{m!.nom}</Text>
+              {m!.langue === 'en' ? <Text style={[type.small, { color: c.accent, fontWeight: '700' }]}>Client anglophone : appli, notifications et emails en anglais</Text> : null}
               <Text style={type.small}>{m!.telephone || 'Pas de téléphone'}{m!.email ? ` · ${m!.email}` : ''}</Text>
               {fi?.notes ? <Text style={[type.small, { color: c.feuilleEncre, marginTop: 4 }]}>{fi.notes}</Text> : null}
             </View>

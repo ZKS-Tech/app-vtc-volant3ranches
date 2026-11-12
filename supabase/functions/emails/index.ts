@@ -52,6 +52,8 @@ export type Course = {
   aller_retour: boolean; passagers: number; bagages: number; numero_vol_train: string | null; offre_id: string;
   montant: number; motif_refus: string | null; frais_annulation: number | null; commentaire: string | null;
   acompte_montant: number | null; acompte_limite: string | null; acompte_paye_le: string | null; source: string;
+  /** Langue du client (fr par défaut) : ses emails sont rédigés dans cette langue. */
+  langue?: string | null;
 };
 export type Contexte = {
   type: string; course: Course; offre: string; donnees: Record<string, unknown>;
@@ -67,8 +69,109 @@ const lieu = (libelle: string, detail: string | null) => detail ? `${libelle}, $
 // « de Léa », mais « d’Evan » : élision devant une voyelle ou un h muet.
 export const de = (nom: string) => (/^[aeiouyhàâäéèêëîïôöùûü]/i.test(nom.trim()) ? `d’${nom.trim()}` : `de ${nom.trim()}`);
 
+// ——— Anglais (clients dont l'appli est en anglais) ———
+export const anglais = (x: Contexte) => x.course.langue === 'en' && !x.type.startsWith('chauffeur_');
+export const eurosEn = (n: number) => `${Number(n) < 0 ? '-' : ''}€${Math.abs(Number(n)).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',')}`;
+export const quandEn = (iso: string) => {
+  const d = new Date(iso);
+  const jour = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Paris', weekday: 'long', day: 'numeric', month: 'long' }).format(d);
+  return `${jour} at ${heureEn(iso)}`;
+};
+const heureEn = (iso: string) =>
+  new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Paris', hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(iso));
+// Noms des lieux connus : « Aéroport Toulouse-Blagnac » → « Toulouse-Blagnac Airport », « Gare de Castres » → « Castres station ».
+export const lieuEn = (libelle: string) => libelle
+  .replace(/^Aéroport (.+)$/, '$1 Airport')
+  .replace(/^Gare (?:de |d'|d’)?(.+)$/, '$1 station');
+const OFFRES_EN: Record<string, string> = { tesla: 'Comfort offer · Tesla Model 3', van: 'Premium offer · 9-seat Van' };
+
+function composerEn(x: Contexte): Email {
+  const c = x.course;
+  const prenom = c.nom.split(/\s+/)[0];
+  const date = quandEn(c.date_heure);
+  const acompte = Number(c.acompte_montant ?? 0);
+  const trajet: [string, string][] = [
+    ['Date', date],
+    ['Pick-up', lieu(lieuEn(c.depart_libelle), c.depart_detail)],
+    ['Drop-off', lieu(lieuEn(c.arrivee_libelle), c.arrivee_detail) + (c.aller_retour ? ' (return trip)' : '')],
+    ['Vehicle', OFFRES_EN[c.offre_id] ?? x.offre],
+    ['Passengers', `${c.passagers} · ${c.bagages} bag${c.bagages === 1 ? '' : 's'}`],
+    ...(c.numero_vol_train ? [['Flight / train', `${c.numero_vol_train} (tracked in real time)`] as [string, string]] : []),
+    ['Price', eurosEn(c.montant) + ' incl. VAT'],
+  ];
+  const tel = '+33 ' + x.vendeur.telephone.replace(/^\+33/, '').replace(/^0/, '').replace(/^(\d)(\d{2})(\d{2})(\d{2})(\d{2})$/, '$1 $2 $3 $4 $5');
+  switch (x.type) {
+    case 'demande_recue':
+      return {
+        sujet: `Request received · ${date}`, titre: 'We have received your request',
+        paragraphes: [`Hello ${prenom},`, 'Thank you for your request. Fabrice will reply within 30 minutes; you will be notified in the app and by email.'],
+        details: trajet,
+      };
+    case 'acompte':
+      return {
+        sujet: 'Fabrice can drive you · deposit to pay', titre: 'Fabrice can drive you',
+        paragraphes: [`Hello ${prenom},`,
+          `Fabrice has accepted your request. To confirm the booking, pay the ${eurosEn(acompte)} deposit${c.acompte_limite ? ` before ${heureEn(c.acompte_limite)}` : ''} in the app: My rides › your ride › Pay.`,
+          `The balance, ${eurosEn(Math.max(0, c.montant - acompte))}, is paid on board by card or in cash. Without payment in time, the request expires and you are not charged.`],
+        details: trajet,
+      };
+    case 'confirmation':
+      return {
+        sujet: `Ride confirmed · ${date}`, titre: 'Your ride is confirmed',
+        paragraphes: [`Hello ${prenom},`, `Fabrice will be there on ${date}. Your order form is attached${x.document ? ` (${x.document.numero})` : ''}; it is in French, as required by French law.`,
+          c.acompte_paye_le && acompte > 0
+            ? `Deposit paid: ${eurosEn(acompte)}. Left to pay on board: ${eurosEn(Math.max(0, c.montant - acompte))}.`
+            : 'Payment on board by card or in cash, or by invoice.'],
+        details: trajet,
+        note: 'Free cancellation up to 24 h before the ride; 50% between 24 h and 12 h; 100% less than 12 h before (terms and conditions).',
+      };
+    case 'refus':
+      return {
+        sujet: 'Your ride request', titre: 'Fabrice cannot do this ride',
+        paragraphes: [`Hello ${prenom},`, `Unfortunately Fabrice cannot do your ride on ${date}${c.motif_refus ? ` (${c.motif_refus})` : ''}. You have not been charged.`,
+          `Try another time in the app, or call him on ${tel}: he may be able to suggest a solution.`],
+        details: trajet,
+      };
+    case 'expiree':
+      return {
+        sujet: 'Booking not confirmed', titre: 'Your booking is not confirmed',
+        paragraphes: [`Hello ${prenom},`, `The deposit was not paid in time: the ride on ${date} is not booked and you have not been charged.`,
+          'You can send a new request from the app.'],
+        details: trajet,
+      };
+    case 'annulation': {
+      const parChauffeur = !!x.donnees.par_chauffeur;
+      const frais = Number(c.frais_annulation ?? 0);
+      const lignes = [`Hello ${prenom},`,
+        parChauffeur ? `Fabrice has had to cancel your ride on ${date}. We are very sorry for the inconvenience.` : `Your ride on ${date} has been cancelled.`];
+      if (c.acompte_paye_le && acompte > 0) {
+        const plusDe24h = new Date(c.date_heure).getTime() - Date.now() > 24 * 3600000;
+        lignes.push(parChauffeur || plusDe24h ? `The ${eurosEn(acompte)} deposit is being refunded to your card.` : `The ${eurosEn(acompte)} deposit is kept: the cancellation is less than 24 h before the ride (terms and conditions).`);
+      }
+      if (frais > 0) lignes.push(`Cancellation fee under the terms and conditions: ${eurosEn(frais)}.`);
+      return { sujet: `Ride cancelled · ${date}`, titre: 'Ride cancelled', paragraphes: lignes, details: trajet };
+    }
+    case 'remboursement':
+      return {
+        sujet: 'Deposit refunded', titre: 'Your deposit has been refunded',
+        paragraphes: [`Hello ${prenom},`, `${eurosEn(Number(x.donnees.montant ?? acompte))} has been refunded to the card used for the deposit (ride on ${date}). How long it takes to appear on your account depends on your bank.`],
+        details: trajet,
+      };
+    case 'facture':
+      return {
+        sujet: `Your invoice ${x.document?.numero ?? ''}`.trim(), titre: 'Thank you for travelling with Volant3ranches',
+        paragraphes: [`Hello ${prenom},`, `Please find attached your invoice${x.document ? ` ${x.document.numero} (${eurosEn(x.document.total_ttc)} incl. VAT)` : ''} for the ride on ${date}. It is in French, as required by French law.`,
+          'We look forward to driving you again.'],
+        details: trajet,
+      };
+    default:
+      throw new Error(`Type d'email inconnu : ${x.type}`);
+  }
+}
+
 // Contenu de chaque email (texte brut ; l'échappement HTML est fait à l'assemblage).
 export function composer(x: Contexte): Email {
+  if (anglais(x)) return composerEn(x);
   const c = x.course;
   const prenom = c.nom.split(/\s+/)[0];
   const date = quand(c.date_heure);
@@ -151,7 +254,8 @@ export function composer(x: Contexte): Email {
       return {
         sujet: `Nouvelle demande · ${c.nom} · ${date}`, titre: `Nouvelle demande ${de(c.nom)}`,
         paragraphes: ['Une nouvelle demande vient d’arriver. Ouvrez l’application pour l’accepter ou la refuser.'],
-        details: [['Client', `${c.nom} · ${c.telephone ?? ''}${c.email ? ` · ${c.email}` : ''}`], ...trajet,
+        details: [['Client', `${c.nom} · ${c.telephone ?? ''}${c.email ? ` · ${c.email}` : ''}`],
+          ...(c.langue === 'en' ? [['Langue', 'Anglais : appli et emails du client en anglais'] as [string, string]] : []), ...trajet,
           ...(c.commentaire ? [['Message', c.commentaire] as [string, string]] : [])],
       };
     case 'chauffeur_annulation':
@@ -168,10 +272,14 @@ export function composer(x: Contexte): Email {
 // Gabarit HTML aux couleurs de l'appli (indigo), lisible sur mobile et dans tous les clients mail.
 export function assembler(e: Email, x: Contexte): { html: string; texte: string } {
   const v = x.vendeur;
-  const tel = v.telephone.replace(/^\+33/, '0').replace(/(\d{2})(?=\d)/g, '$1 ');
+  // Téléphone : « 06 16 53 14 91 » en français, « +33 6 16 53 14 91 » pour un client étranger.
+  const tel = anglais(x)
+    ? '+33 ' + v.telephone.replace(/^\+33/, '').replace(/^0/, '').replace(/^(\d)(\d{2})(\d{2})(\d{2})(\d{2})$/, '$1 $2 $3 $4 $5')
+    : v.telephone.replace(/^\+33/, '0').replace(/(\d{2})(?=\d)/g, '$1 ');
   const lignes = e.details.map(([k, val]) =>
     `<tr><td style="padding:8px 0;color:#5B6273;font-size:14px;vertical-align:top;width:110px">${html(k)}</td><td style="padding:8px 0;color:#101B45;font-size:14px;font-weight:600">${html(val)}</td></tr>`).join('');
-  const corps = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${html(e.sujet)}</title></head>
+  const en = anglais(x);
+  const corps = `<!doctype html><html lang="${en ? 'en' : 'fr'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${html(e.sujet)}</title></head>
 <body style="margin:0;padding:0;background:#EEF2F9;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#EEF2F9"><tr><td align="center" style="padding:24px 12px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:16px;overflow:hidden">
@@ -180,7 +288,7 @@ export function assembler(e: Email, x: Contexte): { html: string; texte: string 
     ${x.logo ? `<td style="padding-right:12px;vertical-align:middle"><img src="${html(x.logo)}" width="40" height="40" alt="" style="display:block;border:0;width:40px;height:40px"></td>` : ''}
     <td style="vertical-align:middle;color:#ffffff;font-size:18px;font-weight:700;letter-spacing:.3px">Volant3ranches <span style="font-weight:400;color:#AFC3EA">VTC</span></td>
   </tr></table>
-  ${x.test ? '<div style="margin-top:6px;color:#FFD48A;font-size:12px;font-weight:700">EMAIL DE TEST · aucune valeur</div>' : ''}
+  ${x.test ? `<div style="margin-top:6px;color:#FFD48A;font-size:12px;font-weight:700">${en ? 'TEST EMAIL · no value' : 'EMAIL DE TEST · aucune valeur'}</div>` : ''}
 </td></tr>
 <tr><td style="padding:28px 28px 8px">
   <h1 style="margin:0 0 16px;font-size:24px;line-height:1.25;color:#101B45">${html(e.titre)}</h1>
@@ -192,10 +300,10 @@ ${e.note ? `<tr><td style="padding:14px 28px 0"><p style="margin:0;font-size:13p
   <p style="margin:0;font-size:15px;color:#1F2433">Fabrice<br><span style="color:#5B6273">Volant3ranches VTC · <a href="tel:${html(tel.replace(/\s/g, ''))}" style="color:#1E3277;text-decoration:none">${html(tel)}</a></span></p>
 </td></tr>
 <tr><td style="background:#F6F8FC;padding:14px 28px;font-size:11px;line-height:1.5;color:#7A8296">
-  ${html(v.raison_sociale)} · ${html(v.siege)} · SIREN ${html(v.siren)}<br>Vous recevez cet email suite à une réservation sur l’application Volant3ranches.
+  ${html(v.raison_sociale)} · ${html(v.siege)} · SIREN ${html(v.siren)}<br>${en ? 'You are receiving this email following a booking in the Volant3ranches app.' : 'Vous recevez cet email suite à une réservation sur l’application Volant3ranches.'}
 </td></tr>
 </table></td></tr></table></body></html>`;
-  const texte = [e.titre, '', ...e.paragraphes, '', ...e.details.map(([k, val]) => `${k} : ${val}`), ...(e.note ? ['', e.note] : []),
+  const texte = [e.titre, '', ...e.paragraphes, '', ...e.details.map(([k, val]) => `${k}${en ? ':' : ' :'} ${val}`), ...(e.note ? ['', e.note] : []),
     '', 'Fabrice', `Volant3ranches VTC · ${tel}`].join('\n');
   return { html: corps, texte };
 }

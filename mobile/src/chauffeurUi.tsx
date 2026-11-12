@@ -90,7 +90,7 @@ export function DemandeCarte({ m }: { m: Mission }) {
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2, marginBottom: space.m }}>
           <Ionicons name={iconeSource[m.source]} size={14} color={c.pierre} />
-          <Text style={type.small}>{m.nom} · {offre(m.offre_id as 'tesla' | 'van').nom} · {m.passagers} pass.{m.numero_vol_train ? ` · ${m.numero_vol_train}` : ''}</Text>
+          <Text style={type.small}>{m.nom}{m.langue === 'en' ? ' (anglais)' : ''} · {offre(m.offre_id as 'tesla' | 'van').nom} · {m.passagers} pass.{m.numero_vol_train ? ` · ${m.numero_vol_train}` : ''}</Text>
         </View>
         <TrajetLibre m={m} couleur={c.encre} couleur2={c.pierre} />
       </Pressable>
@@ -144,7 +144,7 @@ export function LigneMission({ m, avecDate }: { m: Mission; avecDate?: boolean }
       </View>
       <View style={{ flex: 1 }}>
         <Text style={[type.body, { fontWeight: '600' }]} numberOfLines={1}>{m.depart_libelle} → {m.arrivee_libelle}</Text>
-        <Text style={type.small} numberOfLines={1}>{m.nom} · {offre(m.offre_id as 'tesla' | 'van').vehicule}</Text>
+        <Text style={type.small} numberOfLines={1}>{m.nom}{m.langue === 'en' ? ' (anglais)' : ''} · {offre(m.offre_id as 'tesla' | 'van').vehicule}</Text>
       </View>
       <View style={{ alignItems: 'flex-end', gap: 4 }}>
         <Text style={[type.body, { fontWeight: '700' }, barre && { color: c.pierre }]}>{euros(m.statut === 'annulee' ? Number(m.frais_annulation ?? 0) : m.montant)}</Text>
