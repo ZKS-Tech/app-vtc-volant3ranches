@@ -125,7 +125,9 @@ export function Segment<T extends string>({ options, valeur, onChange }: {
         const actif = o.id === valeur;
         return (
           <Pressable key={o.id} accessibilityRole="tab" accessibilityState={{ selected: actif }} onPress={() => onChange(o.id)} style={[s.segmentItem, actif && s.segmentActif]}>
-            <Text style={[type.body, { fontWeight: actif ? '700' : '500', color: actif ? c.fort : c.pierre }]}>{o.titre}</Text>
+            {/* Pleine largeur et une seule ligne : sur Android, le passage en gras garde sinon la largeur
+                mesurée en normal, et le libellé se coupe (« À venir » devenait « À »). */}
+            <Text numberOfLines={1} style={[type.body, { alignSelf: 'stretch', textAlign: 'center', paddingHorizontal: 4, fontWeight: actif ? '700' : '500', color: actif ? c.fort : c.pierre }]}>{o.titre}</Text>
           </Pressable>
         );
       })}
