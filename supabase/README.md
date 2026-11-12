@@ -269,6 +269,31 @@ novembre 2027) et après 90 jours sans aucun email de code. Si un client ne reç
 Brevo › SMTP et API › SMTP › générer une nouvelle clé, puis la coller dans Supabase (SMTP Settings ›
 Password). La clé API des autres emails (`BREVO_API_KEY`) expire seulement après 90 jours sans envoi.
 
+## Statistiques GA4 (fonction stats)
+
+Seulement pour les clients qui acceptent (question posée une fois sur l'accueil, modifiable dans
+Profil) ; jamais pour Fabrice. L'appli envoie ses événements à la fonction `stats`, qui les relaie à
+Google Analytics depuis Supabase : la clé GA4 reste secrète et Google ne reçoit ni l'adresse IP du
+téléphone, ni nom, téléphone, email ou adresse. Événements : `ouverture_app`, `raccourci_aeroport_gare`,
+`adresse_saisie`, `estimation_affichee`, `offre_choisie`, `coordonnees_saisies`, `demande_envoyee`,
+`demande_echec_envoi`, `demande_confirmee`, `demande_refusee`, `acompte_paye`, `annulation`,
+`appel_chauffeur`, `message_envoye`, `compte_cree`, `connexion_compte`, `document_ouvert`.
+
+1. **Propriété GA4** : celle du site volant3ranches-vtc.fr (pour comparer site et appli), ou une
+   nouvelle. Admin › **Flux de données** › ajouter un flux **Web** nommé « Application » (URL du site),
+   ou utiliser le flux du site. Noter l'**ID de mesure** (`G-…`).
+2. Dans ce flux › **Measurement Protocol API secrets** › Créer (nom « Appli VTC ») : noter le secret.
+3. Supabase › Edge Functions › **Secrets** : `GA4_MEASUREMENT_ID` = `G-…`, `GA4_API_SECRET` = le secret.
+4. Déployer la fonction **`stats`** ([`functions/stats/index.ts`](functions/stats/index.ts)),
+   « Verify JWT » désactivé.
+5. GA4 › Admin › **Conservation des données** : 14 mois (comme annoncé dans la politique de
+   confidentialité). Admin › **Définitions personnalisées** : déclarer les paramètres utiles comme
+   dimensions (`offre`, `type_lieu`, `raccourci`, `majoration`, `statut`) et métriques (`prix`, `km`).
+6. Vérifier : GA4 › Rapports › **Temps réel** après avoir accepté les statistiques et fait une
+   réservation (quelques minutes de délai possibles).
+
+Sans les secrets, la fonction ignore simplement les événements : l'appli n'est jamais gênée.
+
 ## Tester la confirmation en temps réel
 
 Avec deux téléphones (ou un téléphone et le navigateur) : envoyez une demande côté client, puis

@@ -113,8 +113,10 @@ règles sont vérifiées par un jeu de 21 tests exécutés sur un PostgreSQL loc
    plus les push).
 5. ✅ **Comptes clients** (migration 11) : passer du compte invité à un compte email pour retrouver ses courses sur un
    autre téléphone ; adresses favorites.
-6. **Statistiques et confidentialité** : GA4 avec consentement ; politique de confidentialité du site
-   mise à jour.
+6. ✅ **Statistiques et confidentialité** : GA4 avec consentement (fonction `stats`, relais côté
+   serveur, sans IP ni donnée personnelle) ; texte de politique de confidentialité prêt
+   (`docs/politique-confidentialite.md`) à publier sur le site. Reste avant les stores : suppression de
+   compte depuis l'appli, purge automatique des données anciennes.
 7. **Publication** : version de développement (EAS), test par Fabrice et quelques clients, stores.
 
 **Messagerie client ↔ chauffeur** ✅ (demande de Fabrice) : une conversation par course, en temps réel
