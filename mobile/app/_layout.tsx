@@ -68,7 +68,6 @@ function Navigation() {
         <Stack.Screen name="envoyee" options={{ headerShown: false, gestureEnabled: false }} />
         <Stack.Screen name="course/[id]" options={{ title: 'Votre course' }} />
         <Stack.Screen name="panneau" options={{ presentation: 'fullScreenModal', headerShown: false }} />
-        <Stack.Screen name="connexion-chauffeur" options={{ presentation: 'modal', title: 'Espace chauffeur' }} />
         <Stack.Screen name="compte" options={{ presentation: 'modal', title: 'Mon compte' }} />
         <Stack.Screen name="annonce/[id]" options={{ title: 'Annonce' }} />
         <Stack.Screen name="paiement-test" options={{ presentation: 'modal', title: 'Paiement (test)' }} />

@@ -10,10 +10,11 @@ import { useTheme } from '../src/useTheme';
 
 // Créer un compte (le compte invité du téléphone devient permanent : rien n'est perdu) ou se
 // connecter (les courses réservées en invité sur ce téléphone suivent le compte).
+// Fabrice se connecte ici aussi, avec ses identifiants : il arrive directement dans son espace.
 export default function Compte() {
   const { c, type } = useTheme();
   const params = useLocalSearchParams<{ mode?: string }>();
-  const { brouillon, creerCompte, connecterClient, reinitialiserMotDePasse, serveur } = useStore();
+  const { brouillon, creerCompte, connecterClient, reinitialiserMotDePasse, serveur, entrerDemoChauffeur } = useStore();
   const [mode, setMode] = useState<'creer' | 'connexion'>(params.mode === 'connexion' ? 'connexion' : 'creer');
   // Mot de passe oublié : null, puis « code » (email envoyé), le formulaire passe à code + nouveau mot de passe.
   const [oubli, setOubli] = useState<'email' | 'code' | null>(null);
@@ -43,7 +44,12 @@ export default function Compte() {
   };
 
   if (serveur.etat !== 'connecte') {
-    return <View style={{ padding: space.l }}><Note ton="bain">Les comptes nécessitent la connexion au serveur (indisponible en démonstration).</Note></View>;
+    return (
+      <View style={{ padding: space.l, gap: space.l }}>
+        <Note ton="bain">Les comptes nécessitent la connexion au serveur (indisponible en démonstration).</Note>
+        <Bouton titre="Démonstration de l'espace chauffeur" variante="contour" icone="eye-outline" onPress={entrerDemoChauffeur} />
+      </View>
+    );
   }
   if (fait) {
     return (

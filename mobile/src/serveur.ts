@@ -180,22 +180,6 @@ export async function estChauffeur(): Promise<boolean> {
   return !!data;
 }
 
-// Connexion de Fabrice : email + mot de passe. Un compte sans le rôle chauffeur est refusé.
-export async function connexionChauffeur(email: string, motDePasse: string): Promise<string> {
-  if (!supabase) throw new Error('Serveur non configuré');
-  const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: motDePasse });
-  if (error || !data.user) {
-    throw new Error(error?.message === 'Invalid login credentials' ? 'Email ou mot de passe incorrect' : error?.message ?? 'Connexion impossible');
-  }
-  if (!(await estChauffeur())) {
-    await supabase.auth.signOut();
-    await connexionInvite();
-    throw new Error('Ce compte n’a pas accès à l’espace chauffeur');
-  }
-  return data.user.id;
-}
-
-// Déconnexion : le téléphone redevient un client invité.
 export async function deconnexion(): Promise<string> {
   if (!supabase) throw new Error('Serveur non configuré');
   await supabase.auth.signOut();
@@ -499,9 +483,12 @@ export async function connecterClient(email: string, motDePasse: string): Promis
   if (avant?.anonyme) jeton = ((await supabase.rpc('preparer_fusion')).data as string | null) ?? null;
   const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: motDePasse });
   if (error || !data.user) throw new Error(messageAuth(error?.message));
+  // Fabrice se connecte comme un client : il arrive directement dans son espace, et les courses
+  // éventuelles de l'invité de ce téléphone ne lui sont pas rattachées.
+  const chauffeur = await estChauffeur();
   let rattachees = 0;
-  if (jeton) rattachees = Number((await supabase.rpc('fusionner_compte', { p_jeton: jeton })).data ?? 0);
-  return { uid: data.user.id, chauffeur: await estChauffeur(), rattachees };
+  if (jeton && !chauffeur) rattachees = Number((await supabase.rpc('fusionner_compte', { p_jeton: jeton })).data ?? 0);
+  return { uid: data.user.id, chauffeur, rattachees };
 }
 
 export async function majProfil(nom: string, telephone: string): Promise<Profil> {
@@ -553,7 +540,10 @@ export async function reinitialiserMotDePasse(email: string, code: string, motDe
   if (error || !data.user) throw new Error(/expired|invalid/i.test(error?.message ?? '') ? 'Code incorrect ou expiré.' : messageAuth(error?.message));
   const r = await supabase.auth.updateUser({ password: motDePasse });
   if (r.error) throw new Error(messageAuth(r.error.message));
+  // Fabrice se connecte comme un client : il arrive directement dans son espace, et les courses
+  // éventuelles de l'invité de ce téléphone ne lui sont pas rattachées.
+  const chauffeur = await estChauffeur();
   let rattachees = 0;
-  if (jeton) rattachees = Number((await supabase.rpc('fusionner_compte', { p_jeton: jeton })).data ?? 0);
-  return { uid: data.user.id, chauffeur: await estChauffeur(), rattachees };
+  if (jeton && !chauffeur) rattachees = Number((await supabase.rpc('fusionner_compte', { p_jeton: jeton })).data ?? 0);
+  return { uid: data.user.id, chauffeur, rattachees };
 }

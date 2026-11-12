@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
@@ -110,7 +111,7 @@ function SuppressionCompte() {
 export default function Profil() {
   const { consentement, definir: definirConsentement } = useConsentement();
   const { c, type, s } = useTheme(creerStyles);
-  const { prefs, setPrefs, simulerEchec, setSimulerEchec, apparence, setApparence, serveur } = useStore();
+  const { apparence, setApparence, serveur } = useStore();
   return (
     <ScrollView style={{ backgroundColor: c.sol }} contentContainerStyle={{ padding: space.l, paddingBottom: space.xxl }}>
       <BlocCompte />
@@ -152,29 +153,7 @@ export default function Profil() {
         <Lien titre="Mentions légales" url={`${contact.site}/mentions-legales/`} trait />
       </View>
 
-      <Titre>Prototype</Titre>
-      <View style={s.bloc}>
-        <View style={[s.ligne]}>
-          <View style={{ flex: 1 }}>
-            <Text style={type.body}>Serveur</Text>
-            <Text style={type.small}>
-              {serveur.etat === 'connecte' ? 'Connecté : tarifs et courses enregistrés dans Supabase'
-                : serveur.etat === 'connexion' ? 'Connexion en cours…'
-                : serveur.etat === 'erreur' ? `Erreur : ${serveur.message}`
-                : 'Non configuré : mode démonstration (clé Supabase absente)'}
-            </Text>
-          </View>
-          <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: serveur.etat === 'connecte' ? c.feuille : serveur.etat === 'erreur' ? c.erreur : c.trait }} />
-        </View>
-        <Interrupteur
-          titre="Simuler un échec d'envoi"
-          sous="Pour montrer à Fabrice l'écran affiché quand la demande ne part pas."
-          valeur={simulerEchec}
-          onChange={setSimulerEchec}
-        />
-      </View>
-      <Bouton titre="Espace chauffeur" variante="texte" icone="car-outline" onPress={() => router.push('/connexion-chauffeur')} style={{ alignSelf: 'flex-start', marginTop: space.xl, marginLeft: -space.s }} />
-      <Text style={[type.small, { marginTop: space.s }]}>Volant3ranches · version 0.2</Text>
+      <Text style={[type.small, { marginTop: space.xl }]}>Volant3ranches · version {Constants.expoConfig?.version ?? ''}</Text>
     </ScrollView>
   );
 }

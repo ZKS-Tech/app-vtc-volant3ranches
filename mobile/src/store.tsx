@@ -6,7 +6,7 @@ import * as Notifications from 'expo-notifications';
 import { OffreId, appliquerTarifs, lieu, offre, prix, trajet } from './data';
 import {
   annulerCourse, chargerTarifs, lienAcompte, payerAcompteTest, rembourserTout,
-  Profil, reinitialiserMotDePasse as reinitialiserServeur, connecterClient as connecterClientServeur, creerCompte as creerCompteServeur, majProfil as majProfilServeur, monProfil, sessionActuelle, connexionChauffeur, connexionInvite, creerDemande, deconnexion, supprimerCompte as supprimerCompteServeur, ecouterMesCourses,
+  Profil, reinitialiserMotDePasse as reinitialiserServeur, connecterClient as connecterClientServeur, creerCompte as creerCompteServeur, majProfil as majProfilServeur, monProfil, sessionActuelle, connexionInvite, creerDemande, deconnexion, supprimerCompte as supprimerCompteServeur, ecouterMesCourses,
   estChauffeur, mesCourses, supabase,
 } from './serveur';
 
@@ -124,7 +124,6 @@ type Store = {
   // Espace chauffeur : rôle du compte connecté, ou démonstration sans serveur.
   role: 'client' | 'chauffeur';
   demoChauffeur: boolean;
-  connecterChauffeur: (email: string, motDePasse: string) => Promise<void>;
   deconnecterChauffeur: () => Promise<void>;
   entrerDemoChauffeur: () => void;
   simulerEchec: boolean;
@@ -314,14 +313,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       recalculerTarifs: () => setTarifsVersion((v) => v + 1),
       role,
       demoChauffeur,
-      connecterChauffeur: async (email, motDePasse) => {
-        await oublierTelephone();
-        await connexionChauffeur(email, motDePasse);
-        canal.current?.unsubscribe();
-        setCourses([]);
-        setRole('chauffeur');
-        activerNotifications();
-      },
       deconnecterChauffeur: async () => {
         if (demoChauffeur) { setDemoChauffeur(false); return; }
         await oublierTelephone().catch(() => {});
@@ -352,6 +343,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return r.rattachees;
       },
       connecterClient: async (email, motDePasse) => {
+        await oublierTelephone().catch(() => {});
         const r = await connecterClientServeur(email, motDePasse);
         if (!r.chauffeur) evenement('connexion_compte');
         if (r.chauffeur) { canal.current?.unsubscribe(); setCourses([]); setRole('chauffeur'); activerNotifications(); return 0; }
