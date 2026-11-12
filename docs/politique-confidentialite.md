@@ -1,76 +1,140 @@
 # Politique de confidentialité — application Volant3ranches VTC
 
-Texte prêt à publier sur le site (page « Politique de confidentialité », que l'appli ouvre depuis
-Profil › Informations), à compléter là où c'est entre crochets et à faire valider par Fabrice.
-Il décrit ce que fait réellement l'application ; à mettre à jour si elle évolue.
+Texte de la page à publier sur le site (version HTML prête à coller : `docs/politique-confidentialite.html`).
+Il décrit ce que fait réellement l'application au 12 novembre 2026 ; à mettre à jour si elle évolue.
 
-> **À vérifier avant publication** : les durées de conservation ci-dessous sont des propositions
-> courantes ; la suppression automatique des données anciennes n'est pas encore programmée dans la
-> base (à faire avant la publication sur les stores, avec la suppression de compte depuis l'appli).
+> **Avant publication** : faire relire et valider par Fabrice. Les durées de conservation sont des
+> propositions usuelles : leur effacement automatique dans la base reste à programmer, ainsi que la
+> suppression du compte depuis l'appli (en attendant, la demande se fait par email). Les deux sont
+> obligatoires avant la publication sur les stores.
 
 ---
 
-## Qui est responsable de vos données ?
+# Politique de confidentialité de l'application Volant3ranches VTC
 
-**Volant3ranches**, SASU au capital de 100 €, 11 chemin de la baissade, 81220 Viterbe —
-SIREN 932 513 443 — téléphone 06 16 53 14 91 — email : [adresse de contact].
+*Dernière mise à jour : [date de publication]*
 
-## Quelles données, et pourquoi ?
+Cette politique explique quelles données l'application mobile Volant3ranches VTC utilise, pourquoi,
+avec qui elles sont partagées, combien de temps elles sont gardées, et comment exercer vos droits.
 
-| Données | À quoi elles servent | Base légale |
+## 1. Qui est responsable de vos données ?
+
+**Volant3ranches**, SASU au capital de 100 €
+11 chemin de la baissade, 81220 Viterbe — SIREN 932 513 443
+Téléphone : 06 16 53 14 91 — Email : contact@volant3ranches-vtc.fr
+
+## 2. Les données utilisées, et pourquoi
+
+### Pour réserver et réaliser votre course
+- **Nom, téléphone, email** : vous confirmer la course, vous joindre, vous envoyer le bon de commande
+  et la facture.
+- **Adresses de départ et d'arrivée, date et heure, nombre de passagers et de bagages, numéro de vol
+  ou de train, commentaire** : organiser la course et calculer son prix.
+- **Messages échangés avec le chauffeur** dans l'application : préciser les détails de la course.
+
+*Base légale : l'exécution de votre réservation.*
+
+L'application **ne suit pas votre position** : elle n'utilise pas le GPS du téléphone. Les adresses
+sont celles que vous saisissez ; le texte saisi est envoyé au service public de l'IGN pour trouver
+l'adresse et calculer l'itinéraire par la route.
+
+### Votre compte (facultatif)
+Sans compte, l'application vous attribue un identifiant anonyme propre à votre téléphone. Si vous
+créez un compte : **email et mot de passe**, et vos coordonnées pour préremplir vos réservations et
+retrouver vos courses sur tous vos appareils. Le mot de passe est chiffré : personne ne peut le lire,
+pas même nous. En cas d'oubli, un **code à usage unique** vous est envoyé par email.
+
+*Base légale : votre demande de création de compte.*
+
+### Notifications
+Si vous les autorisez, un **identifiant technique de votre téléphone** permet de vous prévenir
+(demande acceptée, confirmation, message du chauffeur, rappel la veille). Vous pouvez les désactiver à
+tout moment dans les réglages du téléphone.
+
+*Base légale : votre accord.*
+
+### Emails
+Nous vous envoyons des emails liés à vos réservations : demande reçue, confirmation avec le bon de
+commande, refus, annulation, remboursement, facture, code de connexion. Ce ne sont pas des emails
+publicitaires.
+
+*Base légale : l'exécution de votre réservation.*
+
+### Paiement de l'acompte
+Lorsqu'un acompte est demandé pour confirmer la course, il se règle sur la **page sécurisée de notre
+prestataire de paiement**. Vos données de carte bancaire ne passent jamais par l'application ni par
+nos serveurs : nous recevons seulement le montant, la date et le statut du paiement, pour confirmer
+la course et rembourser l'acompte selon nos conditions générales de vente.
+
+*Base légale : l'exécution de votre réservation.*
+
+### Bons de commande et factures
+Ils reprennent vos coordonnées, la course et son prix.
+
+*Base légale : nos obligations comptables et fiscales.*
+
+### Statistiques d'utilisation (seulement si vous les acceptez)
+Pour comprendre quels écrans servent et où le parcours de réservation bloque, l'application peut
+mesurer son utilisation avec **Google Analytics**, dans un compte appartenant à Volant3ranches.
+Elles sont **désactivées tant que vous ne les acceptez pas**, et se modifient à tout moment dans
+**Profil › Statistiques d'utilisation**.
+
+Ce qui est mesuré : les étapes du parcours (choix d'un aéroport ou d'une gare, prix affiché, offre
+choisie, demande envoyée, confirmée, annulée…), avec quelques informations sur la course (offre,
+distance, prix). Ce qui n'est **jamais** transmis à Google : votre nom, votre téléphone, votre email,
+vos adresses, ni l'adresse IP de votre téléphone (les statistiques passent par notre serveur). Un
+identifiant tiré au hasard sur votre téléphone permet seulement de regrouper les visites.
+
+*Base légale : votre consentement.*
+
+Vos données ne sont **ni vendues, ni louées, ni utilisées pour de la publicité**.
+
+## 3. Qui y a accès ?
+
+Le chauffeur (Fabrice Legouez Ricoce) et, uniquement pour leur mission technique, nos prestataires :
+
+| Prestataire | Rôle | Où sont les données |
 |---|---|---|
-| Nom, téléphone, email | Vous confirmer la course, vous joindre, vous envoyer le bon de commande et la facture | Exécution de la réservation |
-| Adresses de départ et d'arrivée, date, heure, passagers, bagages, n° de vol ou de train, commentaire | Organiser et réaliser la course, calculer le prix | Exécution de la réservation |
-| Compte (facultatif) : email et mot de passe | Retrouver vos courses et préremplir vos coordonnées sur tous vos appareils. Le mot de passe est chiffré : personne ne peut le lire, pas même nous | Votre demande (création de compte) |
-| Messages échangés avec le chauffeur dans l'appli | Préciser les détails de la course | Exécution de la réservation |
-| Identifiant technique du téléphone pour les notifications | Vous prévenir (confirmation, message, rappel) | Votre accord (autorisation des notifications) |
-| Acompte : montant, date et statut du paiement | Confirmer la réservation, rembourser selon les CGV | Exécution de la réservation |
-| Bons de commande et factures | Obligations comptables | Obligation légale |
-| Statistiques d'utilisation (si vous les acceptez) | Comprendre quels écrans servent et où le parcours bloque, pour améliorer l'appli | Votre consentement |
-
-L'application **ne suit pas votre position** (pas de GPS) : les adresses sont celles que vous
-saisissez. Vos **données de carte bancaire** ne passent jamais par l'application ni par nos serveurs :
-elles sont saisies sur la page sécurisée de notre prestataire de paiement.
-
-**Statistiques** : désactivées tant que vous ne les acceptez pas (Profil › Statistiques
-d'utilisation, modifiable à tout moment). Elles utilisent Google Analytics avec un identifiant tiré au
-hasard sur votre téléphone ; ni votre nom, ni votre téléphone, ni votre email, ni vos adresses, ni
-l'adresse IP de votre téléphone ne sont transmis à Google.
-
-## Qui y a accès ?
-
-Le chauffeur (Fabrice) et, pour leur seule mission technique, nos prestataires :
-
-| Prestataire | Rôle | Localisation |
-|---|---|---|
-| Supabase | Hébergement de la base de données et des fonctions | Union européenne (Paris) |
-| Brevo | Envoi des emails | France / Union européenne |
-| Expo (650 Industries) et Google Firebase | Acheminement des notifications | États-Unis* |
+| Supabase | Hébergement de la base de données et des services de l'application | Union européenne (Paris) |
+| Brevo | Envoi des emails | Union européenne |
+| Expo (650 Industries) et Google Firebase | Acheminement des notifications vers votre téléphone | États-Unis* |
 | SumUp | Paiement en ligne de l'acompte | Union européenne |
-| IGN (Géoplateforme) | Recherche d'adresses et calcul d'itinéraire | France |
-| Google Analytics (si vous l'acceptez) | Statistiques d'utilisation | États-Unis* |
+| IGN – Géoplateforme | Recherche d'adresses et calcul d'itinéraire | France |
+| Google Analytics (si vous l'acceptez) | Statistiques d'utilisation | Union européenne et États-Unis* |
 
-\* Transferts encadrés par le cadre de protection des données UE–États-Unis (Data Privacy Framework)
-ou par les clauses contractuelles types de la Commission européenne.
+\* Ces transferts sont encadrés par le cadre de protection des données UE–États-Unis (Data Privacy
+Framework) ou par les clauses contractuelles types de la Commission européenne.
 
-Vos données ne sont ni vendues, ni louées, ni utilisées pour de la publicité.
+## 4. Combien de temps ?
 
-## Combien de temps ?
+| Données | Durée |
+|---|---|
+| Réservations, coordonnées, messages | 3 ans après votre dernière course |
+| Compte | Jusqu'à sa suppression, ou 3 ans sans utilisation |
+| Bons de commande et factures | 10 ans (obligation comptable) |
+| Identifiant de notification | Jusqu'à la déconnexion ou la désinstallation |
+| Emails envoyés (journal d'envoi) | 1 an |
+| Statistiques | 14 mois |
 
-- Réservations, coordonnées et messages : 3 ans après votre dernière course, puis supprimés.
-- Compte : jusqu'à sa suppression, ou 3 ans sans utilisation.
-- Bons de commande et factures : 10 ans (obligation comptable).
-- Identifiant de notification : jusqu'à la déconnexion ou la désinstallation de l'appli.
-- Statistiques : 14 mois.
+## 5. Vos droits
 
-## Vos droits
+Vous pouvez demander à **accéder** à vos données, les **corriger**, les **supprimer**, les **recevoir**
+dans un format lisible, **limiter** leur utilisation ou vous y **opposer**, et retirer à tout moment
+votre consentement aux statistiques (Profil › Statistiques d'utilisation) ou aux notifications.
 
-Vous pouvez demander l'accès à vos données, leur correction, leur suppression, leur portabilité, ou
-vous opposer à leur utilisation, en écrivant à [adresse de contact] ou au 06 16 53 14 91. Les
-factures ne peuvent pas être supprimées avant 10 ans (obligation légale). Vous pouvez aussi déposer
-une réclamation auprès de la CNIL (www.cnil.fr).
+Pour **supprimer votre compte** et vos données : écrivez à contact@volant3ranches-vtc.fr depuis
+l'adresse de votre compte [ou, quand ce sera disponible : Profil › Supprimer mon compte]. Les
+factures sont conservées 10 ans, comme la loi l'impose.
 
-Pour supprimer votre compte : [depuis l'appli, Profil › Supprimer mon compte — à venir], ou par
-email à [adresse de contact].
+Pour toute demande : contact@volant3ranches-vtc.fr ou 06 16 53 14 91. Nous répondons sous un mois.
+Si vous estimez que vos droits ne sont pas respectés, vous pouvez saisir la **CNIL** (www.cnil.fr).
 
-*Dernière mise à jour : [date de publication].*
+## 6. Sécurité
+
+Les échanges entre l'application et nos serveurs sont chiffrés. Chaque client n'a accès qu'à ses
+propres courses, messages et documents ; les clés d'accès aux services (paiement, emails,
+statistiques) ne sont jamais présentes dans l'application.
+
+## 7. Modifications
+
+Cette politique peut évoluer avec l'application. La date de mise à jour figure en haut de la page.
