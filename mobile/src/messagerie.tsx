@@ -1,6 +1,7 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Message, chargerMessages, ecouterMessages, envoyerMessageServeur, marquerLusServeur, supabase } from './serveur';
 import { useStore } from './store';
+import { evenement } from './stats';
 
 // Messagerie client ↔ chauffeur : une conversation par course, en temps réel.
 // Sans serveur (démonstration), les messages restent sur le téléphone.
@@ -62,6 +63,7 @@ export function MessagerieProvider({ children }: { children: ReactNode }) {
       totalNonLus: [...nonLusParCourse.values()].reduce((a, b) => a + b, 0),
       conversationsNonLues: [...nonLusParCourse.keys()],
       envoyer: async (id, texte) => {
+        evenement('message_envoye');
         if (!demo) { fusion(await envoyerMessageServeur(id, texte)); return; }
         const m: Message = { id: `local-${Date.now()}`, course_id: id, auteur_id: 'moi', de_chauffeur: cote === 'chauffeur', texte: texte.trim(), envoye_le: maintenant(), lu_le: null };
         fusion(m);

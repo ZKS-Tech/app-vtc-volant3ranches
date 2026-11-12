@@ -1,4 +1,5 @@
 import { activerNotifications, oublierTelephone } from './notifications';
+import { evenement } from './stats';
 import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
@@ -168,6 +169,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   // Côté client : les courses de ce téléphone, puis la confirmation de Fabrice en temps réel.
   const uidClient = useRef<string | null>(null);
+  const coursesRef = useRef(courses);
+  coursesRef.current = courses;
   const relance = useRef<ReturnType<typeof setTimeout> | null>(null);
   const demarrerClient = async (uid: string) => {
     uidClient.current = uid;
@@ -178,7 +181,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setCourses(liste);
     canal.current = ecouterMesCourses(
       uid,
-      (c) => setCourses((cs) => (cs.some((x) => x.id === c.id) ? cs.map((x) => (x.id === c.id ? c : x)) : [c, ...cs])),
+      (c) => {
+        // Statistiques : réponse de Fabrice vue par le client.
+        const avant = coursesRef.current.find((x) => x.id === c.id);
+        if (avant && avant.statut !== c.statut) {
+          if (c.statut === 'confirmee') evenement(avant.statut === 'acompte_attendu' ? 'acompte_paye' : 'demande_confirmee', { offre: c.offreId, prix: c.montant });
+          else if (c.statut === 'refusee') evenement('demande_refusee');
+        }
+        setCourses((cs) => (cs.some((x) => x.id === c.id) ? cs.map((x) => (x.id === c.id ? c : x)) : [c, ...cs]));
+      },
       // Connexion temps réel coupée : on recharge et on se réabonne quelques secondes plus tard.
       () => {
         if (relance.current) clearTimeout(relance.current);
@@ -285,6 +296,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return null;
       },
       annuler: async (id) => {
+        const c0 = courses.find((c) => c.id === id);
+        if (c0) evenement('annulation', { delai_h: Math.round((c0.date.getTime() - Date.now()) / 3600000), statut: c0.statut });
         if (supabase && serveur.etat === 'connecte' && !courses.find((c) => c.id === id)?.demo) {
           const c = await annulerCourse(id);
           setCourses((cs) => cs.map((x) => (x.id === id ? c : x)));
@@ -321,6 +334,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       rafraichir: rafraichirClient,
       creerCompte: async (p) => {
         const r = await creerCompteServeur(p);
+        evenement('compte_cree');
         setBrouillon((b) => ({ ...b, nom: p.nom, telephone: p.telephone, email: p.email }));
         await chargerProfil();
         activerNotifications();
@@ -337,6 +351,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       },
       connecterClient: async (email, motDePasse) => {
         const r = await connecterClientServeur(email, motDePasse);
+        if (!r.chauffeur) evenement('connexion_compte');
         if (r.chauffeur) { canal.current?.unsubscribe(); setCourses([]); setRole('chauffeur'); activerNotifications(); return 0; }
         setBrouillon((b) => ({ ...b, nom: '', telephone: '', email: '' }));
         await demarrerClient(r.uid);

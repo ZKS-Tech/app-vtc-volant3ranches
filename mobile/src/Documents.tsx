@@ -6,6 +6,7 @@ import { DocumentEmis, ModePaiement, chargerDocuments, ecouterDocuments, libelle
 import { Couleurs, radius, space } from './theme';
 import { Bouton, Note } from './ui';
 import { useTheme } from './useTheme';
+import { evenement } from './stats';
 
 // Documents d'une course (bon de commande, facture), mis à jour en temps réel.
 export function useDocumentsCourse(courseId: string, actif = true) {
@@ -24,6 +25,7 @@ export function useDocumentsCourse(courseId: string, actif = true) {
 
 // Ouvre le PDF (créé par le serveur à la première demande).
 export async function ouvrirPdf(d: DocumentEmis) {
+  evenement('document_ouvert', { type_document: d.type });
   const { url } = await lienPdf(d.id);
   await Linking.openURL(url);
 }

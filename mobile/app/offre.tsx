@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
+import { useEffect } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { dateCourte, duree, euros, lieu, offre as getOffre, offres, prix } from '../src/data';
@@ -10,6 +11,7 @@ import { CartePlan } from '../src/CartePlan';
 import { useTheme } from '../src/useTheme';
 import { Bouton, Note, appelerFabrice } from '../src/ui';
 import { useItineraire } from '../src/geo';
+import { evenement } from '../src/stats';
 
 export default function Offre() {
   const { c, type, s } = useTheme(creerStyles);
@@ -22,6 +24,9 @@ export default function Offre() {
   const t = pret ? { km: it.itineraire.km, minutes: it.itineraire.minutes } : { km: 0, minutes: 0 };
   const choisie = getOffre(b.offreId);
   const prixChoisi = prix(choisie, t.km, b.jour, b.heure, b.allerRetour);
+  useEffect(() => {
+    if (pret) evenement('estimation_affichee', { offre: choisie.id, km: t.km, prix: prixChoisi.montant, majoration: prixChoisi.raisons.join(', ') || 'aucune', aller_retour: b.allerRetour, passagers: b.passagers });
+  }, [pret, t.km]);
 
   return (
     <View style={{ flex: 1, backgroundColor: c.sol }}>
@@ -120,7 +125,7 @@ export default function Offre() {
           titre={pret ? `Continuer · ${euros(prixChoisi.montant)}` : it.etat === 'erreur' ? 'Itinéraire indisponible' : 'Calcul du prix…'}
           icone={pret ? 'arrow-forward' : undefined}
           desactive={!pret}
-          onPress={() => router.push('/coordonnees')}
+          onPress={() => { evenement('offre_choisie', { offre: choisie.id, prix: prixChoisi.montant, km: t.km }); router.push('/coordonnees'); }}
         />
       </View>
     </View>

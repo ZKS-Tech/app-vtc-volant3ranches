@@ -7,9 +7,11 @@ import { Lieu, fabrice, lieu, lieux, photos } from '../../src/data';
 import { useStore } from '../../src/store';
 import { Couleurs, f, radius, space } from '../../src/theme';
 import { BandeauAnnonce } from '../../src/BandeauAnnonce';
+import { DemandeConsentement } from '../../src/Consentement';
 import { CuveIndigo } from '../../src/CuveIndigo';
 import { useTheme } from '../../src/useTheme';
 import { Bouton, CarteCourse, Titre, appelerFabrice } from '../../src/ui';
+import { evenement } from '../../src/stats';
 
 const raccourcis = lieux.filter((l) => l.type !== 'ville');
 
@@ -24,6 +26,7 @@ export default function Accueil() {
     .sort((a, b) => +a.date - +b.date)[0];
 
   const choisirRaccourci = (l: Lieu) => {
+    evenement('raccourci_aeroport_gare', { raccourci: l.id, type_lieu: l.type });
     if (!brouillon.departId || brouillon.arriveeId) maj({ departId: l.id, arriveeId: brouillon.arriveeId === l.id ? undefined : brouillon.arriveeId });
     else maj({ arriveeId: l.id });
   };
@@ -59,6 +62,9 @@ export default function Accueil() {
       <View style={{ paddingHorizontal: space.l }}>
         <View style={{ marginTop: space.l }}>
           <BandeauAnnonce />
+        </View>
+        <View style={{ marginTop: space.l }}>
+          <DemandeConsentement />
         </View>
         {depart && arrivee ? (
           <Bouton titre="Choisir la date et l'heure" icone="arrow-forward" onPress={() => router.push('/trajet')} style={{ marginTop: space.l }} />

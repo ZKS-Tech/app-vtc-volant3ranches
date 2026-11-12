@@ -9,6 +9,7 @@ import { contact, dateCourte, euros, lieu, offre } from './data';
 import type { Course, Statut } from './store';
 import { Couleurs, f, radius, sansContourWeb, space } from './theme';
 import { useTheme } from './useTheme';
+import { evenement } from './stats';
 
 export type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -44,7 +45,7 @@ export function Bouton({
   );
 }
 
-export const appelerFabrice = () => Linking.openURL(contact.telephoneLien).catch(() => {});
+export const appelerFabrice = () => { evenement('appel_chauffeur'); Linking.openURL(contact.telephoneLien).catch(() => {}); };
 
 export function Note({ children, ton = 'feuille', icone }: { children: ReactNode; ton?: 'feuille' | 'alerte' | 'erreur' | 'bain'; icone?: IconName }) {
   const { c, type, s } = useTheme(creerStyles);

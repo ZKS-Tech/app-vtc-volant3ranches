@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Linking, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { contact } from '../../src/data';
 import { LigneNotifications } from '../../src/LigneNotifications';
+import { useConsentement } from '../../src/stats';
 import { useStore } from '../../src/store';
 import { Couleurs, radius, space } from '../../src/theme';
 import { useTheme } from '../../src/useTheme';
@@ -56,6 +57,7 @@ function BlocCompte() {
 }
 
 export default function Profil() {
+  const { consentement, definir: definirConsentement } = useConsentement();
   const { c, type, s } = useTheme(creerStyles);
   const { prefs, setPrefs, simulerEchec, setSimulerEchec, apparence, setApparence, serveur } = useStore();
   return (
@@ -84,10 +86,10 @@ export default function Profil() {
       <Titre>Confidentialité</Titre>
       <View style={s.bloc}>
         <Interrupteur
-          titre="Mesure d'audience"
-          sous="Statistiques anonymes (Google Analytics) pour améliorer l'application. Désactivées tant que vous ne les acceptez pas."
-          valeur={prefs.stats}
-          onChange={(v) => setPrefs({ stats: v })}
+          titre="Statistiques d'utilisation"
+          sous="Anonymes (Google Analytics), pour améliorer l'application : ni nom, ni téléphone, ni adresse. Désactivées tant que vous ne les acceptez pas."
+          valeur={consentement === 'oui'}
+          onChange={(v) => definirConsentement(v ? 'oui' : 'non')}
         />
       </View>
 

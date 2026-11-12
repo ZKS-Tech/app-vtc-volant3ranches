@@ -9,6 +9,7 @@ import { AnnoncesProvider } from '../src/annonces';
 import { ChauffeurProvider } from '../src/chauffeur';
 import { MessagerieProvider } from '../src/messagerie';
 import { useNotifications } from '../src/notifications';
+import { activerSuivi } from '../src/stats';
 import { StoreProvider, useStore } from '../src/store';
 import { useTheme } from '../src/useTheme';
 
@@ -37,6 +38,8 @@ function Navigation() {
   const { role, demoChauffeur, serveur, cleSession } = useStore();
   const chauffeur = role === 'chauffeur' || demoChauffeur;
   useNotifications(serveur.etat === 'connecte' ? `${role}:${cleSession}` : null);
+  // Statistiques : seulement l'interface client reliée au serveur (jamais Fabrice ni la démo).
+  useEffect(() => { activerSuivi(serveur.etat === 'connecte' && !chauffeur); }, [serveur.etat, chauffeur]);
   // À chaque bascule client ↔ chauffeur, on ouvre l'accueil de l'interface qui vient d'être autorisée.
   const precedent = useRef(chauffeur);
   useEffect(() => {

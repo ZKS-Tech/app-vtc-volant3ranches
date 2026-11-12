@@ -8,6 +8,7 @@ import { Couleurs, radius, space } from '../src/theme';
 import { EcranAvecClavier } from '../src/Clavier';
 import { useTheme } from '../src/useTheme';
 import { Bouton, couleursSwitch, Champ, Ligne, Note, Titre, appelerFabrice } from '../src/ui';
+import { evenement } from '../src/stats';
 
 export default function Coordonnees() {
   const { c, type, s } = useTheme(creerStyles);
@@ -34,11 +35,14 @@ export default function Coordonnees() {
     setTente(true);
     if (!complet) return;
     setEtat('envoi');
+    evenement('coordonnees_saisies');
     try {
       const course = await envoyer();
+      evenement('demande_envoyee', { offre: b.offreId, prix: p.montant, km: t.km, aller_retour: b.allerRetour, passagers: b.passagers });
       router.replace({ pathname: '/envoyee', params: { id: course.id } });
     } catch (e) {
       setRaison(e instanceof Error ? e.message : '');
+      evenement('demande_echec_envoi', { erreur: e instanceof Error ? e.message.slice(0, 60) : 'inconnue' });
       setEtat('echec');
     }
   };
