@@ -19,14 +19,15 @@ export default function Offre() {
   const insets = useSafeAreaInsets();
   // Distance et durée réelles par la route (IGN). Pas de prix tant qu'elles ne sont pas connues.
   const it = useItineraire(b.departId ? lieu(b.departId) : undefined, b.arriveeId ? lieu(b.arriveeId) : undefined);
-  if (!b.departId || !b.arriveeId) return null;
   const pret = it.etat === 'ok';
   const t = pret ? { km: it.itineraire.km, minutes: it.itineraire.minutes } : { km: 0, minutes: 0 };
   const choisie = getOffre(b.offreId);
   const prixChoisi = prix(choisie, t.km, b.jour, b.heure, b.allerRetour);
+  // Les hooks restent avant tout « return » anticipé : React exige qu'ils soient appelés à chaque affichage.
   useEffect(() => {
-    if (pret) evenement('estimation_affichee', { offre: choisie.id, km: t.km, prix: prixChoisi.montant, majoration: prixChoisi.raisons.join(', ') || 'aucune', aller_retour: b.allerRetour, passagers: b.passagers });
+    if (pret && b.departId && b.arriveeId) evenement('estimation_affichee', { offre: choisie.id, km: t.km, prix: prixChoisi.montant, majoration: prixChoisi.raisons.join(', ') || 'aucune', aller_retour: b.allerRetour, passagers: b.passagers });
   }, [pret, t.km]);
+  if (!b.departId || !b.arriveeId) return null;
 
   return (
     <View style={{ flex: 1, backgroundColor: c.sol }}>
