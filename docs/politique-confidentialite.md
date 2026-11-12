@@ -19,8 +19,8 @@ avec qui elles sont partagées, combien de temps elles sont gardées, et comment
 
 ## 1. Qui est responsable de vos données ?
 
-**Volant3ranches**, SASU au capital de 100 €
-11 chemin de la baissade, 81220 Viterbe — SIREN 932 513 443
+**Volant3ranches**, SASU au capital de 100 €\
+11 chemin de la baissade, 81220 Viterbe — SIREN 932 513 443\
 Téléphone : 06 16 53 14 91 — Email : contact@volant3ranches-vtc.fr
 
 ## 2. Les données utilisées, et pourquoi
