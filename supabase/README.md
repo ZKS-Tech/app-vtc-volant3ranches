@@ -279,9 +279,11 @@ téléphone, ni nom, téléphone, email ou adresse. Événements : `ouverture_ap
 `demande_echec_envoi`, `demande_confirmee`, `demande_refusee`, `acompte_paye`, `annulation`,
 `appel_chauffeur`, `message_envoye`, `compte_cree`, `connexion_compte`, `document_ouvert`.
 
-1. **Propriété GA4** : celle du site volant3ranches-vtc.fr (pour comparer site et appli), ou une
-   nouvelle. Admin › **Flux de données** › ajouter un flux **Web** nommé « Application » (URL du site),
-   ou utiliser le flux du site. Noter l'**ID de mesure** (`G-…`).
+1. **Propriété GA4 dédiée à l'appli** (créée avec le compte Google de l'entreprise) : Admin › Créer ›
+   Propriété « Volant3ranches – Application », France, euro. Plateforme : **Web** (le relais utilise un
+   identifiant de flux Web, pas l'outil Firebase), URL du site, flux « Application », **Mesure
+   améliorée désactivée**. Noter l'**ID de mesure** (`G-…`). (La propriété du site peut aussi servir ;
+   les deux se comparent ensuite dans Looker Studio.)
 2. Dans ce flux › **Measurement Protocol API secrets** › Créer (nom « Appli VTC ») : noter le secret.
 3. Supabase › Edge Functions › **Secrets** : `GA4_MEASUREMENT_ID` = `G-…`, `GA4_API_SECRET` = le secret.
 4. Déployer la fonction **`stats`** ([`functions/stats/index.ts`](functions/stats/index.ts)),
