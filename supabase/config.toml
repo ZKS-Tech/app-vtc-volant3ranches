@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.emails]
 verify_jwt = false
+
+[functions.stats]
+verify_jwt = false
