@@ -353,6 +353,17 @@ Une facture émise ne se modifie pas : pour la corriger ou rembourser un client,
    versions ([`functions/document-pdf/index.ts`](functions/document-pdf/index.ts),
    [`functions/emails/index.ts`](functions/emails/index.ts)) › Deploy.
 
+## Avant l'ouverture aux clients : remise à zéro (une seule fois)
+
+Les essais ont consommé de vrais numéros (BC-…, F-…, AV-…) : les factures réelles doivent
+commencer à 0001, sans trou.
+1. SQL Editor : exécuter [`scripts/remise-a-zero-lancement.sql`](scripts/remise-a-zero-lancement.sql).
+   Il efface courses, pièces, emails, fiches et comptes d'essai ; il garde le compte de Fabrice,
+   les tarifs, les réglages et les annonces. Il refuse de tourner s'il trouve plus de 100 pièces
+   réelles (appli déjà en service).
+2. Storage › `documents` › tout sélectionner › Delete (anciens PDF).
+3. Sur les téléphones d'essai : se déconnecter, ou désinstaller et réinstaller l'appli.
+
 ## Tester la confirmation en temps réel
 
 Avec deux téléphones (ou un téléphone et le navigateur) : envoyez une demande côté client, puis

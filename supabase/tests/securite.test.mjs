@@ -965,3 +965,30 @@ if (process.argv[19]) {
   r = await q(`select count(*)::int n from public.documents where type = 'avoir'`);
   ok(r[0].n === 0, 'un autre client ne voit pas les avoirs');
 }
+
+// Remise à zéro avant lancement (supabase/scripts/remise-a-zero-lancement.sql), en dernier.
+if (process.argv[20]) {
+  console.log('--- remise à zéro avant lancement');
+  await db.exec('reset role');
+  const reelles = Number((await db.query(`select count(*)::int n from public.documents where not test`)).rows[0].n);
+  await db.exec(readFileSync(process.argv[20], 'utf8').replace(/^select \(select count[\s\S]*$/m, ''));
+  const n = (await db.query(`select (select count(*)::int from public.courses) c, (select count(*)::int from public.documents) d,
+    (select count(*)::int from public.fiches_clients) f, (select count(*)::int from public.compteurs_documents) k,
+    (select count(*)::int from auth.users) u, (select count(*)::int from public.offres) o`)).rows[0];
+  ok(n.c === 0 && n.d === 0 && n.f === 0 && n.k === 0, `essais effacés (${reelles} pièces réelles d'essai supprimées)`);
+  ok(n.u === 1 && n.o === 2, 'compte de Fabrice et tarifs gardés');
+  await db.exec(`select set_config('request.jwt.claim.sub', '${fabrice}', false); set role authenticated`);
+  const c = (await db.query(`select * from public.creer_course_manuelle(null, 'Premier Client', '06 10 10 10 10', null,
+    '{"ref":"lavaur","libelle":"Lavaur","lat":43.6989,"lon":1.8191,"type":"ville"}',
+    '{"ref":"tls","libelle":"Aéroport Toulouse-Blagnac","lat":43.6293,"lon":1.3638,"type":"aeroport"}',
+    now() + interval '5 days', false, 1, 1, null, 'tesla', 50, 45, null, 'telephone', null)`)).rows[0];
+  const bc = (await db.query(`select numero from public.documents where course_id = '${c.id}'`)).rows[0];
+  ok(/^BC-\d{4}-0001$/.test(bc.numero), `numérotation repartie à 0001 (${bc.numero})`);
+  await db.exec('reset role');
+  let refus = false;
+  await db.exec(`alter table public.documents disable trigger documents_figes`);
+  for (let i = 0; i < 101; i++) await db.exec(`insert into public.documents (type, numero, course_id, total_ht, tva, total_ttc, contenu) values ('commande', 'X-${i}', '${c.id}', 1, 0, 1, '{}')`);
+  await db.exec(`alter table public.documents enable trigger documents_figes`);
+  try { await db.exec(readFileSync(process.argv[20], 'utf8')); } catch (e) { refus = /Arrêt/.test(e.message); await db.exec('rollback').catch(() => {}); }
+  ok(refus, 'le script refuse de tourner une fois l\'appli en service');
+}
