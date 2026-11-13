@@ -101,6 +101,7 @@ if (process.argv[4]) {
     ok(true, 'migration 15 (effacement) appliquée sans erreur');
   }
   if (process.argv[18]) { await db.exec(readFileSync(process.argv[18], 'utf8')); ok(true, 'migration 16 (langue) appliquée sans erreur'); }
+  if (process.argv[19]) { await db.exec(readFileSync(process.argv[19], 'utf8')); ok(true, 'migration 17 (avoirs) appliquée sans erreur'); }
 }
 
 
@@ -922,4 +923,45 @@ if (process.argv[18]) {
   await en(fabrice);
   r = await q(`select public.fusionner_compte(gen_random_uuid()) n`);
   ok(r[0].n === 0, 'Fabrice ne récupère jamais les courses d\'un invité');
+}
+
+if (process.argv[19]) {
+  console.log('--- avoirs');
+  const srv = async (sql) => { await db.exec('reset role'); return (await db.query(sql)).rows; };
+  await srv(`update public.parametres set acompte_pourcent = 0, paiements_test = false, emails_actifs = true`);
+  await en(fabrice);
+  const course = (await q(`select * from public.creer_course_manuelle(null, 'Avoir Test', '06 45 45 45 45', 'avoir@exemple.fr',
+    '{"ref":"lavaur","libelle":"Lavaur","lat":43.6989,"lon":1.8191,"type":"ville"}',
+    '{"ref":"tls","libelle":"Aéroport Toulouse-Blagnac","lat":43.6293,"lon":1.3638,"type":"aeroport"}',
+    now() + interval '12 days' + interval '2 hours', false, 1, 1, null, 'tesla', 50, 45, null, 'telephone', null)`))[0];
+  const f = (await q(`select * from public.emettre_facture('${course.id}', 'cb')`))[0];
+  const ttc = Number(f.total_ttc);
+  await en(client);
+  await echoue(() => q(`select public.emettre_avoir('${f.id}', 10, 'Geste commercial', null)`), 'un client ne peut pas émettre d\'avoir');
+  await en(fabrice);
+  await echoue(() => q(`select public.emettre_avoir('${f.id}', 10, '', null)`), 'motif obligatoire');
+  await echoue(() => q(`select public.emettre_avoir('${f.id}', ${ttc + 1}, 'Trop', null)`), 'un avoir ne dépasse pas la facture');
+  await echoue(() => q(`select public.emettre_avoir('${f.id}', -5, 'Négatif', null)`), 'montant négatif refusé');
+  await echoue(() => q(`select public.emettre_avoir('${course.id}', 5, 'Pas une facture', null)`), 'un avoir porte sur une facture');
+  const a1 = (await q(`select * from public.emettre_avoir('${f.id}', 10, 'Attente non due', 'especes')`))[0];
+  ok(/^AV-\d{4}-\d{4}$/.test(a1.numero) && Number(a1.total_ttc) === -10 && Number(a1.total_ht) === -9.09 && Number(a1.tva) === -0.91,
+    `avoir partiel ${a1.numero} : ${a1.total_ht} HT, ${a1.tva} TVA, ${a1.total_ttc} TTC`);
+  ok(a1.contenu.facture.numero === f.numero && a1.contenu.motif === 'Attente non due' && a1.facture_id === f.id, 'l\'avoir référence la facture et porte le motif');
+  r = await srv(`select public.reste_facture('${f.id}') r`);
+  ok(Number(r[0].r) === ttc - 10, `reste de la facture : ${r[0].r} €`);
+  await echoue(() => q(`select public.emettre_facture('${course.id}', 'cb')`), 'pas de nouvelle facture tant que la précédente n\'est pas entièrement annulée');
+  const a2 = (await q(`select * from public.emettre_avoir('${f.id}', null, 'Erreur de facturation', null)`))[0];
+  ok(Number(a2.total_ttc) === -(ttc - 10) && Number(a2.numero.slice(-4)) === Number(a1.numero.slice(-4)) + 1, `avoir du reste (${a2.total_ttc} €), numérotation continue`);
+  await echoue(() => q(`select public.emettre_avoir('${f.id}', null, 'Encore', null)`), 'facture déjà entièrement annulée');
+  const f2 = (await q(`select * from public.emettre_facture('${course.id}', 'virement')`))[0];
+  ok(f2.numero !== f.numero && f2.type === 'facture', `nouvelle facture après annulation : ${f2.numero}`);
+  const a3 = (await q(`select * from public.emettre_avoir('${f2.id}', null, 'Course offerte', 'cb')`))[0];
+  ok(a3.contenu.avoir_total === true && a3.contenu.lignes.every((l) => Number(l.total_ht) <= 0) && Number(a3.total_ht) === -Number(f2.total_ht),
+    'avoir total : les lignes de la facture en négatif, HT identique');
+  await echoue(() => q(`update public.documents set total_ttc = 0 where id = '${a3.id}'`).then(() => { throw new Error('modifié'); }), 'un avoir émis est figé');
+  r = await srv(`select type from public.emails where document_id = '${a1.id}'`);
+  ok(r[0]?.type === 'avoir', 'le client reçoit l\'avoir par email');
+  await en(client);
+  r = await q(`select count(*)::int n from public.documents where type = 'avoir'`);
+  ok(r[0].n === 0, 'un autre client ne voit pas les avoirs');
 }

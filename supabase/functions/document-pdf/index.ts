@@ -30,12 +30,14 @@ const LOGO = 'iVBORw0KGgoAAAANSUhEUgAAAPAAAADwCAMAAAAJixmgAAAAYFBMVEUAAAAyLSkxLC
 
 export type Ligne = { libelle: string; detail: string | null; quantite: number | null; unite: string | null; prix_unitaire_ht: number | null; total_ht: number };
 export type Contenu = {
-  type: 'commande' | 'facture'; numero: string; date: string;
+  type: 'commande' | 'facture' | 'avoir'; numero: string; date: string;
   vendeur: { raison_sociale: string; forme: string; siege: string; siren: string; tva: string; telephone: string };
   client: { numero: string | null; nom: string; entreprise: string | null; adresse: string | null; code_postal: string | null; ville: string | null; telephone: string | null; email: string | null };
   course: { date: string; heure: string; passagers: number; offre: string; offre_id: string; vehicule: string; depart: string; arrivee: string; aller_retour: boolean; numero_vol_train: string | null };
   lignes: Ligne[]; total_ht: number; taux_tva: number; tva: number; total_ttc: number; acompte: number; reste: number;
   mode_paiement: string | null; acquittee: boolean;
+  /** Avoir : facture concernée, motif, avoir total ou partiel. */
+  facture?: { numero: string; date: string; total_ttc: number }; motif?: string; avoir_total?: boolean;
 };
 
 // Couleurs du modèle
@@ -57,7 +59,7 @@ const propre = (t: string | null | undefined) => (t ?? '').replace(/[  ]/g, '
 
 export async function rendrePdf(c: Contenu): Promise<Uint8Array> {
   const pdf = await PDFDocument.create();
-  pdf.setTitle(`${c.type === 'facture' ? 'Facture' : 'Bon de commande'} ${c.numero}`);
+  pdf.setTitle(`${c.type === 'facture' ? 'Facture' : c.type === 'avoir' ? 'Avoir' : 'Bon de commande'} ${c.numero}`);
   pdf.setAuthor(c.vendeur.raison_sociale);
   const page = pdf.addPage([595.28, 841.89]);
   const n = await pdf.embedFont(StandardFonts.Helvetica);
@@ -85,11 +87,12 @@ export async function rendrePdf(c: Contenu): Promise<Uint8Array> {
   const logo = await pdf.embedPng(Uint8Array.from(atob(LOGO), (ch) => ch.charCodeAt(0)));
   page.drawImage(logo, { x: 48, y: H - 140, width: 92, height: 92 });
   const facture = c.type === 'facture';
-  t(page, facture ? 'FACTURE' : 'BON DE COMMANDE', 0, H - 112, { f: g, size: 22, droite: 545 });
-  if (!facture) t(page, 'Réservation', 0, H - 128, { size: 10, color: GRIS, droite: 545 });
+  const avoir = c.type === 'avoir';
+  t(page, facture ? 'FACTURE' : avoir ? 'AVOIR' : 'BON DE COMMANDE', 0, H - 112, { f: g, size: 22, droite: 545 });
+  if (!facture) t(page, avoir ? 'Facture rectificative' : 'Réservation', 0, H - 128, { size: 10, color: GRIS, droite: 545 });
   const yN = H - 175;
   cadre(330, yN, 125, 15, BEIGE); cadre(455, yN, 90, 15, BEIGE);
-  t(page, facture ? 'N° de Facture' : 'N° de Commande', 335, yN + 4.5, { size: 8.5 });
+  t(page, facture ? 'N° de Facture' : avoir ? "N° d'avoir" : 'N° de Commande', 335, yN + 4.5, { size: 8.5 });
   t(page, 'Date', 460, yN + 4.5, { size: 8.5 });
   cadre(330, yN - 17, 125, 17); cadre(455, yN - 17, 90, 17);
   t(page, c.numero, 335, yN - 12, { f: g, size: 9.5 });
@@ -100,11 +103,12 @@ export async function rendrePdf(c: Contenu): Promise<Uint8Array> {
   cadre(60, yB, 260, 15, BEIGE); cadre(320, yB, 115, 15, BEIGE); cadre(435, yB, 110, 15, BEIGE);
   t(page, 'Facturé à', 65, yB + 4.5, { f: g, size: 9 });
   t(page, 'Numéro client', 325, yB + 4.5, { f: g, size: 9 });
-  t(page, 'Mode de paiement', 440, yB + 4.5, { f: g, size: 9 });
+  t(page, avoir ? 'Remboursement' : 'Mode de paiement', 440, yB + 4.5, { f: g, size: 9 });
   t(page, c.client.numero ?? '—', 325, yB - 14, { size: 9.5 });
   const modes: [string, string][] = [['cb', 'CB'], ['cheque', 'Chèque'], ['especes', 'Espèce'], ['virement', 'Virement'], ['en_ligne', 'CB en ligne']];
   let ym = yB - 16;
   for (const [cle, lib] of modes) {
+    if (avoir && !c.mode_paiement) { t(page, 'À valoir', 445, ym, { f: g, size: 9 }); break; }
     if ((cle === 'virement' || cle === 'en_ligne') && c.mode_paiement !== cle && !(cle === 'en_ligne' && c.acompte > 0)) continue;
     // L'acompte payé en ligne est coché en plus du mode de paiement du solde.
     const coche = c.mode_paiement === cle || (cle === 'en_ligne' && c.acompte > 0);
@@ -120,6 +124,12 @@ export async function rendrePdf(c: Contenu): Promise<Uint8Array> {
     t(page, val ?? '', 60 + g.widthOfTextAtSize(propre(lib), 9) + 4, y, { size: 9, max: 360 });
     y -= 11.5;
   };
+  if (avoir && c.facture) {
+    champ('Facture concernée :', `${c.facture.numero} du ${c.facture.date} (${euros(Number(c.facture.total_ttc))} TTC)`);
+    champ('Motif :', c.motif ?? '');
+    champ('Avoir :', c.avoir_total ? 'total (annule la facture)' : 'partiel');
+    y -= 8;
+  }
   champ('Date de la course :', c.course.date);
   champ('Heure de départ :', c.course.heure + (c.course.numero_vol_train ? `   (vol / train ${c.course.numero_vol_train})` : ''));
   champ('Nombre de passager :', String(c.course.passagers));
@@ -183,6 +193,10 @@ export async function rendrePdf(c: Contenu): Promise<Uint8Array> {
     const lib = modes.find(([k]) => k === c.mode_paiement)?.[1] ?? '';
     t(page, `Facture acquittée le ${c.date}${lib ? ` (${lib})` : ''}`, 0, yT - 2, { f: g, size: 9, droite: 545 });
   }
+  if (avoir) {
+    const lib = modes.find(([k]) => k === c.mode_paiement)?.[1] ?? '';
+    t(page, c.mode_paiement ? `Remboursé le ${c.date}${lib ? ` (${lib})` : ''}` : 'Montant à valoir sur une prochaine course', 0, yT - 2, { f: g, size: 9, droite: 545 });
+  }
 
   // Pièce émise en mode test : filigrane « sans valeur »
   if (c.numero.startsWith('TEST-')) {
@@ -230,7 +244,7 @@ Deno.serve(async (req) => {
 
     let chemin = doc.pdf_chemin as string | null;
     if (!chemin) {
-      chemin = `${doc.type === 'facture' ? 'factures' : 'bons-de-commande'}/${doc.numero}.pdf`;
+      chemin = `${doc.type === 'facture' ? 'factures' : doc.type === 'avoir' ? 'avoirs' : 'bons-de-commande'}/${doc.numero}.pdf`;
       const octets = await rendrePdf(doc.contenu as Contenu);
       const { error } = await admin.storage.from('documents').upload(chemin, octets, { contentType: 'application/pdf', upsert: true });
       if (error) throw new Error(error.message);

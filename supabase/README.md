@@ -336,6 +336,23 @@ en français, avec la mention « anglais » sur la demande. Bons de commande et 
 Ajouter un texte dans l'appli : l'écrire en français dans `t('…')`, puis sa traduction dans
 `mobile/src/traductions.ts` ; `node scripts/verifier-traductions.mjs` (dans `mobile/`) liste les oublis.
 
+## Avoirs (migration 17)
+
+Une facture émise ne se modifie pas : pour la corriger ou rembourser un client, Fabrice émet un
+**avoir** depuis la course (Documents › « Avoir sur F-… »).
+- **Partiel** : un montant TTC (geste commercial, attente non due…).
+- **Total** : annule la facture ; la course peut ensuite être refacturée avec un nouveau numéro.
+- Motif obligatoire (imprimé sur l'avoir) ; remboursement par carte, espèces, chèque ou virement, ou
+  « à valoir » sur une prochaine course. Fabrice rembourse lui-même : l'avoir ne déclenche aucun
+  paiement.
+- Numéro AV-AAAA-0001, montants négatifs : dans Factures et bons, le total du mois est net des avoirs.
+- Le client reçoit l'avoir en PDF par email (en anglais si son appli est en anglais).
+
+1. SQL Editor : exécuter [`20261120000000_avoirs.sql`](migrations/20261120000000_avoirs.sql).
+2. Edge Functions : remplacer le code de **`document-pdf`** et de **`emails`** par les nouvelles
+   versions ([`functions/document-pdf/index.ts`](functions/document-pdf/index.ts),
+   [`functions/emails/index.ts`](functions/emails/index.ts)) › Deploy.
+
 ## Tester la confirmation en temps réel
 
 Avec deux téléphones (ou un téléphone et le navigateur) : envoyez une demande côté client, puis

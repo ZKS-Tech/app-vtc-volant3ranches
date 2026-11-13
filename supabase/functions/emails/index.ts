@@ -164,6 +164,18 @@ function composerEn(x: Contexte): Email {
           'We look forward to driving you again.'],
         details: trajet,
       };
+    case 'avoir': {
+      const montant = Math.abs(Number(x.document?.total_ttc ?? 0));
+      const ref = String((x.donnees.facture as string | undefined) ?? '');
+      return {
+        sujet: `Your credit note ${x.document?.numero ?? ''}`.trim(), titre: 'Your credit note',
+        paragraphes: [`Hello ${prenom},`,
+          `Please find attached credit note ${x.document?.numero ?? ''} for ${eurosEn(montant)} incl. VAT${ref ? ` against invoice ${ref}` : ''}, for the ride on ${date}. It is in French, as required by French law.`,
+          x.donnees.motif ? `Reason: ${x.donnees.motif}.` : '',
+          x.donnees.rembourse ? 'The amount is being refunded to you.' : 'This amount can be used towards a future ride.'].filter(Boolean),
+        details: trajet,
+      };
+    }
     default:
       throw new Error(`Type d'email inconnu : ${x.type}`);
   }
@@ -250,6 +262,18 @@ export function composer(x: Contexte): Email {
           'Au plaisir de vous conduire à nouveau.'],
         details: trajet,
       };
+    case 'avoir': {
+      const montant = Math.abs(Number(x.document?.total_ttc ?? 0));
+      const ref = String((x.donnees.facture as string | undefined) ?? '');
+      return {
+        sujet: `Votre avoir ${x.document?.numero ?? ''}`.trim(), titre: 'Votre avoir',
+        paragraphes: [`Bonjour ${prenom},`,
+          `Vous trouverez en pièce jointe l’avoir ${x.document?.numero ?? ''} de ${euros(montant)} TTC${ref ? ` sur la facture ${ref}` : ''}, pour la course du ${date}.`,
+          x.donnees.motif ? `Motif : ${x.donnees.motif}.` : '',
+          x.donnees.rembourse ? 'Le montant vous est remboursé.' : 'Ce montant est à valoir sur une prochaine course.'].filter(Boolean),
+        details: trajet,
+      };
+    }
     case 'chauffeur_demande':
       return {
         sujet: `Nouvelle demande · ${c.nom} · ${date}`, titre: `Nouvelle demande ${de(c.nom)}`,
@@ -342,11 +366,15 @@ Deno.serve(async (req: Request) => {
     for (const m of file ?? []) {
       try {
         const { data: course } = await admin.from('courses').select('*').eq('id', m.course_id).single();
-        let doc: { id: string; numero: string; type: string; total_ttc: number; test?: boolean } | null = null;
-        if (m.document_id) doc = (await admin.from('documents').select('id, numero, type, total_ttc, test').eq('id', m.document_id).maybeSingle()).data;
+        let doc: { id: string; numero: string; type: string; total_ttc: number; test?: boolean; mode_paiement?: string | null; contenu?: { facture?: { numero?: string }; motif?: string } } | null = null;
+        if (m.document_id) doc = (await admin.from('documents').select('id, numero, type, total_ttc, test, mode_paiement, contenu').eq('id', m.document_id).maybeSingle()).data;
+        // Avoir : facture concernée, motif et remboursement, repris dans l'email.
+        const donnees = doc?.type === 'avoir'
+          ? { ...(m.donnees ?? {}), facture: doc.contenu?.facture?.numero, motif: doc.contenu?.motif, rembourse: !!doc.mode_paiement }
+          : m.donnees ?? {};
         const test = !!(p.paiements_test || doc?.test);
         const x: Contexte = {
-          type: m.type, course, offre: OFFRES[course.offre_id] ?? course.offre_id, donnees: m.donnees ?? {},
+          type: m.type, course, offre: OFFRES[course.offre_id] ?? course.offre_id, donnees,
           document: doc, test, logo: `${url}/functions/v1/emails?logo=1`,
           vendeur: { raison_sociale: p.raison_sociale ?? 'Volant3ranches', siege: p.siege ?? '', siren: p.siren ?? '', telephone: p.telephone_chauffeur ?? '' },
         };
@@ -364,7 +392,7 @@ Deno.serve(async (req: Request) => {
           if (!lien?.url) throw new Error(`PDF indisponible (${r.status})`);
           const pdf = await fetch(lien.url);
           if (!pdf.ok) throw new Error(`PDF illisible (${pdf.status})`);
-          pieces.push({ name: `${doc.type === 'facture' ? 'Facture' : 'Bon de commande'} ${doc.numero}.pdf`, content: base64(new Uint8Array(await pdf.arrayBuffer())) });
+          pieces.push({ name: `${doc.type === 'facture' ? 'Facture' : doc.type === 'avoir' ? 'Avoir' : 'Bon de commande'} ${doc.numero}.pdf`, content: base64(new Uint8Array(await pdf.arrayBuffer())) });
         }
 
         const reponseA = Deno.env.get('EMAIL_REPONSE') || p.email_chauffeur;

@@ -122,6 +122,8 @@ règles sont vérifiées par un jeu de 21 tests exécutés sur un PostgreSQL loc
    ou le choix du client, notifications et emails dans sa langue ; espace chauffeur toujours en
    français. Fabrice se connecte avec ses identifiants depuis Profil › J'ai déjà un compte et arrive
    directement dans son espace (plus de lien « Espace chauffeur » chez les clients).
+6 ter. ✅ **Avoirs** (migration 17) : avoir total ou partiel sur une facture, motif, remboursement ou
+   « à valoir », PDF et email au client ; totaux du mois nets des avoirs.
 7. **Publication** : version de développement (EAS), test par Fabrice et quelques clients, stores.
 
 **Messagerie client ↔ chauffeur** ✅ (demande de Fabrice) : une conversation par course, en temps réel

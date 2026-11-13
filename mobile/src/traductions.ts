@@ -425,4 +425,5 @@ export const EN: Record<string, string> = {
   "Il est interdit de fumer, de consommer de l’alcool ou des substances illicites et de transporter des objets dangereux.": "Smoking, drinking alcohol, taking illegal substances and carrying dangerous items are not allowed.",
   "…": "…",
   "Uniquement dans l'application mobile": "Only in the mobile app",
+  "Avoir": "Credit note",
 };

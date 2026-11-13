@@ -109,7 +109,7 @@ Deno.test('le HTML fourni par un client est neutralisé', () => {
 });
 
 Deno.test('chaque type d’email a un contenu complet', async () => {
-  const types = ['demande_recue', 'acompte', 'confirmation', 'refus', 'expiree', 'annulation', 'remboursement', 'facture', 'chauffeur_demande', 'chauffeur_annulation'];
+  const types = ['demande_recue', 'acompte', 'confirmation', 'refus', 'expiree', 'annulation', 'remboursement', 'facture', 'avoir', 'chauffeur_demande', 'chauffeur_annulation'];
   const sortie = Deno.env.get('EMAILS_SORTIE');
   for (const type of types) {
     const x = { type, course: { ...COURSE, nom: 'Léa Martin', motif_refus: 'Indisponible à cet horaire', frais_annulation: 0 }, offre: 'Offre Confort · Tesla Model 3',
@@ -128,7 +128,7 @@ Deno.test('chaque type d’email a un contenu complet', async () => {
 
 Deno.test('client anglophone : emails en anglais, Fabrice reste en français', async () => {
   const sortie = Deno.env.get('EMAILS_SORTIE');
-  for (const type of ['demande_recue', 'acompte', 'confirmation', 'refus', 'expiree', 'annulation', 'remboursement', 'facture']) {
+  for (const type of ['demande_recue', 'acompte', 'confirmation', 'refus', 'expiree', 'annulation', 'remboursement', 'facture', 'avoir']) {
     const x = { type, course: { ...COURSE, nom: 'John Smith', langue: 'en', motif_refus: 'Not available at that time', frais_annulation: 0 }, offre: 'Offre Confort · Tesla Model 3',
       donnees: { montant: 17.3, par_chauffeur: false }, document: { numero: 'F-2026-0004', type: 'facture', total_ttc: 173 },
       vendeur: { raison_sociale: 'Volant3ranches', siege: 'Viterbe', siren: '932 513 443', telephone: '+33616531491' }, test: false };
@@ -144,6 +144,19 @@ Deno.test('client anglophone : emails en anglais, Fabrice reste en français', a
   const pourFabrice = { type: 'chauffeur_demande', course: { ...COURSE, nom: 'John Smith', langue: 'en' }, offre: 'Offre Confort · Tesla Model 3',
     donnees: {}, document: null, vendeur: { raison_sociale: 'V', siege: 'S', siren: '1', telephone: '+33616531491' }, test: false };
   assert(module.composer(pourFabrice).titre.startsWith('Nouvelle demande'));
+});
+
+Deno.test('avoir : email avec le PDF, la facture concernée et le motif', async () => {
+  appels = [];
+  reponses = { ...base([{ id: 'e9', type: 'avoir', course_id: 'c1', document_id: 'a1', destinataire: 'lea@exemple.fr', nom: 'Léa Martin', donnees: {} }]),
+    '/rest/v1/documents': () => ({ id: 'a1', numero: 'AV-2026-0001', type: 'avoir', total_ttc: -10, test: false, mode_paiement: 'especes',
+      contenu: { facture: { numero: 'F-2026-0004' }, motif: 'Attente non due' } }) };
+  const r = await executer();
+  assertEquals((await r.json()).envoyes, 1);
+  const brevo = appels.find((a) => a.url.includes('api.brevo.com'))!.corps as { subject: string; htmlContent: string; attachment: { name: string }[] };
+  assertEquals(brevo.subject, 'Votre avoir AV-2026-0001');
+  assertEquals(brevo.attachment[0].name, 'Avoir AV-2026-0001.pdf');
+  assert(brevo.htmlContent.includes('10,00 € TTC sur la facture F-2026-0004') && brevo.htmlContent.includes('Motif : Attente non due.') && brevo.htmlContent.includes('remboursé'));
 });
 
 globalThis.addEventListener('unload', () => { globalThis.fetch = avant; });

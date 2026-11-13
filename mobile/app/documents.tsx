@@ -6,7 +6,7 @@ import { useChauffeur } from '../src/chauffeur';
 import { Chiffre, LigneMission, Vide } from '../src/chauffeurUi';
 import { LigneDocument } from '../src/Documents';
 import { euros } from '../src/data';
-import { DocumentEmis, ModePaiement, chargerDocuments, libelleMode } from '../src/serveur';
+import { DocumentEmis, ModePaiement, chargerDocuments, libelleMode, resteFacture } from '../src/serveur';
 import { Couleurs, radius, space } from '../src/theme';
 import { Bouton, Ligne, Note, Segment, Titre } from '../src/ui';
 import { useTheme } from '../src/useTheme';
@@ -26,7 +26,7 @@ export default function Documents() {
   const [docs, setDocs] = useState<DocumentEmis[]>([]);
   const [chargement, setChargement] = useState(false);
   const [erreur, setErreur] = useState('');
-  const [onglet, setOnglet] = useState<'facture' | 'commande'>('facture');
+  const [onglet, setOnglet] = useState<'facture' | 'avoir' | 'commande'>('facture');
   const fin = new Date(mois.getFullYear(), mois.getMonth() + 1, 1);
 
   const charger = async () => {
@@ -40,6 +40,9 @@ export default function Documents() {
   const reelles = docs.filter((d) => !d.numero.startsWith('TEST-'));
   const nbTest = docs.length - reelles.length;
   const factures = reelles.filter((d) => d.type === 'facture');
+  // Avoirs du mois (montants négatifs) : comptés dans le mois où ils sont émis.
+  const avoirs = reelles.filter((d) => d.type === 'avoir');
+  const nettes = [...factures, ...avoirs];
   const bons = reelles.filter((d) => d.type === 'commande');
   const somme = (xs: DocumentEmis[], k: 'total_ht' | 'tva' | 'total_ttc') => xs.reduce((t, d) => t + d[k], 0);
   const parMode = useMemo(() => {
@@ -49,10 +52,12 @@ export default function Documents() {
       if (acompte > 0) m.set('en_ligne', (m.get('en_ligne') ?? 0) + acompte);
       if (f.mode_paiement) m.set(f.mode_paiement, (m.get(f.mode_paiement) ?? 0) + f.total_ttc - acompte);
     }
+    // Remboursements par avoir : retirés du mode utilisé.
+    for (const a of avoirs) if (a.mode_paiement) m.set(a.mode_paiement, (m.get(a.mode_paiement) ?? 0) + a.total_ttc);
     return [...m.entries()].sort((a, b) => b[1] - a[1]);
   }, [docs]);
   // Courses effectuées ce mois-ci, sans facture : à contrôler.
-  const facturees = new Set(factures.map((f) => f.course_id));
+  const facturees = new Set(factures.filter((f) => resteFacture(f, docs) > 0).map((f) => f.course_id));
   const aFacturer = missions.filter((m) => m.statut === 'terminee' && m.date >= mois && m.date < fin && !facturees.has(m.id))
     .sort((a, b) => +a.date - +b.date);
 
@@ -60,7 +65,7 @@ export default function Documents() {
     const lignes = [
       ['Type', 'Numéro', 'Date', 'Client', 'Entreprise', 'Date course', 'Total HT', 'TVA', 'Total TTC', 'Acompte en ligne', 'Mode de paiement'].join(';'),
       ...[...reelles].reverse().map((d) => [
-        d.type === 'facture' ? 'Facture' : 'Bon de commande', d.numero, new Date(d.emis_le).toLocaleDateString('fr-FR'),
+        d.type === 'facture' ? 'Facture' : d.type === 'avoir' ? `Avoir sur ${d.contenu.facture?.numero ?? ''}` : 'Bon de commande', d.numero, new Date(d.emis_le).toLocaleDateString('fr-FR'),
         d.contenu.client?.nom ?? '', d.contenu.client?.entreprise ?? '', d.contenu.course?.date ?? '',
         d.total_ht, d.tva, d.total_ttc, Number(d.contenu.acompte ?? 0), d.mode_paiement ? libelleMode[d.mode_paiement] : '',
       ].map(csvCellule).join(';')),
@@ -87,16 +92,18 @@ export default function Documents() {
       {nbTest ? <View style={{ marginTop: space.s }}><Note ton="alerte" icone="flask-outline">{nbTest} pièce{nbTest > 1 ? 's' : ''} de test (TEST-…) : affichée{nbTest > 1 ? 's' : ''} dans la liste, non comptée{nbTest > 1 ? 's' : ''} dans les totaux.</Note></View> : null}
 
       <View style={[s.bloc, { flexDirection: 'row', paddingVertical: space.l, gap: space.m, marginTop: space.m }]}>
-        <Chiffre valeur={euros(somme(factures, 'total_ttc')).replace(',00', '')} libelle="facturé TTC" fort />
+        <Chiffre valeur={euros(somme(nettes, 'total_ttc')).replace(',00', '')} libelle={avoirs.length ? 'facturé TTC (net)' : 'facturé TTC'} fort />
         <Chiffre valeur={String(factures.length)} libelle={`facture${factures.length > 1 ? 's' : ''}`} />
         <Chiffre valeur={String(bons.length)} libelle={`bon${bons.length > 1 ? 's' : ''} de cde`} />
       </View>
 
       <Titre>Factures du mois</Titre>
       <View style={s.bloc}>
-        <Ligne libelle="Total HT" valeur={euros(somme(factures, 'total_ht'))} />
-        <Ligne libelle="TVA (10 %)" valeur={euros(somme(factures, 'tva'))} />
-        <Ligne libelle="Total TTC" valeur={euros(somme(factures, 'total_ttc'))} fort />
+        {avoirs.length ? <Ligne libelle={`Factures (${factures.length})`} valeur={`${euros(somme(factures, 'total_ttc'))} TTC`} /> : null}
+        {avoirs.length ? <Ligne libelle={`Avoirs (${avoirs.length})`} valeur={`${euros(somme(avoirs, 'total_ttc'))} TTC`} /> : null}
+        <Ligne libelle={avoirs.length ? 'Total HT net' : 'Total HT'} valeur={euros(somme(nettes, 'total_ht'))} />
+        <Ligne libelle="TVA (10 %)" valeur={euros(somme(nettes, 'tva'))} />
+        <Ligne libelle={avoirs.length ? 'Total TTC net' : 'Total TTC'} valeur={euros(somme(nettes, 'total_ttc'))} fort />
         {parMode.map(([m, v]) => <Ligne key={m} libelle={`dont ${libelleMode[m].toLowerCase()}`} valeur={euros(v)} />)}
       </View>
       <Text style={[type.small, { marginTop: space.s }]}>
@@ -112,11 +119,15 @@ export default function Documents() {
       ) : null}
 
       <Titre>Pièces émises</Titre>
-      <Segment options={[{ id: 'facture', titre: `Factures (${docs.filter((d) => d.type === 'facture').length})` }, { id: 'commande', titre: `Bons (${docs.filter((d) => d.type === 'commande').length})` }]} valeur={onglet} onChange={setOnglet} />
+      <Segment options={[
+        { id: 'facture', titre: `Factures (${docs.filter((d) => d.type === 'facture').length})` },
+        { id: 'avoir', titre: `Avoirs (${docs.filter((d) => d.type === 'avoir').length})` },
+        { id: 'commande', titre: `Bons (${docs.filter((d) => d.type === 'commande').length})` },
+      ]} valeur={onglet} onChange={setOnglet} />
       {liste.length ? (
         <View style={[s.bloc, { marginTop: space.m }]}>{liste.map((d, i) => <LigneDocument key={d.id} d={d} trait={i > 0} detail />)}</View>
       ) : (
-        <Vide icone="document-outline" titre="Aucune pièce ce mois-ci" texte={onglet === 'facture' ? 'Les factures sont émises quand vous marquez une course comme effectuée.' : 'Un bon de commande est émis à chaque course confirmée.'} />
+        <Vide icone="document-outline" titre="Aucune pièce ce mois-ci" texte={onglet === 'facture' ? 'Les factures sont émises quand vous marquez une course comme effectuée.' : onglet === 'avoir' ? 'Un avoir corrige une facture : depuis la course, « Avoir sur F-… ».' : 'Un bon de commande est émis à chaque course confirmée.'} />
       )}
       {docs.length ? <Bouton titre="Exporter le mois (tableur)" icone="share-outline" variante="contour" onPress={exporter} style={{ marginTop: space.l }} /> : null}
       {liste.length ? <Text style={[type.small, { marginTop: space.s }]}>Touchez une pièce pour ouvrir son PDF.</Text> : null}

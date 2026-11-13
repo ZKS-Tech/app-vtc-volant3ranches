@@ -381,14 +381,23 @@ export async function paiementsDe(courseId: string): Promise<Paiement[]> {
 export type ModePaiement = 'cb' | 'cheque' | 'especes' | 'virement' | 'en_ligne';
 export const libelleMode: Record<ModePaiement, string> = { cb: 'Carte bancaire', cheque: 'Chèque', especes: 'Espèces', virement: 'Virement', en_ligne: 'CB en ligne' };
 export type DocumentEmis = {
-  id: string; type: 'commande' | 'facture'; numero: string; course_id: string; emis_le: string;
+  id: string; type: 'commande' | 'facture' | 'avoir'; numero: string; course_id: string; emis_le: string;
+  /** Avoir : la facture qu'il corrige. Ses montants sont négatifs. */
+  facture_id?: string | null;
   total_ht: number; tva: number; total_ttc: number; mode_paiement: ModePaiement | null;
-  contenu: { client?: { nom?: string; entreprise?: string | null }; course?: { date?: string; depart?: string; arrivee?: string }; acompte?: number };
+  contenu: {
+    client?: { nom?: string; entreprise?: string | null }; course?: { date?: string; depart?: string; arrivee?: string }; acompte?: number;
+    facture?: { numero?: string; date?: string }; motif?: string; avoir_total?: boolean;
+  };
 };
+
+/** Reste d'une facture : son montant moins les avoirs déjà émis (0 = entièrement annulée). */
+export const resteFacture = (f: DocumentEmis, docs: DocumentEmis[]) =>
+  Math.round((f.total_ttc + docs.filter((a) => a.type === 'avoir' && a.facture_id === f.id).reduce((t, a) => t + a.total_ttc, 0)) * 100) / 100;
 
 export async function chargerDocuments(filtre?: { courseId?: string; depuis?: Date; jusqua?: Date }): Promise<DocumentEmis[]> {
   if (!supabase) return [];
-  let r = supabase.from('documents').select('id, type, numero, course_id, emis_le, total_ht, tva, total_ttc, mode_paiement, contenu').order('emis_le', { ascending: false });
+  let r = supabase.from('documents').select('*').order('emis_le', { ascending: false });
   if (filtre?.courseId) r = r.eq('course_id', filtre.courseId);
   if (filtre?.depuis) r = r.gte('emis_le', filtre.depuis.toISOString());
   if (filtre?.jusqua) r = r.lt('emis_le', filtre.jusqua.toISOString());
@@ -398,6 +407,14 @@ export async function chargerDocuments(filtre?: { courseId?: string; depuis?: Da
     throw new Error(error.message);
   }
   return (data ?? []).map((d) => ({ ...d, total_ht: Number(d.total_ht), tva: Number(d.tva), total_ttc: Number(d.total_ttc) })) as DocumentEmis[];
+}
+
+// Avoir sur une facture (Fabrice). montant : TTC à créditer, null = toute la facture (reste).
+export async function emettreAvoir(factureId: string, montant: number | null, motif: string, mode: ModePaiement | null): Promise<DocumentEmis> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const { data, error } = await supabase.rpc('emettre_avoir', { p_facture: factureId, p_montant: montant, p_motif: motif, p_mode: mode });
+  if (error) throw new Error(error.message);
+  return data as DocumentEmis;
 }
 
 export async function emettreFacture(courseId: string, mode: ModePaiement): Promise<DocumentEmis> {

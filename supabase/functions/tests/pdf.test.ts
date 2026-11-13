@@ -39,3 +39,16 @@ Deno.test('pièce de test : PDF avec filigrane', async () => {
   const sortie = Deno.env.get('PDF_SORTIE');
   if (sortie) await Deno.writeFile(`${sortie}/test.pdf`, octets);
 });
+
+Deno.test('avoirs total et partiel : PDF valides', async () => {
+  const facture = { numero: 'F-2026-0007', date: '12/11/2026', total_ttc: 154.15 };
+  const total = await rendrePdf({ ...base, type: 'avoir', numero: 'AV-2026-0001', facture, motif: 'Erreur de facturation', avoir_total: true,
+    lignes: base.lignes.map((l) => ({ ...l, total_ht: -l.total_ht })), total_ht: -140.14, tva: -14.01, total_ttc: -154.15,
+    acompte: 0, reste: 0, mode_paiement: 'cb', acquittee: true });
+  const partiel = await rendrePdf({ ...base, type: 'avoir', numero: 'AV-2026-0002', facture, motif: 'Attente non due à l’aéroport', avoir_total: false,
+    lignes: [{ libelle: 'Avoir partiel sur la facture F-2026-0007', detail: 'Attente non due à l’aéroport', quantite: null, unite: null, prix_unitaire_ht: null, total_ht: -9.09 }],
+    total_ht: -9.09, tva: -0.91, total_ttc: -10, acompte: 0, reste: 0, mode_paiement: null, acquittee: false });
+  for (const o of [total, partiel]) assert(new TextDecoder().decode(o.slice(0, 5)) === '%PDF-');
+  const sortie = Deno.env.get('PDF_SORTIE');
+  if (sortie) { await Deno.writeFile(`${sortie}/avoir-total.pdf`, total); await Deno.writeFile(`${sortie}/avoir-partiel.pdf`, partiel); }
+});

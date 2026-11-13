@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node securite.test.mjs ../migrations/20261104000000_fondations.sql ../migrations/20261105000000_espace_chauffeur.sql ../migrations/20261106000000_itineraires.sql ../migrations/20261107000000_itineraire_ign_moteurs.sql ../migrations/20261108000000_messagerie.sql ../migrations/20261109000000_notifications.sql ../migrations/20261110000000_annonces.sql ../migrations/20261111000000_acompte_statuts.sql ../migrations/20261111000001_acompte.sql ../migrations/20261112000000_factures.sql ../migrations/20261113000000_mode_test.sql ../migrations/20261114000000_comptes.sql ../migrations/20261115000000_emails.sql ../migrations/20261116000000_droits_serveur.sql ../migrations/20261117000000_arrondi.sql ../migrations/20261118000000_effacement.sql ../migrations/20261119000000_langue.sql"
+    "test": "node securite.test.mjs ../migrations/20261104000000_fondations.sql ../migrations/20261105000000_espace_chauffeur.sql ../migrations/20261106000000_itineraires.sql ../migrations/20261107000000_itineraire_ign_moteurs.sql ../migrations/20261108000000_messagerie.sql ../migrations/20261109000000_notifications.sql ../migrations/20261110000000_annonces.sql ../migrations/20261111000000_acompte_statuts.sql ../migrations/20261111000001_acompte.sql ../migrations/20261112000000_factures.sql ../migrations/20261113000000_mode_test.sql ../migrations/20261114000000_comptes.sql ../migrations/20261115000000_emails.sql ../migrations/20261116000000_droits_serveur.sql ../migrations/20261117000000_arrondi.sql ../migrations/20261118000000_effacement.sql ../migrations/20261119000000_langue.sql ../migrations/20261120000000_avoirs.sql"
   },
   "devDependencies": {
     "@electric-sql/pglite": "^0.5.15"

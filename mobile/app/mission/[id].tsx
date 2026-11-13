@@ -9,7 +9,8 @@ import { Couleurs, f, radius, sansContourWeb, space } from '../../src/theme';
 import { Bouton, Ligne, Note, Teinture, Titre, teintesDe } from '../../src/ui';
 import { useMessagerie } from '../../src/messagerie';
 import { AcompteChauffeur } from '../../src/AcompteChauffeur';
-import { Facturer, ListeDocuments, useDocumentsCourse } from '../../src/Documents';
+import { FaireAvoir, Facturer, ListeDocuments, useDocumentsCourse } from '../../src/Documents';
+import { resteFacture } from '../../src/serveur';
 import { useTheme } from '../../src/useTheme';
 
 // Une course vue par Fabrice : le client, le trajet, les actions selon le statut.
@@ -28,6 +29,8 @@ export default function Mission() {
   const [erreur, setErreur] = useState('');
   const [finCourse, setFinCourse] = useState(false);
   const { docs } = useDocumentsCourse(id, !demo);
+  // Une facture « en cours » n'est pas entièrement annulée par des avoirs (sinon on peut refacturer).
+  const factureEnCours = docs.some((d) => d.type === 'facture' && resteFacture(d, docs) > 0);
   useEffect(() => { setNote(m?.note_chauffeur ?? ''); setNoteSauvee(true); }, [m?.note_chauffeur]);
   if (!m) return <Text style={[type.small, { padding: space.l }]}>Course introuvable.</Text>;
 
@@ -128,7 +131,7 @@ export default function Mission() {
           <Bouton titre="Terminer sans facture pour l'instant" variante="texte" chargement={action === 'terminer'} onPress={() => faire('terminer', async () => { await terminer(m.id); setFinCourse(false); })} />
         </View>
       ) : null}
-      {!demo && !docs.some((d) => d.type === 'facture') && (m.statut === 'terminee' || (m.statut === 'annulee' && Number(m.frais_annulation ?? 0) > 0)) ? (
+      {!demo && !factureEnCours && (m.statut === 'terminee' || (m.statut === 'annulee' && Number(m.frais_annulation ?? 0) > 0)) ? (
         <Facturer
           titre={m.statut === 'annulee' ? `Facturer les frais d'annulation (${euros(Number(m.frais_annulation))})` : 'Facturer la course'}
           onFacturer={(mode) => facturer(m.id, mode)}
@@ -138,7 +141,8 @@ export default function Mission() {
         <View style={{ gap: space.s }}>
           <Text accessibilityRole="header" style={type.h3}>Documents</Text>
           <ListeDocuments docs={docs} />
-          {fi && !fi.adresse && !docs.some((d) => d.type === 'facture') ? (
+          {docs.filter((d) => d.type === 'facture').map((f) => <FaireAvoir key={f.id} facture={f} docs={docs} />)}
+          {fi && !fi.adresse && !factureEnCours ? (
             <Bouton titre="Ajouter l'adresse de facturation du client" variante="texte" icone="business-outline" onPress={() => router.push(`/fiche/${fi.id}`)} style={{ alignSelf: 'flex-start' }} />
           ) : null}
         </View>
