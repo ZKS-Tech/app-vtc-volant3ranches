@@ -41,36 +41,26 @@ type Ctx = {
   indisponibiliteLe: (jour: Date) => Annonce | undefined;
   enregistrer: (a: AnnonceSaisie) => Promise<void>;
   supprimer: (id: string) => Promise<void>;
-  demo: boolean;
 };
 
 const Contexte = createContext<Ctx | null>(null);
 
-// Démonstration : les annonces survivent au passage de l'espace chauffeur à l'interface client.
-let annoncesDemo: Annonce[] = [];
-
-export function AnnoncesProvider({ children, demo: demoForce }: { children: ReactNode; demo?: boolean }) {
-  const demo = demoForce || !supabase;
-  const [annonces, setAnnoncesBrut] = useState<Annonce[]>(() => (demo ? annoncesDemo : []));
-  const setAnnonces = useCallback((f: Annonce[] | ((xs: Annonce[]) => Annonce[])) => setAnnoncesBrut((xs) => {
-    const n = typeof f === 'function' ? f(xs) : f;
-    if (demo) annoncesDemo = n;
-    return n;
-  }), [demo]);
+export function AnnoncesProvider({ children }: { children: ReactNode }) {
+  const [annonces, setAnnonces] = useState<Annonce[]>([]);
   const [aujourdhui, setAujourdhui] = useState(() => isoJour(new Date()));
 
   const recharger = useCallback(() => {
-    if (demo) return;
+    if (!supabase) return;
     chargerAnnonces().then(setAnnonces).catch((e) => console.warn('Annonces :', e instanceof Error ? e.message : e));
-  }, [demo, setAnnonces]);
+  }, []);
 
   useEffect(() => {
     recharger();
-    const canal = demo ? null : ecouterAnnonces(recharger);
+    const canal = supabase ? ecouterAnnonces(recharger) : null;
     // Le bandeau disparaît de lui-même après le dernier jour, même appli ouverte.
     const t = setInterval(() => setAujourdhui(isoJour(new Date())), 60_000);
     return () => { canal?.unsubscribe(); clearInterval(t); };
-  }, [demo, recharger]);
+  }, [recharger]);
 
   const value = useMemo<Ctx>(() => {
     const triees = [...annonces].sort((a, b) => a.debut.localeCompare(b.debut));
@@ -82,21 +72,15 @@ export function AnnoncesProvider({ children, demo: demoForce }: { children: Reac
         .sort((a, b) => Number(b.bloquer) - Number(a.bloquer) || a.debut.localeCompare(b.debut)),
       indisponibiliteLe: (jour) => { const j = isoJour(jour); return triees.find((a) => a.bloquer && a.debut <= j && j <= a.fin); },
       enregistrer: async (a) => {
-        if (demo) {
-          const ligne: Annonce = { ...a, id: a.id ?? `demo-${Date.now()}`, cree_le: new Date().toISOString() };
-          setAnnonces((xs) => [...xs.filter((x) => x.id !== ligne.id), ligne]);
-          return;
-        }
         const ligne = await enregistrerAnnonceServeur(a);
         setAnnonces((xs) => [...xs.filter((x) => x.id !== ligne.id), ligne]);
       },
       supprimer: async (id) => {
-        if (!demo) await supprimerAnnonceServeur(id);
+        await supprimerAnnonceServeur(id);
         setAnnonces((xs) => xs.filter((x) => x.id !== id));
       },
-      demo,
     };
-  }, [annonces, aujourdhui, demo, setAnnonces]);
+  }, [annonces, aujourdhui]);
 
   return <Contexte.Provider value={value}>{children}</Contexte.Provider>;
 }

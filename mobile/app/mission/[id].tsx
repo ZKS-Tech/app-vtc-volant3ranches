@@ -17,7 +17,7 @@ import { useTheme } from '../../src/useTheme';
 export default function Mission() {
   const { c, type, s } = useTheme(creerStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { missions, fiche, terminer, annuler, noter, facturer, demo } = useChauffeur();
+  const { missions, fiche, terminer, annuler, noter, facturer } = useChauffeur();
   const { nonLus } = useMessagerie();
   const maintenant = useMaintenant();
   const m = missions.find((x) => x.id === id);
@@ -28,7 +28,7 @@ export default function Mission() {
   const [action, setAction] = useState<string | null>(null);
   const [erreur, setErreur] = useState('');
   const [finCourse, setFinCourse] = useState(false);
-  const { docs } = useDocumentsCourse(id, !demo);
+  const { docs } = useDocumentsCourse(id);
   // Une facture « en cours » n'est pas entièrement annulée par des avoirs (sinon on peut refacturer).
   const factureEnCours = docs.some((d) => d.type === 'facture' && resteFacture(d, docs) > 0);
   useEffect(() => { setNote(m?.note_chauffeur ?? ''); setNoteSauvee(true); }, [m?.note_chauffeur]);
@@ -131,7 +131,7 @@ export default function Mission() {
           <Bouton titre="Terminer sans facture pour l'instant" variante="texte" chargement={action === 'terminer'} onPress={() => faire('terminer', async () => { await terminer(m.id); setFinCourse(false); })} />
         </View>
       ) : null}
-      {!demo && !factureEnCours && (m.statut === 'terminee' || (m.statut === 'annulee' && Number(m.frais_annulation ?? 0) > 0)) ? (
+      {!factureEnCours && (m.statut === 'terminee' || (m.statut === 'annulee' && Number(m.frais_annulation ?? 0) > 0)) ? (
         <Facturer
           titre={m.statut === 'annulee' ? `Facturer les frais d'annulation (${euros(Number(m.frais_annulation))})` : 'Facturer la course'}
           onFacturer={(mode) => facturer(m.id, mode)}

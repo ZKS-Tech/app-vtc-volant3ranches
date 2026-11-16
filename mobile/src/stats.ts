@@ -7,7 +7,7 @@ import { supabase } from './serveur';
 // Les événements passent par la fonction serveur « stats » : la clé GA4 reste dans Supabase et
 // Google ne reçoit ni l'adresse IP du téléphone, ni nom, téléphone, email ou adresse — seulement un
 // identifiant tiré au hasard sur ce téléphone et quelques paramètres (offre, km, prix…).
-// Jamais pour Fabrice (espace chauffeur) ni en démonstration.
+// Jamais pour Fabrice (espace chauffeur).
 
 export type Consentement = 'oui' | 'non' | null; // null : pas encore demandé
 const CLE_CONSENTEMENT = 'stats.consentement';

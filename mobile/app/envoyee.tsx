@@ -17,7 +17,7 @@ import { t } from '../src/i18n';
 export default function Envoyee() {
   const { c, type, s } = useTheme(creerStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { courses, changerStatut, reinitialiser, serveur, compte } = useStore();
+  const { courses, reinitialiser, compte } = useStore();
   const insets = useSafeAreaInsets();
   const course = courses.find((x) => x.id === id);
   const confirmee = course?.statut === 'confirmee';
@@ -131,20 +131,6 @@ export default function Envoyee() {
           </View>
         ) : null}
 
-        {serveur.etat !== 'connecte' ? (
-        <View style={s.demo}>
-          <Text style={[type.label, { color: texte2, marginBottom: space.s }]}>Prototype</Text>
-          {course.statut === 'envoyee' ? (
-            <>
-              <Bouton titre="Simuler l'acceptation de Fabrice (acompte)" variante="texte"
-                onPress={() => changerStatut(course.id, 'acompte_attendu', undefined, { acompteMontant: Math.max(1, Math.round(course.montant * 10) / 100), acompteLimite: new Date(Date.now() + 3600000) })} />
-              <Bouton titre="Simuler un refus de Fabrice" variante="texte" onPress={() => changerStatut(course.id, 'refusee', 'Indisponible à cet horaire')} />
-            </>
-          ) : (
-            <Bouton titre="Revenir à « demande envoyée »" variante="texte" surFonce={fonce} onPress={() => changerStatut(course.id, 'envoyee', undefined, { acomptePaye: false })} />
-          )}
-        </View>
-        ) : null}
       </ScrollView>
     </View>
   );
@@ -157,5 +143,4 @@ const creerStyles = (c: Couleurs) => StyleSheet.create({
   recap: { borderWidth: 1, borderRadius: radius.l, padding: space.l, marginTop: space.xl },
   date: { fontFamily: f.display, fontSize: 24 },
   compte: { backgroundColor: c.surface, borderRadius: radius.l, padding: space.l, marginTop: space.xl },
-  demo: { marginTop: space.xxl, alignItems: 'flex-start' },
 });

@@ -86,28 +86,11 @@ Deno.serve(async (req) => {
     const checkout = await r.json().catch(() => ({}));
     if (!r.ok || !checkout.id || !checkout.hosted_checkout_url) {
       console.error('SumUp checkout', r.status, JSON.stringify(checkout).slice(0, 500));
-      // Code marchand refusé : on cherche dans les journaux les codes des comptes liés à la clé.
-      if (String(checkout.param ?? '').includes('merchant_code')) {
-        const m = await fetch(`${SUMUP}/v0.1/memberships`, { headers: { Authorization: `Bearer ${cleSumup}` } }).catch(() => null);
-        const liste = m && m.ok ? await m.json().catch(() => null) : null;
-        const codes = ((liste?.items ?? []) as { type?: string; resource_id?: string; resource?: { name?: string } }[])
-          .filter((x) => x.type === 'merchant' || x.resource_id).map((x) => `${x.resource_id}${x.resource?.name ? ` (${x.resource.name})` : ''}`);
-        console.error(`SumUp : code marchand saisi « ${marchand} » refusé. Comptes liés à cette clé : ${codes.length ? codes.join(', ') : `introuvables (réponse ${m?.status ?? 'absente'})`}`);
-        // Diagnostic : même paiement sans page hébergée ni date limite, aussitôt désactivé s'il passe.
-        const essai = await fetch(`${SUMUP}/v0.1/checkouts`, {
-          method: 'POST', headers: { Authorization: `Bearer ${cleSumup}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ checkout_reference: `diagnostic-${Date.now()}`, amount: 1, currency: 'EUR', merchant_code: marchand }),
-        }).catch(() => null);
-        const corpsEssai = essai ? await essai.json().catch(() => ({})) : {};
-        if (essai?.ok && corpsEssai.id) await fetch(`${SUMUP}/v0.1/checkouts/${corpsEssai.id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${cleSumup}` } }).catch(() => null);
-        console.error(`SumUp diagnostic (paiement minimal) : ${essai?.status ?? 'sans réponse'} ${JSON.stringify(corpsEssai).slice(0, 300)}`);
-      }
-      // Raison donnée par SumUp (jamais la clé) : aide à régler le compte marchand.
+      // Le détail (raison donnée par SumUp, jamais la clé) reste dans les journaux de la fonction :
+      // le client reçoit un message simple, sans information sur le compte marchand.
       const raison = [checkout.error_code, checkout.message ?? checkout.error_message, checkout.param].filter(Boolean).join(' · ');
-      const conseil = r.status === 401 ? ' (clé API refusée : vérifier SUMUP_API_KEY)'
-        : r.status === 403 ? ' (accès refusé : paiements en ligne non activés, ou code marchand ne correspondant pas à la clé)'
-        : r.ok && !checkout.hosted_checkout_url ? ' (page de paiement hébergée non disponible sur ce compte)' : '';
-      return reponse({ erreur: `SumUp n’a pas pu créer le paiement (${r.status}${raison ? ` : ${raison}` : ''})${conseil}.` }, 502);
+      console.error(`SumUp : paiement non créé (${r.status}${raison ? ` : ${raison}` : ''})`);
+      return reponse({ erreur: 'Paiement en ligne indisponible pour le moment. Réessayez plus tard ou appelez Fabrice.' }, 502);
     }
 
     const { error: e2 } = await admin.rpc('enregistrer_checkout', {

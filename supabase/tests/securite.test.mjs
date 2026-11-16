@@ -18,6 +18,12 @@ await db.exec(`
   grant usage on schema auth to anon, authenticated;
   grant execute on function auth.uid() to anon, authenticated;
   create publication supabase_realtime;
+  -- Comme sur Supabase : tout ce qui est créé dans « public » est ouvert à anon et authenticated
+  -- (tables, séquences, fonctions). Seules la RLS et les « revoke » des migrations protègent.
+  grant usage on schema public to anon, authenticated;
+  alter default privileges in schema public grant all on tables to anon, authenticated;
+  alter default privileges in schema public grant all on sequences to anon, authenticated;
+  alter default privileges in schema public grant execute on functions to anon, authenticated;
 `);
 await db.exec(readFileSync(process.argv[2], 'utf8'));
 ok(true, 'migration 1 appliquée sans erreur');
@@ -102,6 +108,7 @@ if (process.argv[4]) {
   }
   if (process.argv[18]) { await db.exec(readFileSync(process.argv[18], 'utf8')); ok(true, 'migration 16 (langue) appliquée sans erreur'); }
   if (process.argv[19]) { await db.exec(readFileSync(process.argv[19], 'utf8')); ok(true, 'migration 17 (avoirs) appliquée sans erreur'); }
+  if (process.argv[20]) { await db.exec(readFileSync(process.argv[20], 'utf8')); ok(true, 'migration 18 (sécurité) appliquée sans erreur'); }
 }
 
 
@@ -125,7 +132,8 @@ r = await q(`select * from public.calculer_prix('tesla', 50, '2026-12-25 10:00+0
 ok(Number(r[0].montant) === 209, `aller-retour un jour férié = ${r[0].montant} € (${r[0].majorations})`);
 r = await q(`select count(*)::int n from public.offres`);
 ok(r[0].n === 2, 'tarifs lisibles sans compte');
-await echoue(() => q(`select * from public.courses`), 'visiteur sans compte ne lit pas les courses');
+r = await q(`select * from public.courses`).catch(() => []);
+ok(r.length === 0, 'visiteur sans compte ne lit pas les courses');
 
 // Demande par le client.
 await en(client);
@@ -227,9 +235,9 @@ if (process.argv[4]) {
   for (let k = 0; k < 6 && !bloque; k++) {
     try { await q(`select * from public.creer_demande('{"libelle":"A","lat":43.6,"lon":2.2}', '{"libelle":"B","lat":43.6,"lon":1.4}',
       now() + interval '3 days', false, 1, 1, null, 'tesla', 5, 5, 'Paul Test', '06 00 00 00 01', 'paul@exemple.fr', null)`); n++; }
-    catch (e) { bloque = /Trop de demandes/.test(e.message); }
+    catch (e) { bloque = /Trop de demandes|demandes en attente/.test(e.message); }
   }
-  ok(bloque && n === 5, `limite anti-abus : bloqué après ${n} demandes dans l'heure`);
+  ok(bloque && n <= 5, `limite anti-abus : bloqué après ${n} demandes`);
   await echoue(() => q(`select * from public.itineraire_ign(2.2, 43.6, 1.4, 43.6)`), 'le service IGN n\'est pas appelable directement par un client');
 }
 
@@ -567,71 +575,6 @@ if (process.argv[11]) {
   ok(r.length === 1 && r[0].type === 'commande', 'le client voit le bon de commande de sa course');
 }
 
-if (process.argv[12]) {
-  console.log('--- mode test (faux argent)');
-  const srv = async (sql) => { await db.exec('reset role'); return (await db.query(sql)).rows; };
-  const annee = new Date().getFullYear();
-  await srv(`update public.parametres set acompte_pourcent = 10, paiements_test = false`);
-  await db.exec(`reset role; insert into auth.users values ('aaaaaaaa-0000-0000-0000-000000000001') on conflict do nothing`);
-  const testeur = 'aaaaaaaa-0000-0000-0000-000000000001';
-  const demande = async () => {
-    await en(testeur);
-    return (await q(`select * from public.creer_demande(
-      '{"ref":"castres-gare","libelle":"Gare de Castres","lat":43.6007,"lon":2.2329,"type":"gare"}',
-      '{"ref":"tls","libelle":"Aéroport Toulouse-Blagnac","lat":43.6293,"lon":1.3638,"type":"aeroport"}',
-      now() + interval '4 days', false, 1, 1, null, 'tesla', 5, 5, 'Evan Test', '06 00 00 00 01', 'test@exemple.fr', null)`))[0];
-  };
-  const d1 = await demande();
-  await en(fabrice); await q(`select public.repondre_demande('${d1.id}', true)`);
-  await en(testeur);
-  await echoue(() => q(`select public.payer_acompte_test('${d1.id}')`), 'faux paiement refusé tant que le mode test est désactivé');
-
-  const derniereVraie = (await srv(`select max(numero) n from public.documents where type = 'facture' and not test`))[0].n;
-  await srv(`update public.parametres set paiements_test = true`);
-  await en(testeur);
-  await q(`select public.payer_acompte_test('${d1.id}')`);
-  let c = (await srv(`select statut, acompte_paye_le from public.courses where id = '${d1.id}'`))[0];
-  ok(c.statut === 'confirmee' && c.acompte_paye_le, 'faux paiement → course confirmée par le vrai circuit');
-  let docs = await srv(`select * from public.documents where course_id = '${d1.id}'`);
-  ok(docs.length === 1 && docs[0].test && docs[0].numero === `TEST-BC-${annee}-0001` && docs[0].contenu.test === true, `bon de commande de test (${docs[0]?.numero})`);
-  await en(testeur);
-  await echoue(() => q(`select public.payer_acompte_test('${d1.id}')`), 'pas de double paiement');
-  const autre = 'aaaaaaaa-0000-0000-0000-000000000002';
-  await db.exec(`reset role; insert into auth.users values ('${autre}') on conflict do nothing`);
-  await en(autre);
-  await echoue(() => q(`select public.payer_acompte_test('${d1.id}')`), 'un autre client ne peut pas payer cette course');
-  await echoue(() => q(`select public.rembourser_test('${d1.id}')`), 'un autre client ne peut pas déclencher de remboursement');
-
-  // Facture de test et numéros réels intacts
-  await en(fabrice);
-  const f = (await q(`select * from public.emettre_facture('${d1.id}', 'cb')`))[0];
-  ok(f.test && f.numero === `TEST-F-${annee}-0001`, `facture de test (${f.numero})`);
-  const apres = (await srv(`select max(numero) n from public.documents where type = 'facture' and not test`))[0].n;
-  ok(apres === derniereVraie, `les vrais numéros de facture ne bougent pas (dernier : ${apres})`);
-
-  // Annulation + faux remboursement
-  const d2 = await demande();
-  await en(fabrice); await q(`select public.repondre_demande('${d2.id}', true)`);
-  await en(testeur); await q(`select public.payer_acompte_test('${d2.id}')`);
-  await q(`select public.annuler_course('${d2.id}')`);
-  r = await q(`select public.rembourser_test('${d2.id}') as m`);
-  const p2 = (await srv(`select statut, rembourse from public.paiements where course_id = '${d2.id}' and statut <> 'expire'`))[0];
-  ok(Number(r[0].m) > 0 && p2.statut === 'rembourse', `annulation à 4 jours : faux acompte remboursé (${r[0].m} €)`);
-  r = await q(`select public.rembourser_test('${d2.id}') as m`);
-  ok(Number(r[0].m) === 0, 'pas de second remboursement');
-
-  // Effacer les pièces de test, jamais les vraies
-  const vraies = (await srv(`select count(*)::int n from public.documents where not test`))[0].n;
-  await en(testeur);
-  await echoue(() => q(`select public.effacer_documents_test()`), 'un client ne peut pas effacer de pièces');
-  await en(fabrice);
-  r = await q(`select public.effacer_documents_test() as n`);
-  const reste = await srv(`select count(*)::int n, count(*) filter (where test)::int t from public.documents`);
-  ok(r[0].n >= 2 && reste[0].t === 0 && reste[0].n === vraies, `pièces de test effacées (${r[0].n}), vraies pièces intactes (${vraies})`);
-  await echoue(() => srv(`delete from public.documents where not test`), 'une vraie pièce reste impossible à supprimer');
-  await srv(`update public.parametres set paiements_test = false`);
-}
-
 if (process.argv[13]) {
   console.log('--- comptes clients');
   const srv = async (sql) => { await db.exec('reset role'); return (await db.query(sql)).rows; };
@@ -686,7 +629,8 @@ if (process.argv[13]) {
   r = await q(`select public.fusionner_compte('${j2}') as n`);
   ok(r[0].n === 0, 'jeton expiré (15 min) : rien n\'est rattaché');
   await session(intrus, false);
-  await echoue(() => q(`select * from public.fusions_comptes`), 'personne ne lit les jetons directement');
+  r = await q(`select * from public.fusions_comptes`).catch(() => []);
+  ok(r.length === 0, 'personne ne lit les jetons directement');
 }
 
 if (process.argv[14]) {
@@ -956,8 +900,11 @@ if (process.argv[19]) {
   const f2 = (await q(`select * from public.emettre_facture('${course.id}', 'virement')`))[0];
   ok(f2.numero !== f.numero && f2.type === 'facture', `nouvelle facture après annulation : ${f2.numero}`);
   const a3 = (await q(`select * from public.emettre_avoir('${f2.id}', null, 'Course offerte', 'cb')`))[0];
-  ok(a3.contenu.avoir_total === true && a3.contenu.lignes.every((l) => Number(l.total_ht) <= 0) && Number(a3.total_ht) === -Number(f2.total_ht),
-    'avoir total : les lignes de la facture en négatif, HT identique');
+  const somme = a3.contenu.lignes.reduce((t, l) => t + Number(l.total_ht), 0);
+  ok(a3.contenu.avoir_total === true && a3.contenu.lignes.length === f2.contenu.lignes.length
+    && a3.contenu.lignes.every((l, i) => Number(l.total_ht) === -Number(f2.contenu.lignes[i].total_ht))
+    && Math.abs(somme - Number(a3.total_ht)) < 0.001 && Number(a3.total_ht) === -Number(f2.total_ht),
+    `avoir total : chaque ligne de la facture inversée, total identique (${a3.total_ht} €)`);
   await echoue(() => q(`update public.documents set total_ttc = 0 where id = '${a3.id}'`).then(() => { throw new Error('modifié'); }), 'un avoir émis est figé');
   r = await srv(`select type from public.emails where document_id = '${a1.id}'`);
   ok(r[0]?.type === 'avoir', 'le client reçoit l\'avoir par email');
@@ -967,11 +914,11 @@ if (process.argv[19]) {
 }
 
 // Remise à zéro avant lancement (supabase/scripts/remise-a-zero-lancement.sql), en dernier.
-if (process.argv[20]) {
+if (process.argv[21]) {
   console.log('--- remise à zéro avant lancement');
   await db.exec('reset role');
   const reelles = Number((await db.query(`select count(*)::int n from public.documents where not test`)).rows[0].n);
-  await db.exec(readFileSync(process.argv[20], 'utf8').replace(/^select \(select count[\s\S]*$/m, ''));
+  await db.exec(readFileSync(process.argv[21], 'utf8').replace(/^select \(select count[\s\S]*$/m, ''));
   const n = (await db.query(`select (select count(*)::int from public.courses) c, (select count(*)::int from public.documents) d,
     (select count(*)::int from public.fiches_clients) f, (select count(*)::int from public.compteurs_documents) k,
     (select count(*)::int from auth.users) u, (select count(*)::int from public.offres) o`)).rows[0];
@@ -989,6 +936,45 @@ if (process.argv[20]) {
   await db.exec(`alter table public.documents disable trigger documents_figes`);
   for (let i = 0; i < 101; i++) await db.exec(`insert into public.documents (type, numero, course_id, total_ht, tva, total_ttc, contenu) values ('commande', 'X-${i}', '${c.id}', 1, 0, 1, '{}')`);
   await db.exec(`alter table public.documents enable trigger documents_figes`);
-  try { await db.exec(readFileSync(process.argv[20], 'utf8')); } catch (e) { refus = /Arrêt/.test(e.message); await db.exec('rollback').catch(() => {}); }
+  try { await db.exec(readFileSync(process.argv[21], 'utf8')); } catch (e) { refus = /Arrêt/.test(e.message); await db.exec('rollback').catch(() => {}); }
   ok(refus, 'le script refuse de tourner une fois l\'appli en service');
+}
+
+if (process.argv[20]) {
+  console.log('--- sécurité');
+  const srv = async (sql) => { await db.exec('reset role'); return (await db.query(sql)).rows; };
+  // Toutes les tables de l'appli ont la RLS activée (sinon, ouvertes à tous par Supabase).
+  r = await srv(`select c.relname from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity`);
+  ok(r.length === 0, `RLS active sur toutes les tables${r.length ? ' — manquante : ' + r.map((x) => x.relname).join(', ') : ''}`);
+  // Fonctions appelables depuis l'appli : uniquement celles prévues pour.
+  const permises = {
+    anon: ['calculer_prix', 'est_chauffeur', 'est_anonyme', 'normaliser_telephone', 'indisponibilite_le_public', 'quand_fr', 'quand_en', 'lieu_en', 'euros_en'],
+    authenticated: ['calculer_prix', 'est_chauffeur', 'est_anonyme', 'normaliser_telephone', 'quand_fr', 'quand_en', 'lieu_en', 'euros_en',
+      'creer_demande', 'annuler_course', 'enregistrer_profil', 'preparer_fusion', 'fusionner_compte', 'envoyer_message', 'marquer_lus',
+      'enregistrer_appareil', 'oublier_appareil', 'acompte_a_payer', 'supprimer_mes_donnees', 'definir_langue',
+      // réservées à Fabrice (vérifié à l'intérieur)
+      'repondre_demande', 'annuler_course_chauffeur', 'creer_course_manuelle', 'modifier_course', 'terminer_course', 'noter_course',
+      'participe_a', // utilisée par les règles d'accès aux messages
+      'emettre_facture', 'emettre_avoir', 'marquer_remboursement', 'renvoyer_email', 'enregistrer_fiche', 'fusionner_fiches',
+      'remboursements_dus', 'stats_chauffeur'],
+  };
+  for (const role of ['anon', 'authenticated']) {
+    const rows = await srv(`select distinct p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public' and p.prorettype <> 'trigger'::regtype and has_function_privilege('${role}', p.oid, 'execute') order by 1`);
+    const ouvertes = rows.map((x) => x.proname).filter((f) => !permises[role].includes(f));
+    ok(ouvertes.length === 0, `${role} : aucune fonction interne appelable${ouvertes.length ? ' — à fermer : ' + ouvertes.join(', ') : ''}`);
+    console.log(`      (${role} : ${rows.map((x) => x.proname).join(', ')})`);
+  }
+  r = await srv(`select count(*)::int n from pg_proc where proname in ('payer_acompte_test', 'rembourser_test', 'effacer_documents_test')`);
+  ok(r[0].n === 0, 'fonctions du mode test supprimées');
+  await echoue(() => srv(`update public.parametres set paiements_test = true`), 'le mode test ne peut plus être réactivé');
+  const nouveau = 'abababab-0000-0000-0000-000000000001';
+  await srv(`insert into auth.users (id) values ('${nouveau}')`);
+  await en(nouveau);
+  await echoue(() => q(`insert into public.profils (id, role) values ('${nouveau}', 'chauffeur')`), 'un client ne crée pas de profil chauffeur');
+  await echoue(() => q(`update public.profils set role = 'chauffeur'`).then(() => q(`select public.est_chauffeur() c`)).then((x) => { if (!x[0].c) throw new Error('rôle inchangé'); }), 'aucun moyen de devenir chauffeur');
+  for (let i = 0; i < 21; i++) await srv(`insert into public.messages (course_id, auteur_id, texte) select id, '${nouveau}', 'x' from public.courses limit 1`).catch(() => {});
+  r = await srv(`select count(*)::int n from public.messages where auteur_id = '${nouveau}'`);
+  ok(r[0].n === 20, `messages limités à 20 par heure (${r[0].n})`);
 }

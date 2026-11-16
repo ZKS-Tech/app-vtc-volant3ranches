@@ -185,16 +185,10 @@ le prix au km HT est affiché au millième, et la seule différence restante est
 Les informations de l'entreprise (raison sociale, siège, SIREN, n° de TVA, taux de TVA) sont dans
 **Table Editor** › `parametres` ; elles sont recopiées dans chaque pièce au moment de l'émission.
 
-## Mode test : faux argent (migration 10)
+## Mode test : faux argent (migration 10) — supprimé
 
-**SQL Editor** › coller [`migrations/20261113000000_mode_test.sql`](migrations/20261113000000_mode_test.sql) › **Run**.
-
-Dans l'appli, espace chauffeur › Gestion › Tarifs › **Mode test (faux argent)**. Tant qu'il est activé :
-l'acompte se « paie » sur un écran de test dans l'appli (sans SumUp ni carte) ; la base suit le vrai
-circuit (confirmation, notifications, bon de commande, facture, remboursement) ; les pièces émises
-sont numérotées TEST-BC-… / TEST-F-…, portent un filigrane « document de test » et ne comptent pas
-dans les totaux. Bouton **Effacer les pièces de test** juste en dessous. Les vrais numéros ne bougent
-pas. **Désactiver le mode test avant d'accueillir de vrais clients.**
+Le mode test a été retiré avant la publication (migration 18) : plus aucun faux paiement possible,
+même par erreur de réglage. Les anciennes pièces TEST-… disparaissent avec la remise à zéro.
 
 ## Comptes clients (migration 11)
 
@@ -352,6 +346,35 @@ Une facture émise ne se modifie pas : pour la corriger ou rembourser un client,
 2. Edge Functions : remplacer le code de **`document-pdf`** et de **`emails`** par les nouvelles
    versions ([`functions/document-pdf/index.ts`](functions/document-pdf/index.ts),
    [`functions/emails/index.ts`](functions/emails/index.ts)) › Deploy.
+
+## Sécurité (migration 18) — à faire avant la publication
+
+1. SQL Editor : exécuter [`20261121000000_securite.sql`](migrations/20261121000000_securite.sql).
+   - **Faille corrigée** : un client pouvait se donner le rôle « chauffeur » (Supabase ouvre par
+     défaut toutes les tables en écriture ; seule la RLS filtrait, et le rôle n'était protégé que
+     par un droit par colonne). Désormais un déclencheur refuse tout changement de rôle venant de
+     l'appli. Seul le SQL Editor (ou le tableau de bord) peut donner le rôle chauffeur.
+   - Mode test supprimé (fonctions de faux paiement effacées, réglage verrouillé).
+   - Limites anti-abus : 5 demandes en attente et 10 demandes par 24 h par client ; 20 messages
+     par heure.
+   - Les nouvelles fonctions ne sont plus appelables par défaut depuis l'appli.
+2. Edge Functions : redéployer **`acompte`** et **`acompte-rembourser`** (message d'erreur sans
+   détail du compte marchand, diagnostic SumUp retiré).
+3. Contrôle : Supabase › **Advisors › Security Advisor** : aucune alerte « RLS disabled » ni
+   « security definer » ouverte inattendue.
+4. Réglages du tableau de bord :
+   - Authentication › Rate Limits : laisser les limites par défaut (inscriptions anonymes,
+     emails, codes).
+   - Authentication › Attack Protection : activer le **CAPTCHA** (hCaptcha ou Turnstile, gratuits)
+     si des inscriptions anonymes en masse apparaissent.
+5. Google Cloud (projet Firebase) › API et services › Identifiants › clé « Android key » :
+   **restreindre aux applications Android** `fr.volant3ranches.app` (+ empreinte SHA-1 donnée par
+   `npx eas-cli credentials`). La clé est dans l'appli par conception, la restriction empêche de
+   l'utiliser ailleurs.
+
+Les tests de la base (`npm test` dans `supabase/tests`) reproduisent les droits par défaut de
+Supabase et vérifient : RLS active sur toutes les tables, liste exacte des fonctions appelables par
+un visiteur et par un client, impossibilité de devenir chauffeur.
 
 ## Avant l'ouverture aux clients : remise à zéro (une seule fois)
 

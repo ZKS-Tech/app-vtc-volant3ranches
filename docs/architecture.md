@@ -124,6 +124,8 @@ règles sont vérifiées par un jeu de 21 tests exécutés sur un PostgreSQL loc
    directement dans son espace (plus de lien « Espace chauffeur » chez les clients).
 6 ter. ✅ **Avoirs** (migration 17) : avoir total ou partiel sur une facture, motif, remboursement ou
    « à valoir », PDF et email au client ; totaux du mois nets des avoirs.
+6 quater. ✅ **Sécurité** (migration 18) : faille du rôle chauffeur corrigée, mode démonstration et
+   mode test retirés, limites anti-abus, audit automatique des droits dans les tests.
 7. **Publication** : version de développement (EAS), test par Fabrice et quelques clients, stores.
 
 **Messagerie client ↔ chauffeur** ✅ (demande de Fabrice) : une conversation par course, en temps réel

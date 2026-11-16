@@ -4,9 +4,9 @@ import { langueClient, useLangue } from './i18n';
 import { createContext, ReactNode, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
-import { OffreId, appliquerTarifs, lieu, offre, prix, trajet } from './data';
+import { OffreId, appliquerTarifs, lieu, trajet } from './data';
 import {
-  annulerCourse, chargerTarifs, lienAcompte, payerAcompteTest, rembourserTout,
+  annulerCourse, chargerTarifs, lienAcompte, rembourserTout,
   Profil, reinitialiserMotDePasse as reinitialiserServeur, connecterClient as connecterClientServeur, creerCompte as creerCompteServeur, majProfil as majProfilServeur, monProfil, sessionActuelle, connexionInvite, creerDemande, deconnexion, supprimerCompte as supprimerCompteServeur, ecouterMesCourses,
   envoyerLangue, estChauffeur, mesCourses, supabase,
 } from './serveur';
@@ -34,7 +34,6 @@ export type Course = {
   acompteMontant?: number; // acompte demandé quand Fabrice accepte (10 % par défaut)
   acompteLimite?: Date; // à régler avant cette heure, sinon la demande expire
   acomptePaye?: boolean;
-  demo?: boolean;
 };
 
 export type Brouillon = {
@@ -71,27 +70,6 @@ const avecHeure = (jour: Date, heure: string) => {
   return d;
 };
 
-function coursesDemo(): Course[] {
-  const make = (
-    id: string, departId: string, arriveeId: string, jours: number, heure: string,
-    offreId: OffreId, statut: Statut, numero?: string, passagers = 1, bagages = 1,
-  ): Course => {
-    const t = trajet(lieu(departId), lieu(arriveeId));
-    const jour = dansJours(jours);
-    return {
-      id, departId, arriveeId, heure, offreId, statut, numero, passagers, bagages,
-      date: avecHeure(jour, heure), allerRetour: false, km: t.km, minutes: t.minutes,
-      montant: prix(offre(offreId), t.km, jour, heure, false).montant,
-      nom: 'Claire Martin', demo: true,
-    };
-  };
-  return [
-    make('d1', 'tls', 'castres', 3, '18:40', 'tesla', 'confirmee', 'AF 6127', 2, 2),
-    make('d2', 'albi', 'matabiau', -12, '07:15', 'tesla', 'terminee'),
-    make('d3', 'lavaur', 'tls', -40, '05:30', 'van', 'terminee', 'U2 4421', 6, 6),
-  ];
-}
-
 const brouillonVide = (): Brouillon => ({
   jour: dansJours(1),
   heure: '09:00',
@@ -113,22 +91,15 @@ type Store = {
   reinitialiser: () => void;
   courses: Course[];
   envoyer: () => Promise<Course>;
-  changerStatut: (id: string, s: Statut, motif?: string, extra?: Partial<Course>) => void;
-  /** Adresse de la page de paiement de l'acompte (null en démonstration : payé aussitôt). */
+  /** Adresse de la page de paiement de l'acompte (null si déjà payé). */
   payerAcompte: (id: string) => Promise<string | null>;
-  /** Mode test : faux paiement de l'acompte (même circuit que le vrai, sans argent). */
-  payerAcompteTest: (id: string) => Promise<void>;
   annuler: (id: string) => Promise<void>;
   serveur: EtatServeur;
   tarifsVersion: number;
   recalculerTarifs: () => void;
-  // Espace chauffeur : rôle du compte connecté, ou démonstration sans serveur.
+  // Espace chauffeur : rôle du compte connecté.
   role: 'client' | 'chauffeur';
-  demoChauffeur: boolean;
   deconnecterChauffeur: () => Promise<void>;
-  entrerDemoChauffeur: () => void;
-  simulerEchec: boolean;
-  setSimulerEchec: (v: boolean) => void;
   prefs: { push: boolean; sms: boolean; email: boolean; stats: boolean };
   setPrefs: (p: Partial<Store['prefs']>) => void;
   apparence: Apparence;
@@ -150,21 +121,19 @@ type Store = {
 };
 
 export type Apparence = 'auto' | 'clair' | 'sombre';
-// non-configure : pas de clés Supabase, l'appli tourne en démonstration.
+// non-configure : pas de clés Supabase (mobile/.env) : l'appli ne peut pas fonctionner.
 export type EtatServeur = { etat: 'non-configure' | 'connexion' | 'connecte' | 'erreur'; message?: string };
 
 const Ctx = createContext<Store | null>(null);
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [brouillon, setBrouillon] = useState<Brouillon>(brouillonVide);
-  const [courses, setCourses] = useState<Course[]>(coursesDemo);
-  const [simulerEchec, setSimulerEchec] = useState(false);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [prefs, setP] = useState({ push: true, sms: true, email: true, stats: false });
   const [apparence, setApparence] = useState<Apparence>('auto');
   const [serveur, setServeur] = useState<EtatServeur>({ etat: supabase ? 'connexion' : 'non-configure' });
   const [tarifsVersion, setTarifsVersion] = useState(0);
   const [role, setRole] = useState<'client' | 'chauffeur'>('client');
-  const [demoChauffeur, setDemoChauffeur] = useState(false);
   const [compte, setCompte] = useState<Store['compte']>(null);
   const [cleSession, setCleSession] = useState('');
   const canal = useRef<ReturnType<typeof ecouterMesCourses>>(null);
@@ -216,14 +185,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const abo = AppState.addEventListener('change', (etat) => {
-      if (etat === 'active' && role === 'client' && !demoChauffeur) rafraichirClient().catch(() => {});
+      if (etat === 'active' && role === 'client') rafraichirClient().catch(() => {});
     });
     // Notification reçue appli ouverte (confirmation, refus…) : la course a changé, on recharge.
     const notif = Platform.OS === 'web' ? null : Notifications.addNotificationReceivedListener(() => {
-      if (role === 'client' && !demoChauffeur) rafraichirClient().catch(() => {});
+      if (role === 'client') rafraichirClient().catch(() => {});
     });
     return () => { abo.remove(); notif?.remove(); };
-  }, [role, demoChauffeur]);
+  }, [role]);
 
   // Profil du compte (ou de l'invité) : préremplit les coordonnées de réservation.
   const chargerProfil = async () => {
@@ -261,76 +230,38 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       reinitialiser: () => setBrouillon((b) => ({ ...brouillonVide(), nom: b.nom, telephone: b.telephone, email: b.email })),
       courses,
       envoyer: async () => {
-        if (supabase && serveur.etat === 'connecte') {
-          const b = brouillon;
-          const t = trajet(lieu(b.departId!), lieu(b.arriveeId!));
-          const c = await creerDemande(b, avecHeure(b.jour, b.heure), t.km, t.minutes);
-          setCourses((cs) => [c, ...cs.filter((x) => x.id !== c.id)]);
-          activerNotifications(); // la demande d'autorisation arrive au moment où elle a un sens
-          return c;
-        }
-        return new Promise<Course>((resolve, reject) => {
-          setTimeout(() => {
-            if (simulerEchec) return reject(new Error('reseau'));
-            const b = brouillon;
-            const t = trajet(lieu(b.departId!), lieu(b.arriveeId!));
-            const c: Course = {
-              id: String(Date.now()),
-              departId: b.departId!, arriveeId: b.arriveeId!,
-              date: avecHeure(b.jour, b.heure), heure: b.heure, allerRetour: b.allerRetour,
-              passagers: b.passagers, bagages: b.bagages, numero: b.numero || undefined,
-              offreId: b.offreId, km: t.km, minutes: t.minutes,
-              montant: prix(offre(b.offreId), t.km, b.jour, b.heure, b.allerRetour).montant,
-              nom: b.nom, statut: 'envoyee', envoyeeLe: new Date(),
-            };
-            setCourses((cs) => [c, ...cs]);
-            resolve(c);
-          }, 1400);
-        });
-      },
-      changerStatut: (id, s, motif, extra) => setCourses((cs) => cs.map((c) => (c.id === id ? { ...c, statut: s, motifRefus: motif, ...extra } : c))),
-      payerAcompteTest: async (id) => {
-        if (supabase && serveur.etat === 'connecte' && !courses.find((c) => c.id === id)?.demo) {
-          await payerAcompteTest(id);
-          setCourses((cs) => cs.map((c) => (c.id === id ? { ...c, statut: c.statut === 'acompte_attendu' ? 'confirmee' : c.statut, acomptePaye: true } : c)));
-        } else setCourses((cs) => cs.map((c) => (c.id === id ? { ...c, statut: 'confirmee', acomptePaye: true } : c)));
+        if (!supabase || serveur.etat !== 'connecte') throw new Error('reseau');
+        const b = brouillon;
+        const t = trajet(lieu(b.departId!), lieu(b.arriveeId!));
+        const c = await creerDemande(b, avecHeure(b.jour, b.heure), t.km, t.minutes);
+        setCourses((cs) => [c, ...cs.filter((x) => x.id !== c.id)]);
+        activerNotifications(); // la demande d'autorisation arrive au moment où elle a un sens
+        return c;
       },
       payerAcompte: async (id) => {
-        if (supabase && serveur.etat === 'connecte' && !courses.find((c) => c.id === id)?.demo) {
-          const r = await lienAcompte(id);
-          if (r.deja_paye) return null;
-          return r.url ?? null;
-        }
-        // Démonstration : paiement accepté aussitôt.
-        setCourses((cs) => cs.map((c) => (c.id === id ? { ...c, statut: 'confirmee', acomptePaye: true } : c)));
-        return null;
+        const r = await lienAcompte(id);
+        if (r.deja_paye) return null;
+        return r.url ?? null;
       },
       annuler: async (id) => {
         const c0 = courses.find((c) => c.id === id);
         if (c0) evenement('annulation', { delai_h: Math.round((c0.date.getTime() - Date.now()) / 3600000), statut: c0.statut });
-        if (supabase && serveur.etat === 'connecte' && !courses.find((c) => c.id === id)?.demo) {
-          const c = await annulerCourse(id);
-          setCourses((cs) => cs.map((x) => (x.id === id ? c : x)));
-          // Acompte remboursé si les CGV le prévoient (le serveur décide, rien sinon).
-          if (c.acomptePaye) rembourserTout(id).catch((e) => console.warn('Remboursement :', e instanceof Error ? e.message : e));
-        } else {
-          setCourses((cs) => cs.map((c) => (c.id === id ? { ...c, statut: 'annulee' } : c)));
-        }
+        const c = await annulerCourse(id);
+        setCourses((cs) => cs.map((x) => (x.id === id ? c : x)));
+        // Acompte remboursé si les CGV le prévoient (le serveur décide, rien sinon).
+        if (c.acomptePaye) rembourserTout(id).catch((e) => console.warn('Remboursement :', e instanceof Error ? e.message : e));
       },
       serveur,
       tarifsVersion,
       recalculerTarifs: () => setTarifsVersion((v) => v + 1),
       role,
-      demoChauffeur,
       deconnecterChauffeur: async () => {
-        if (demoChauffeur) { setDemoChauffeur(false); return; }
         await oublierTelephone().catch(() => {});
         const uid = await deconnexion();
         setRole('client');
         await demarrerClient(uid);
         await chargerProfil().catch(() => {});
       },
-      entrerDemoChauffeur: () => setDemoChauffeur(true),
       compte,
       cleSession,
       rafraichir: rafraichirClient,
@@ -386,14 +317,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         setBrouillon((b) => ({ ...b, nom, telephone }));
         await chargerProfil();
       },
-      simulerEchec,
-      setSimulerEchec,
       prefs,
       setPrefs: (p) => setP((x) => ({ ...x, ...p })),
       apparence,
       setApparence,
     }),
-    [brouillon, courses, simulerEchec, prefs, apparence, serveur, tarifsVersion, role, demoChauffeur, compte, cleSession],
+    [brouillon, courses, prefs, apparence, serveur, tarifsVersion, role, compte, cleSession],
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

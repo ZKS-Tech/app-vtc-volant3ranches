@@ -20,7 +20,7 @@ const LIBELLES: Record<string, string> = {
 // Emails envoyés aux clients (Brevo) : activation, copie pour Fabrice, et journal des envois.
 export default function Emails() {
   const { c, type, s } = useTheme(creerStyles);
-  const { demo, missions } = useChauffeur();
+  const { missions } = useChauffeur();
   const [reglages, setReglages] = useState<ReglagesEmails | null>(null);
   const [emailCopie, setEmailCopie] = useState('');
   const [journal, setJournal] = useState<EmailEnvoye[]>([]);
@@ -28,26 +28,25 @@ export default function Emails() {
   const [message, setMessage] = useState<{ ok?: string; erreur?: string } | null>(null);
 
   const charger = async () => {
-    if (demo || !supabase) return;
+    if (!supabase) return;
     setChargement(true);
     try {
       const [r, j] = await Promise.all([chargerReglagesEmails(), chargerEmails()]);
       setReglages(r); setEmailCopie(r?.email_chauffeur ?? ''); setJournal(j);
     } finally { setChargement(false); }
   };
-  useEffect(() => { charger(); }, [demo]);
+  useEffect(() => { charger(); }, []);
   useEffect(() => {
-    if (!supabase || demo) return;
+    if (!supabase) return;
     const canal = supabase.channel('emails').on('postgres_changes', { event: '*', schema: 'public', table: 'emails' }, () => { chargerEmails().then(setJournal); }).subscribe();
     return () => { canal.unsubscribe(); };
-  }, [demo]);
+  }, []);
 
   const enregistrer = async (v: Partial<ReglagesEmails>, ok: string) => {
     setMessage(null);
     try { await majReglagesEmails(v); setReglages((r) => (r ? { ...r, ...v } : r)); setMessage({ ok }); } catch (e) { setMessage({ erreur: e instanceof Error ? e.message : String(e) }); }
   };
 
-  if (demo) return <View style={{ padding: space.l }}><Note ton="bain" icone="eye-outline">Démonstration : les emails partent seulement avec le serveur et Brevo configuré.</Note></View>;
   if (!reglages && !chargement) return <View style={{ padding: space.l }}><Note ton="alerte">Emails pas encore installés : exécuter la migration 12 dans Supabase (voir supabase/README.md).</Note></View>;
 
   const nomClient = (id: string | null) => missions.find((m) => m.id === id)?.nom;

@@ -181,7 +181,7 @@ Deno.test('les appels à la base utilisent la clé secrète pour le serveur, la 
   assertEquals(admin.apikey, 'sb_secret_test');
 });
 
-Deno.test('acompte : la raison du refus de SumUp est transmise (sans la clé)', async () => {
+Deno.test('acompte : refus de SumUp, le client ne voit aucun détail du compte marchand', async () => {
   reponses = {
     'rpc/acompte_a_payer': () => [{ course_id: COURSE, montant: 1, limite: null, description: 'x', deja_paye: false }],
     '/rest/v1/paiements': () => [],
@@ -190,5 +190,5 @@ Deno.test('acompte : la raison du refus de SumUp est transmise (sans la clé)', 
   const r = await acompte(requete({ course_id: COURSE }));
   const corps = await r.json();
   assertEquals(r.status, 502);
-  assert(corps.erreur.includes('400') && corps.erreur.includes('merchant_code') && !corps.erreur.includes('sup_sk'));
+  assert(corps.erreur.startsWith('Paiement en ligne indisponible') && !corps.erreur.includes('merchant_code') && !corps.erreur.includes('sup_sk'));
 });

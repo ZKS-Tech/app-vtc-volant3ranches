@@ -28,7 +28,7 @@ export default function Conversation() {
   const { c, type, s } = useTheme(creerStyles);
   const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { messagesDe, envoyer, marquerLus, nonLus, cote, demo } = useMessagerie();
+  const { messagesDe, envoyer, marquerLus, nonLus, cote } = useMessagerie();
   const { courses } = useStore();
   const chauffeur = useChauffeurOptionnel();
   const [texte, setTexte] = useState('');
@@ -96,7 +96,6 @@ export default function Conversation() {
               {cote === 'chauffeur'
                 ? 'Messages gratuits avec votre client, sans SMS. Pour une urgence, appelez-le.'
                 : t('Écrivez à Fabrice pour un imprévu : retard, terminal, bagage… Gratuit, sans SMS. Pour une urgence, appelez-le.')}
-              {demo ? '\nDémonstration : les messages restent sur ce téléphone.' : ''}
             </Text>
           </View>
         }

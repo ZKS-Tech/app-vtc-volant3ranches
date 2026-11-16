@@ -7,7 +7,7 @@ import type { Brouillon, Course, Statut } from './store';
 
 // Connexion à Supabase. Adresse du projet et clé publique dans mobile/.env (variables EXPO_PUBLIC_…).
 // La clé publique peut être dans l'appli : la sécurité repose sur les règles de la base (RLS).
-// Sans ces variables, l'appli reste en mode démonstration.
+// Sans ces variables, l'appli affiche un écran « configuration manquante ».
 const URL_PROJET = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const CLE_PUBLIQUE = process.env.EXPO_PUBLIC_SUPABASE_KEY ?? '';
 
@@ -432,20 +432,16 @@ export function ecouterDocuments(surDocument: () => void): RealtimeChannel | nul
   return supabase.channel('documents').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'documents' }, surDocument).subscribe();
 }
 
-// ——— Mode test (migration 10) : paiements et remboursements simulés ———
 async function rpc<T>(nom: string, params: Record<string, unknown>): Promise<T> {
   if (!supabase) throw new Error('Serveur non configuré');
   const { data, error } = await supabase.rpc(nom, params);
   if (error) throw new Error(error.message);
   return data as T;
 }
-export const payerAcompteTest = (courseId: string) => rpc<unknown>('payer_acompte_test', { p_course: courseId });
-export const effacerDocumentsTest = () => rpc<number>('effacer_documents_test', {});
 
-// Rembourse les faux paiements (mode test) puis les vrais (SumUp) ; renvoie le total remboursé.
+// Rembourse les acomptes dus (SumUp) selon les CGV ; renvoie le total remboursé.
 export async function rembourserTout(courseId: string): Promise<number> {
   let total = 0;
-  try { total += Number(await rpc<number>('rembourser_test', { p_course: courseId })) || 0; } catch { /* base sans la migration 10 */ }
   const dus = (await paiementsDe(courseId)).filter((p) => p.statut === 'paye' && Number(p.remboursement_du) > Number(p.rembourse));
   if (dus.length) total += (await rembourserAcompte(courseId)).rembourse;
   return total;

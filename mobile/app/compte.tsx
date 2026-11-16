@@ -15,7 +15,7 @@ import { t, traduireErreur } from '../src/i18n';
 export default function Compte() {
   const { c, type } = useTheme();
   const params = useLocalSearchParams<{ mode?: string }>();
-  const { brouillon, creerCompte, connecterClient, reinitialiserMotDePasse, serveur, entrerDemoChauffeur } = useStore();
+  const { brouillon, creerCompte, connecterClient, reinitialiserMotDePasse, serveur } = useStore();
   const [mode, setMode] = useState<'creer' | 'connexion'>(params.mode === 'connexion' ? 'connexion' : 'creer');
   // Mot de passe oublié : null, puis « code » (email envoyé), le formulaire passe à code + nouveau mot de passe.
   const [oubli, setOubli] = useState<'email' | 'code' | null>(null);
@@ -45,12 +45,7 @@ export default function Compte() {
   };
 
   if (serveur.etat !== 'connecte') {
-    return (
-      <View style={{ padding: space.l, gap: space.l }}>
-        <Note ton="bain">Les comptes nécessitent la connexion au serveur (indisponible en démonstration).</Note>
-        <Bouton titre="Démonstration de l'espace chauffeur" variante="contour" icone="eye-outline" onPress={entrerDemoChauffeur} />
-      </View>
-    );
+    return <View style={{ padding: space.l }}><Note ton="alerte">{t('Connexion au serveur impossible pour le moment. Vérifiez votre connexion internet et réessayez.')}</Note></View>;
   }
   if (fait) {
     return (

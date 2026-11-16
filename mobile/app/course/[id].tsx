@@ -20,7 +20,7 @@ export default function DetailCourse() {
   const [annuler, setAnnuler] = useState(false);
   const { nonLus } = useMessagerie();
   const course = courses.find((x) => x.id === id);
-  const { docs } = useDocumentsCourse(id, !!course && !course.demo);
+  const { docs } = useDocumentsCourse(id, !!course);
   if (!course) return null;
   const tt = teintesDe(c)[course.statut];
   const o = offre(course.offreId);
@@ -74,7 +74,7 @@ export default function DetailCourse() {
         <Bouton titre={t('Afficher le panneau à mon nom')} icone="id-card-outline" onPress={() => router.push({ pathname: '/panneau', params: { id: course.id } })} style={{ marginTop: space.l }} />
       ) : null}
       {active ? <Bouton titre={t('Appeler Fabrice')} variante="contour" icone="call-outline" onPress={appelerFabrice} style={{ marginTop: space.m }} /> : null}
-      {active && !course.demo ? (
+      {active ? (
         <Bouton
           titre={nonLus(course.id) ? `Messages · ${pluriel(nonLus(course.id), ['nouveau', 'nouveaux'], ['new', 'new'])}` : t('Écrire à Fabrice')}
           variante={nonLus(course.id) ? 'plein' : 'contour'}

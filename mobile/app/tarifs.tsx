@@ -4,7 +4,6 @@ import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from
 import { useChauffeur } from '../src/chauffeur';
 import { OffreId, dateCourte, euros, joursFeries, offres, regles } from '../src/data';
 import { useStore } from '../src/store';
-import { effacerDocumentsTest } from '../src/serveur';
 import { Couleurs, radius, sansContourWeb, space } from '../src/theme';
 import { Bouton, Compteur, Note, Segment, Titre, couleursSwitch } from '../src/ui';
 import { EcranAvecClavier } from '../src/Clavier';
@@ -16,14 +15,13 @@ const texte = (n: number) => String(n).replace('.', ',');
 // Tarifs et jours fériés : la base les applique immédiatement à toutes les nouvelles demandes.
 export default function Tarifs() {
   const { c, type, s } = useTheme(creerStyles);
-  const { majOffre, majParametres, ajouterJourFerie, retirerJourFerie, demo } = useChauffeur();
+  const { majOffre, majParametres, ajouterJourFerie, retirerJourFerie } = useChauffeur();
   useStore(); // se met à jour quand les tarifs changent
   const [prixForm, setPrixForm] = useState(() => Object.fromEntries(offres.map((o) => [o.id, { jour: texte(o.prixKmJour), majore: texte(o.prixKmMajore), minimum: texte(o.minimum) }])) as Record<OffreId, { jour: string; majore: string; minimum: string }>);
   const [nuit, setNuit] = useState({ debut: regles.nuitDebut, fin: regles.nuitFin });
   const [weekend, setWeekend] = useState(regles.majorationWeekend);
   const [attente, setAttente] = useState({ aeroport: regles.attenteAeroportMin, gare: regles.attenteGareMin, standard: regles.attenteStandardMin });
   const [acompte, setAcompte] = useState({ pourcent: regles.acomptePourcent, delai: regles.acompteDelaiMin });
-  const [test, setTest] = useState(regles.paiementsTest);
   const [nouveauFerie, setNouveauFerie] = useState('');
   const [etat, setEtat] = useState<{ quoi: string; ok?: string; erreur?: string } | null>(null);
 
@@ -42,7 +40,7 @@ export default function Tarifs() {
     <EcranAvecClavier style={{ backgroundColor: c.sol }}>
     <ScrollView style={{ backgroundColor: c.sol }} contentContainerStyle={{ padding: space.l, paddingBottom: space.xxl }} keyboardShouldPersistTaps="handled">
       <Text style={type.small}>
-        {demo ? 'Démonstration : les changements ne sont pas enregistrés.' : 'Les nouveaux tarifs s’appliquent tout de suite aux nouvelles demandes. Les courses déjà enregistrées gardent leur prix.'}
+        Les nouveaux tarifs s’appliquent tout de suite aux nouvelles demandes. Les courses déjà enregistrées gardent leur prix.
       </Text>
 
       {offres.map((o) => {
@@ -118,28 +116,6 @@ export default function Tarifs() {
       />
       {retour('acompte')}
 
-      <View style={[s.bloc, { marginTop: space.l }]}>
-        <View style={s.ligneSwitch}>
-          <Ionicons name="flask-outline" size={22} color={c.accent} />
-          <View style={{ flex: 1 }}>
-            <Text style={type.body}>Mode test (faux argent)</Text>
-            <Text style={type.small}>Paiements et remboursements simulés, pièces numérotées « TEST » et sans valeur. À désactiver avant d'accueillir de vrais clients.</Text>
-          </View>
-          <Switch value={test} {...couleursSwitch(c)} accessibilityLabel="Mode test"
-            onValueChange={(v) => { setTest(v); faire('test', () => majParametres({ paiements_test: v }), v ? 'Mode test activé : les paiements sont simulés.' : 'Mode test désactivé : paiements réels par SumUp.'); }} />
-        </View>
-      </View>
-      {retour('test')}
-      {demo ? null : (
-        <Bouton titre="Effacer les pièces de test" variante="texte" icone="trash-outline" chargement={etat?.quoi === 'effacer' && !etat.ok && !etat.erreur}
-          onPress={async () => {
-            setEtat({ quoi: 'effacer' });
-            try { const n = await effacerDocumentsTest(); setEtat({ quoi: 'effacer', ok: `${n} pièce${n > 1 ? 's' : ''} de test effacée${n > 1 ? 's' : ''}.` }); }
-            catch (e) { setEtat({ quoi: 'effacer', erreur: e instanceof Error ? e.message : String(e) }); }
-          }}
-          style={{ alignSelf: 'flex-start', marginTop: space.s }} />
-      )}
-      {retour('effacer')}
 
       <Titre>Jours fériés à venir</Titre>
       <View style={s.bloc}>

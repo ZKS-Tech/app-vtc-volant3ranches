@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { bilan, estAujourdhui, useChauffeur } from '../../src/chauffeur';
 import { Chiffre, DemandeCarte, LigneMission, TrajetLibre, appeler, dansCombien, heureDe, ouvrirGps, useMaintenant } from '../../src/chauffeurUi';
 import { CuveIndigo } from '../../src/CuveIndigo';
-import { euros, offre, regles } from '../../src/data';
+import { euros, offre } from '../../src/data';
 import { Couleurs, f, radius, space } from '../../src/theme';
 import { Bouton, Note, Titre } from '../../src/ui';
 import { useMessagerie } from '../../src/messagerie';
@@ -20,7 +20,7 @@ const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 
 export default function TableauDeBord() {
   const { c, type, s } = useTheme(creerStyles);
   const insets = useSafeAreaInsets();
-  const { missions, demo, chargement, erreur, recharger } = useChauffeur();
+  const { missions, chargement, erreur, recharger } = useChauffeur();
   const maintenant = useMaintenant();
   const { conversationsNonLues, nonLus, messagesDe } = useMessagerie();
   const absence = useAnnonces().visibles.find((a) => a.bloquer);
@@ -55,21 +55,11 @@ export default function TableauDeBord() {
       </View>
 
       <View style={{ paddingHorizontal: space.l }}>
-        {demo ? (
-          <View style={{ marginTop: space.l }}>
-            <Note ton="bain" icone="eye-outline">Démonstration : clients et courses fictifs. Rien n'est enregistré.</Note>
-          </View>
-        ) : null}
         {absence ? (
           <Pressable onPress={() => router.push({ pathname: '/annonce-edition', params: { id: absence.id } })} style={{ marginTop: space.l }} accessibilityRole="button">
             <Note ton="alerte" icone="calendar-outline">
               {absence.debut <= isoJour(maintenant) ? 'Absence en cours' : 'Absence prévue'} {periode(absence)} : les clients ne peuvent pas réserver ces jours-là.
             </Note>
-          </Pressable>
-        ) : null}
-        {regles.paiementsTest ? (
-          <Pressable onPress={() => router.push('/tarifs')} style={{ marginTop: space.l }} accessibilityRole="button">
-            <Note ton="alerte" icone="flask-outline">Mode test activé : paiements simulés (faux argent). À désactiver dans Tarifs avant les vrais clients.</Note>
           </Pressable>
         ) : null}
         {erreur ? (

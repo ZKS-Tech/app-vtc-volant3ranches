@@ -21,7 +21,7 @@ const csvCellule = (v: string | number | null | undefined) => {
 // encore à facturer, liste des pièces et export pour la comptabilité.
 export default function Documents() {
   const { c, type, s } = useTheme(creerStyles);
-  const { missions, demo } = useChauffeur();
+  const { missions } = useChauffeur();
   const [mois, setMois] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [docs, setDocs] = useState<DocumentEmis[]>([]);
   const [chargement, setChargement] = useState(false);
@@ -30,15 +30,12 @@ export default function Documents() {
   const fin = new Date(mois.getFullYear(), mois.getMonth() + 1, 1);
 
   const charger = async () => {
-    if (demo) return;
     setChargement(true); setErreur('');
     try { setDocs(await chargerDocuments({ depuis: mois, jusqua: fin })); } catch (e) { setErreur(e instanceof Error ? e.message : String(e)); } finally { setChargement(false); }
   };
-  useEffect(() => { charger(); }, [mois.getTime(), demo]);
+  useEffect(() => { charger(); }, [mois.getTime()]);
 
-  // Les pièces de test (mode test, numéros TEST-…) ne comptent pas dans les totaux.
-  const reelles = docs.filter((d) => !d.numero.startsWith('TEST-'));
-  const nbTest = docs.length - reelles.length;
+  const reelles = docs;
   const factures = reelles.filter((d) => d.type === 'facture');
   // Avoirs du mois (montants négatifs) : comptés dans le mois où ils sont émis.
   const avoirs = reelles.filter((d) => d.type === 'avoir');
@@ -87,9 +84,7 @@ export default function Documents() {
         </Pressable>
       </View>
 
-      {demo ? <Note ton="bain" icone="eye-outline">Démonstration : les factures et bons de commande sont émis seulement avec le serveur.</Note> : null}
       {erreur ? <Note ton="erreur">{erreur}</Note> : null}
-      {nbTest ? <View style={{ marginTop: space.s }}><Note ton="alerte" icone="flask-outline">{nbTest} pièce{nbTest > 1 ? 's' : ''} de test (TEST-…) : affichée{nbTest > 1 ? 's' : ''} dans la liste, non comptée{nbTest > 1 ? 's' : ''} dans les totaux.</Note></View> : null}
 
       <View style={[s.bloc, { flexDirection: 'row', paddingVertical: space.l, gap: space.m, marginTop: space.m }]}>
         <Chiffre valeur={euros(somme(nettes, 'total_ttc')).replace(',00', '')} libelle={avoirs.length ? 'facturé TTC (net)' : 'facturé TTC'} fort />

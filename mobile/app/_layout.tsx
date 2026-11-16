@@ -3,13 +3,14 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Stack, router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { LogBox } from 'react-native';
+import { LogBox, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AnnoncesProvider } from '../src/annonces';
 import { ChauffeurProvider } from '../src/chauffeur';
 import { MessagerieProvider } from '../src/messagerie';
 import { useNotifications } from '../src/notifications';
 import { chargerLangue, forcerFrancais, t, useLangue } from '../src/i18n';
+import { supabase } from '../src/serveur';
 import { activerSuivi } from '../src/stats';
 import { StoreProvider, useStore } from '../src/store';
 import { useTheme } from '../src/useTheme';
@@ -25,6 +26,17 @@ export default function Racine() {
   useEffect(() => { chargerLangue().finally(() => setLangueChargee(true)); }, []);
   if (erreur) console.warn('Polices non chargées :', erreur.message);
   if ((!pret && !erreur) || !langueChargee) return null;
+  // Appli construite sans l'adresse du serveur (mobile/.env) : rien ne peut fonctionner.
+  if (!supabase) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, backgroundColor: '#101B45' }}>
+        <Text style={{ color: '#fff', fontSize: 20, fontWeight: '700', textAlign: 'center' }}>Volant3ranches</Text>
+        <Text style={{ color: '#AFC3EA', fontSize: 15, textAlign: 'center', marginTop: 12 }}>
+          {t('Application mal configurée. Appelez Fabrice au 06 16 53 14 91.')}
+        </Text>
+      </View>
+    );
+  }
   return (
     <SafeAreaProvider>
       <StoreProvider>
@@ -38,8 +50,8 @@ export default function Racine() {
 // Stack.Protected n'ouvre que celle qui correspond au compte connecté.
 function Navigation() {
   const { c, estSombre } = useTheme();
-  const { role, demoChauffeur, serveur, cleSession } = useStore();
-  const chauffeur = role === 'chauffeur' || demoChauffeur;
+  const { role, serveur, cleSession } = useStore();
+  const chauffeur = role === 'chauffeur';
   // L'espace de Fabrice est toujours en français ; l'interface client suit la langue choisie.
   forcerFrancais(chauffeur);
   useLangue();
@@ -76,7 +88,6 @@ function Navigation() {
         <Stack.Screen name="panneau" options={{ presentation: 'fullScreenModal', headerShown: false }} />
         <Stack.Screen name="compte" options={{ presentation: 'modal', title: t('Mon compte') }} />
         <Stack.Screen name="annonce/[id]" options={{ title: t('Annonce') }} />
-        <Stack.Screen name="paiement-test" options={{ presentation: 'modal', title: 'Paiement (test)' }} />
       </Stack.Protected>
       <Stack.Protected guard={chauffeur}>
         <Stack.Screen name="chauffeur" options={{ headerShown: false, title: 'Tableau de bord' }} />
@@ -98,9 +109,9 @@ function Navigation() {
   return (
     <>
       <StatusBar style={estSombre ? 'light' : 'dark'} />
-      <AnnoncesProvider key={demoChauffeur ? 'demo' : chauffeur ? 'chauffeur' : 'client'} demo={demoChauffeur}>
+      <AnnoncesProvider key={chauffeur ? 'chauffeur' : 'client'}>
         <MessagerieProvider key={chauffeur ? 'chauffeur' : 'client'}>
-          {chauffeur ? <ChauffeurProvider key={demoChauffeur ? 'demo' : 'serveur'}>{pile}</ChauffeurProvider> : pile}
+          {chauffeur ? <ChauffeurProvider>{pile}</ChauffeurProvider> : pile}
         </MessagerieProvider>
       </AnnoncesProvider>
     </>

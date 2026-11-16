@@ -1,9 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Linking, StyleSheet, Text, View } from 'react-native';
-import { appliquerTarifs, euros, regles } from './data';
-import { chargerTarifs, supabase } from './serveur';
+import { euros } from './data';
 import { Course, useStore } from './store';
 import { Couleurs, f, radius, space } from './theme';
 import { Bouton, Note, heureCourte } from './ui';
@@ -31,10 +29,6 @@ export function BlocAcompte({ course, surFonce }: { course: Course; surFonce?: b
 
   const payer = async () => {
     setEtat('ouverture'); setErreur('');
-    // Réglages relus au moment de payer : le mode test a pu être activé depuis l'ouverture de l'appli.
-    if (supabase && !course.demo) { try { appliquerTarifs(await chargerTarifs()); } catch { /* on garde les réglages connus */ } }
-    // Mode test : écran de paiement simulé dans l'appli au lieu de la page SumUp.
-    if (regles.paiementsTest) { setEtat(null); router.push({ pathname: '/paiement-test', params: { id: course.id } }); return; }
     try {
       const url = await payerAcompte(course.id);
       if (url) { await Linking.openURL(url); setEtat('ouvert'); } else setEtat(null);
@@ -74,7 +68,7 @@ export function BlocAcompte({ course, surFonce }: { course: Course; surFonce?: b
       <View style={s.securite}>
         <Ionicons name="lock-closed-outline" size={14} color={surFonce ? c.surCuve2 : c.pierre} />
         <Text style={[type.label, { color: surFonce ? c.surCuve2 : c.pierre, flex: 1 }]}>
-          {regles.paiementsTest ? t('Mode test : paiement simulé, aucun argent réel.') : t('Paiement sécurisé par SumUp. Remboursé si vous annulez plus de 24 h avant (CGV).')}
+          {t('Paiement sécurisé par SumUp. Remboursé si vous annulez plus de 24 h avant (CGV).')}
         </Text>
       </View>
     </View>

@@ -426,4 +426,11 @@ export const EN: Record<string, string> = {
   "…": "…",
   "Uniquement dans l'application mobile": "Only in the mobile app",
   "Avoir": "Credit note",
+  "Application mal configurée. Appelez Fabrice au 06 16 53 14 91.": "App misconfigured. Call Fabrice on +33 6 16 53 14 91.",
+  "Connexion au serveur impossible pour le moment. Vérifiez votre connexion internet et réessayez.": "Cannot reach the server right now. Check your internet connection and try again.",
+  "Connexion au serveur impossible pour le moment.": "Cannot reach the server right now.",
+  "Paiement en ligne indisponible pour le moment. Réessayez plus tard ou appelez Fabrice.": "Online payment unavailable right now. Try again later or call Fabrice.",
+  "Trop de messages en peu de temps : appelez Fabrice si c'est urgent.": "Too many messages in a short time: call Fabrice if it is urgent.",
+  "Trop de demandes aujourd'hui : appelez Fabrice au 06 16 53 14 91.": "Too many requests today: call Fabrice on +33 6 16 53 14 91.",
+  "Vous avez déjà 5 demandes en attente : attendez la réponse de Fabrice ou appelez-le.": "You already have 5 requests waiting: wait for Fabrice's reply or call him.",
 };
