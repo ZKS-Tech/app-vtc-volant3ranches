@@ -1,5 +1,6 @@
 // Contenu et règles repris de volant3ranches-vtc.fr (accueil, véhicules, à propos, contact, CGV,
 // module de réservation, mars 2026).
+import { anglais, t } from './i18n';
 
 export const contact = {
   telephone: '06 16 53 14 91',
@@ -119,7 +120,7 @@ export const itineraireEnCache = (a: Lieu, b: Lieu) => itineraires.get(cle(a, b)
 export const memoriserItineraire = (a: Lieu, b: Lieu, it: Itineraire) => { itineraires.set(cle(a, b), it); return it; };
 
 // Distance et durée : l'itinéraire IGN s'il est connu, sinon une estimation (vol d'oiseau × 1,25)
-// qui ne sert qu'en démonstration hors ligne. Pour une vraie demande, la base recalcule toujours.
+// qui ne sert qu'en secours hors ligne. Pour une vraie demande, la base recalcule toujours.
 export function trajet(a: Lieu, b: Lieu) {
   const it = itineraireEnCache(a, b);
   if (it) return { km: it.km, minutes: it.minutes };
@@ -145,6 +146,8 @@ export const regles = {
   attenteGareMin: 15,
   attenteStandardMin: 10,
   delaiConfirmationMin: 30,
+  acomptePourcent: 10, // acompte demandé à l'acceptation (0 = aucun)
+  acompteDelaiMin: 60, // délai pour le régler
 };
 
 export const joursFeries = [
@@ -160,6 +163,7 @@ export type TarifsServeur = {
   parametres: {
     nuit_debut: number; nuit_fin: number; majoration_weekend: boolean; coef_aller_retour: number; arrondi: number;
     attente_aeroport_min: number; attente_gare_min: number; attente_standard_min: number; delai_confirmation_min: number;
+    acompte_pourcent?: number; acompte_delai_min?: number;
   } | null;
   joursFeries: string[];
 };
@@ -181,6 +185,9 @@ export function appliquerTarifs(t: TarifsServeur) {
       attenteAeroportMin: p.attente_aeroport_min, attenteGareMin: p.attente_gare_min,
       attenteStandardMin: p.attente_standard_min, delaiConfirmationMin: p.delai_confirmation_min,
     });
+    // Sans la migration 8, la base ne connaît pas l'acompte : aucun n'est demandé.
+    regles.acomptePourcent = p.acompte_pourcent ?? 0;
+    if (p.acompte_delai_min) regles.acompteDelaiMin = p.acompte_delai_min;
   }
   if (t.joursFeries.length) joursFeries.splice(0, joursFeries.length, ...t.joursFeries);
 }
@@ -191,11 +198,11 @@ export const isoJour = (d: Date) =>
 export function majoration(date: Date, heure: string) {
   const h = parseInt(heure.split(':')[0], 10);
   const raisons: string[] = [];
-  if (h >= regles.nuitDebut || h < regles.nuitFin) raisons.push(`nuit (${regles.nuitDebut}h–${regles.nuitFin}h)`);
+  if (h >= regles.nuitDebut || h < regles.nuitFin) raisons.push(t('nuit ({debut}h–{fin}h)', { debut: regles.nuitDebut, fin: regles.nuitFin }));
   const j = date.getDay();
-  if (regles.majorationWeekend && j === 6) raisons.push('samedi');
-  if (regles.majorationWeekend && j === 0) raisons.push('dimanche');
-  if (joursFeries.includes(isoJour(date))) raisons.push('jour férié');
+  if (regles.majorationWeekend && j === 6) raisons.push(t('samedi'));
+  if (regles.majorationWeekend && j === 0) raisons.push(t('dimanche'));
+  if (joursFeries.includes(isoJour(date))) raisons.push(t('jour férié'));
   return raisons;
 }
 
@@ -211,12 +218,20 @@ export function prix(o: Offre, km: number, date: Date, heure: string, allerRetou
   return { montant: p, prixKm, raisons, auMinimum };
 }
 
-export const euros = (n: number) =>
-  n.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €';
+// Formats : français (93,50 €, « lun. 12 nov. », 14h30) ou anglais (€93.50, « Mon 12 Nov », 14:30).
+const nombre = (n: number, decimales: number) =>
+  n.toLocaleString(anglais() ? 'en-GB' : 'fr-FR', { minimumFractionDigits: decimales, maximumFractionDigits: decimales });
+export const euros = (n: number) => (anglais() ? `€${nombre(n, 2)}` : `${nombre(n, 2)} €`);
+export const kilometres = (km: number) => `${km.toLocaleString(anglais() ? 'en-GB' : 'fr-FR')} km`;
 
 const JOURS = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
 const MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
-export const dateCourte = (d: Date) => `${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}`;
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+export const dateCourte = (d: Date) =>
+  anglais() ? `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}` : `${JOURS[d.getDay()]} ${d.getDate()} ${MOIS[d.getMonth()]}`;
+/** « 14:30 » (heure saisie) affichée « 14h30 » en français, « 14:30 » en anglais. */
+export const heureAffichee = (h: string) => (anglais() ? h : h.replace(':', 'h'));
 export const duree = (min: number) =>
   min < 60 ? `${min} min` : `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')}`;
 
@@ -321,7 +336,11 @@ export const fabrice = {
 
 export function fraisAnnulation(depart: Date, maintenant = new Date()) {
   const heures = (depart.getTime() - maintenant.getTime()) / 36e5;
-  if (heures > 24) return { taux: 0, texte: 'Annulation gratuite (plus de 24 h avant la course).' };
-  if (heures > 12) return { taux: 0.5, texte: 'Annulation entre 24 h et 12 h : 50 % du montant.' };
-  return { taux: 1, texte: 'Moins de 12 h avant la course : 100 % du montant.' };
+  if (heures > 24) return { taux: 0, texte: t('Annulation gratuite (plus de 24 h avant la course).') };
+  if (heures > 12) return { taux: 0.5, texte: t('Annulation entre 24 h et 12 h : 50 % du montant.') };
+  return { taux: 1, texte: t('Moins de 12 h avant la course : 100 % du montant.') };
 }
+
+// Montant de l'acompte pour un prix (même calcul que la fonction montant_acompte de la base).
+export const montantAcompte = (prixCourse: number) =>
+  regles.acomptePourcent > 0 ? Math.max(1, Math.round(prixCourse * regles.acomptePourcent) / 100) : 0;

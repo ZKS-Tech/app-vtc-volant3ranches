@@ -7,6 +7,7 @@ import { avis, contact, euros, fabrice, faq, offres, photos, prestations, valeur
 import { Couleurs, f, radius, space } from '../../src/theme';
 import { useTheme } from '../../src/useTheme';
 import { Bouton, IconName, Titre, appelerFabrice } from '../../src/ui';
+import { t, L } from '../../src/i18n';
 
 export default function Decouvrir() {
   const { c, type, s } = useTheme(creerStyles);
@@ -14,10 +15,10 @@ export default function Decouvrir() {
   return (
     <ScrollView style={{ backgroundColor: c.sol }} contentContainerStyle={{ paddingBottom: space.xxl }}>
       <View style={s.hero}>
-        <Image source={photos.flotte} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityLabel="La Tesla et le Van dans les collines du Lauragais" />
+        <Image source={photos.flotte} style={StyleSheet.absoluteFill} contentFit="cover" accessibilityLabel={t('La Tesla et le Van dans les collines du Lauragais')} />
         <View style={s.voile} />
-        <Text style={s.heroTitre}>Votre chauffeur privé dans le Tarn</Text>
-        <Text style={[type.small, { color: c.surCuve2 }]}>Ponctuel, discret, disponible 24h/24 et 7j/7.</Text>
+        <Text style={s.heroTitre}>{t('Votre chauffeur privé dans le Tarn')}</Text>
+        <Text style={[type.small, { color: c.surCuve2 }]}>{t('Ponctuel, discret, disponible 24h/24 et 7j/7.')}</Text>
       </View>
 
       <View style={{ paddingHorizontal: space.l }}>
@@ -26,100 +27,100 @@ export default function Decouvrir() {
           <Image source={photos.fabrice} style={s.portrait} contentFit="cover" contentPosition="top" accessibilityLabel={fabrice.nom} />
           <View style={{ flex: 1 }}>
             <Text style={type.h3}>{fabrice.nom}</Text>
-            <Text style={[type.small, { marginTop: 4 }]}>{fabrice.bio}</Text>
+            <Text style={[type.small, { marginTop: 4 }]}>{t(fabrice.bio)}</Text>
           </View>
         </View>
-        <Text style={[type.body, { marginTop: space.m }]}>{fabrice.objectif}</Text>
+        <Text style={[type.body, { marginTop: space.m }]}>{t(fabrice.objectif)}</Text>
         <View style={s.valeurs}>
           {valeurs.map((v) => (
             <View key={v.titre} style={s.valeur}>
-              <Text style={s.valeurTitre}>{v.titre}</Text>
-              <Text style={type.small}>{v.texte}</Text>
+              <Text style={s.valeurTitre}>{t(v.titre)}</Text>
+              <Text style={type.small}>{t(v.texte)}</Text>
             </View>
           ))}
         </View>
 
-        <Titre>Les véhicules</Titre>
+        <Titre>{t('Les véhicules')}</Titre>
       </View>
       {offres.map((o) => (
         <View key={o.id} style={{ marginBottom: space.xl }}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: space.l, gap: space.s }}>
             {o.galerie.map((p, i) => (
-              <Image key={i} source={p} style={[s.galerie, i === 0 && { width: 280 }]} contentFit="cover" accessibilityLabel={`${o.vehicule}, photo ${i + 1}`} />
+              <Image key={i} source={p} style={[s.galerie, i === 0 && { width: 280 }]} contentFit="cover" accessibilityLabel={`${t(o.vehicule)}, photo ${i + 1}`} />
             ))}
           </ScrollView>
           <View style={{ paddingHorizontal: space.l, marginTop: space.m }}>
             <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: space.s }}>
-              <Text style={[type.h3, { flex: 1 }]}>{o.vehicule}</Text>
-              <Text style={s.tarif}>dès {euros(o.prixKmJour)}/km</Text>
+              <Text style={[type.h3, { flex: 1 }]}>{t(o.vehicule)}</Text>
+              <Text style={s.tarif}>{t('dès {prix}/km', { prix: euros(o.prixKmJour) })}</Text>
             </View>
             <Text style={type.small}>
-              {o.nom} · {o.passagersMax} passagers · {o.bagagesMax} bagages · minimum {euros(o.minimum)}
+              {t(o.nom)} · {t('{n} passagers', { n: o.passagersMax })} · {t('{n} bagages', { n: o.bagagesMax })} · {t('minimum {prix}', { prix: euros(o.minimum) })}
             </Text>
-            <Text style={[type.body, { marginTop: space.s }]}>{o.description}</Text>
-            <Text style={[type.small, { marginTop: space.s }]}>{o.equipements.join(' · ')}</Text>
+            <Text style={[type.body, { marginTop: space.s }]}>{t(o.description)}</Text>
+            <Text style={[type.small, { marginTop: space.s }]}>{o.equipements.map((e) => t(e)).join(' · ')}</Text>
           </View>
         </View>
       ))}
 
       <View style={{ paddingHorizontal: space.l }}>
-        <Titre style={{ marginTop: space.l }}>Prestations</Titre>
+        <Titre style={{ marginTop: space.l }}>{t('Prestations')}</Titre>
         <View style={s.bloc}>
           {prestations.map((p, i) => (
             <View key={p.titre} style={[s.prestation, i > 0 && s.trait]}>
               <Ionicons name={p.icone as IconName} size={24} color={c.accent} style={{ marginTop: 2 }} />
               <View style={{ flex: 1 }}>
-                <Text style={type.h3}>{p.titre}</Text>
-                <Text style={[type.small, { marginTop: 2 }]}>{p.texte}</Text>
-                <Text style={[type.small, { marginTop: space.s, color: c.feuilleEncre }]}>{p.points.join(' · ')}</Text>
+                <Text style={type.h3}>{t(p.titre)}</Text>
+                <Text style={[type.small, { marginTop: 2 }]}>{t(p.texte)}</Text>
+                <Text style={[type.small, { marginTop: space.s, color: c.feuilleEncre }]}>{p.points.map((x) => t(x)).join(' · ')}</Text>
                 {p.reservable ? null : (
-                  <Bouton titre="Demander un devis" variante="texte" icone="mail-outline" onPress={() => Linking.openURL(`mailto:${contact.email}?subject=Demande de devis`)} style={{ alignSelf: 'flex-start', marginTop: space.xs, marginLeft: -space.s }} />
+                  <Bouton titre={t('Demander un devis')} variante="texte" icone="mail-outline" onPress={() => Linking.openURL(`mailto:${contact.email}?subject=${encodeURIComponent(t('Demande de devis'))}`)} style={{ alignSelf: 'flex-start', marginTop: space.xs, marginLeft: -space.s }} />
                 )}
               </View>
             </View>
           ))}
         </View>
-        <Bouton titre="Réserver une course" onPress={() => router.navigate('/')} style={{ marginTop: space.l }} />
+        <Bouton titre={t('Réserver une course')} onPress={() => router.navigate('/')} style={{ marginTop: space.l }} />
 
-        <Titre>Ce que disent les passagers</Titre>
-        <Text style={[type.small, { marginBottom: space.m }]}>Avis publiés sur volant3ranches-vtc.fr</Text>
+        <Titre>{t('Ce que disent les passagers')}</Titre>
+        <Text style={[type.small, { marginBottom: space.m }]}>{t('Avis publiés sur volant3ranches-vtc.fr')}</Text>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingHorizontal: space.l, gap: space.m }}>
         {avis.map((a) => (
           <View key={a.nom} style={s.avis}>
-            <View style={{ flexDirection: 'row', gap: 2 }} accessibilityLabel="5 étoiles sur 5">
+            <View style={{ flexDirection: 'row', gap: 2 }} accessibilityLabel={t('5 étoiles sur 5')}>
               {[0, 1, 2, 3, 4].map((i) => <Ionicons key={i} name="star" size={14} color={c.accent} />)}
             </View>
-            <Text style={[type.body, { marginVertical: space.m }]}>« {a.texte} »</Text>
+            <Text style={[type.body, { marginVertical: space.m }]}>{L('« ', '“')}{t(a.texte)}{L(' »', '”')}</Text>
             <Text style={[type.body, { fontWeight: '700' }]}>{a.nom}</Text>
-            <Text style={type.small}>{a.contexte}</Text>
+            <Text style={type.small}>{t(a.contexte)}</Text>
           </View>
         ))}
       </ScrollView>
 
       <View style={{ paddingHorizontal: space.l }}>
-        <Titre>Questions fréquentes</Titre>
+        <Titre>{t('Questions fréquentes')}</Titre>
         <View style={s.bloc}>
           {faq.map((q, i) => (
             <View key={q.q} style={i > 0 && s.trait}>
               <Pressable onPress={() => setOuverte(ouverte === i ? null : i)} style={s.question} accessibilityRole="button" accessibilityState={{ expanded: ouverte === i }}>
-                <Text style={[type.body, { fontWeight: '600', flex: 1 }]}>{q.q}</Text>
+                <Text style={[type.body, { fontWeight: '600', flex: 1 }]}>{t(q.q)}</Text>
                 <Ionicons name={ouverte === i ? 'chevron-up' : 'chevron-down'} size={20} color={c.pierre} />
               </Pressable>
-              {ouverte === i ? <Text style={[type.small, { color: c.encre, paddingBottom: space.l, paddingRight: space.xl }]}>{q.r}</Text> : null}
+              {ouverte === i ? <Text style={[type.small, { color: c.encre, paddingBottom: space.l, paddingRight: space.xl }]}>{t(q.r)}</Text> : null}
             </View>
           ))}
         </View>
 
-        <Titre>Contact</Titre>
+        <Titre>{t('Contact')}</Titre>
         <View style={s.bloc}>
-          <LigneContact icone="call-outline" titre={contact.telephone} sous="Disponible 24h/24 et 7j/7" onPress={appelerFabrice} />
-          <LigneContact icone="mail-outline" titre={contact.email} sous="Réponse rapide" onPress={() => Linking.openURL(`mailto:${contact.email}`)} />
+          <LigneContact icone="call-outline" titre={contact.telephone} sous={t('Disponible 24h/24 et 7j/7')} onPress={appelerFabrice} />
+          <LigneContact icone="mail-outline" titre={contact.email} sous={t('Réponse rapide')} onPress={() => Linking.openURL(`mailto:${contact.email}`)} />
           <LigneContact icone="logo-instagram" titre="@volant3ranches" sous="Instagram" onPress={() => Linking.openURL(contact.instagram)} />
-          <LigneContact icone="location-outline" titre="Zone d'intervention" sous={contact.zone} />
+          <LigneContact icone="location-outline" titre={t("Zone d'intervention")} sous={t(contact.zone)} />
         </View>
         <Text style={[type.small, { marginTop: space.l }]}>
-          {contact.societe} · {contact.adresse}. Médiateur de la consommation : CM2C.
+          {contact.societe} · {contact.adresse}. {t('Médiateur de la consommation : CM2C.')}
         </Text>
       </View>
     </ScrollView>

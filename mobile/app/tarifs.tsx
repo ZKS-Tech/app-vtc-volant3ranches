@@ -2,10 +2,10 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { useChauffeur } from '../src/chauffeur';
-import { OffreId, dateCourte, joursFeries, offres, regles } from '../src/data';
+import { OffreId, dateCourte, euros, joursFeries, offres, regles } from '../src/data';
 import { useStore } from '../src/store';
 import { Couleurs, radius, sansContourWeb, space } from '../src/theme';
-import { Bouton, Compteur, Note, Titre, couleursSwitch } from '../src/ui';
+import { Bouton, Compteur, Note, Segment, Titre, couleursSwitch } from '../src/ui';
 import { EcranAvecClavier } from '../src/Clavier';
 import { useTheme } from '../src/useTheme';
 
@@ -15,12 +15,13 @@ const texte = (n: number) => String(n).replace('.', ',');
 // Tarifs et jours fériés : la base les applique immédiatement à toutes les nouvelles demandes.
 export default function Tarifs() {
   const { c, type, s } = useTheme(creerStyles);
-  const { majOffre, majParametres, ajouterJourFerie, retirerJourFerie, demo } = useChauffeur();
+  const { majOffre, majParametres, ajouterJourFerie, retirerJourFerie } = useChauffeur();
   useStore(); // se met à jour quand les tarifs changent
   const [prixForm, setPrixForm] = useState(() => Object.fromEntries(offres.map((o) => [o.id, { jour: texte(o.prixKmJour), majore: texte(o.prixKmMajore), minimum: texte(o.minimum) }])) as Record<OffreId, { jour: string; majore: string; minimum: string }>);
   const [nuit, setNuit] = useState({ debut: regles.nuitDebut, fin: regles.nuitFin });
   const [weekend, setWeekend] = useState(regles.majorationWeekend);
   const [attente, setAttente] = useState({ aeroport: regles.attenteAeroportMin, gare: regles.attenteGareMin, standard: regles.attenteStandardMin });
+  const [acompte, setAcompte] = useState({ pourcent: regles.acomptePourcent, delai: regles.acompteDelaiMin });
   const [nouveauFerie, setNouveauFerie] = useState('');
   const [etat, setEtat] = useState<{ quoi: string; ok?: string; erreur?: string } | null>(null);
 
@@ -39,7 +40,7 @@ export default function Tarifs() {
     <EcranAvecClavier style={{ backgroundColor: c.sol }}>
     <ScrollView style={{ backgroundColor: c.sol }} contentContainerStyle={{ padding: space.l, paddingBottom: space.xxl }} keyboardShouldPersistTaps="handled">
       <Text style={type.small}>
-        {demo ? 'Démonstration : les changements ne sont pas enregistrés.' : 'Les nouveaux tarifs s’appliquent tout de suite aux nouvelles demandes. Les courses déjà enregistrées gardent leur prix.'}
+        Les nouveaux tarifs s’appliquent tout de suite aux nouvelles demandes. Les courses déjà enregistrées gardent leur prix.
       </Text>
 
       {offres.map((o) => {
@@ -91,6 +92,30 @@ export default function Tarifs() {
         style={{ marginTop: space.m }}
       />
       {retour('param')}
+
+      <Titre>Acompte</Titre>
+      <Text style={[type.small, { marginBottom: space.m }]}>
+        Demandé quand vous acceptez une demande de l'appli : la course n'est confirmée qu'une fois l'acompte réglé. Remboursé si le client
+        annule plus de 24 h avant, conservé sinon (CGV). 0 % : confirmation directe, sans acompte.
+      </Text>
+      <View style={[s.bloc, { paddingVertical: space.s }]}>
+        <Compteur libelle={`Acompte : ${acompte.pourcent} %${acompte.pourcent ? ` (${euros(Math.max(1, Math.round(80 * acompte.pourcent) / 100))} sur 80 €)` : ''}`} icone="card-outline" valeur={acompte.pourcent} min={0} max={50} onChange={(n) => setAcompte((x) => ({ ...x, pourcent: n }))} />
+      </View>
+      <Text style={[type.label, { marginTop: space.l, marginBottom: space.s }]}>Délai pour régler l'acompte</Text>
+      <Segment
+        options={[{ id: '30', titre: '30 min' }, { id: '60', titre: '1 h' }, { id: '120', titre: '2 h' }]}
+        valeur={String(acompte.delai) as '30' | '60' | '120'}
+        onChange={(v) => setAcompte((x) => ({ ...x, delai: Number(v) }))}
+      />
+      <Bouton
+        titre="Enregistrer l'acompte"
+        variante="contour"
+        chargement={etat?.quoi === 'acompte' && !etat.ok && !etat.erreur}
+        onPress={() => faire('acompte', () => majParametres({ acompte_pourcent: acompte.pourcent, acompte_delai_min: acompte.delai }), 'Acompte enregistré.')}
+        style={{ marginTop: space.m }}
+      />
+      {retour('acompte')}
+
 
       <Titre>Jours fériés à venir</Titre>
       <View style={s.bloc}>

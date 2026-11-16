@@ -1,0 +1,20 @@
+# Secrets : jamais dans le dépôt, où qu'ils soient.
+# (mobile/.env est volontairement suivi : il ne contient que l'adresse du projet et la clé
+#  PUBLIQUE Supabase, publiques par conception. Rien d'autre ne doit y être ajouté.)
+.env
+.env.*
+!mobile/.env
+supabase/.env
+supabase/functions/.env
+*.pem
+*.key
+*.p8
+*.p12
+*.jks
+*.keystore
+*firebase-adminsdk*.json
+*service-account*.json
+cle-fcm*.json
+credentials.json
+supabase/.temp/
+supabase/.branches/

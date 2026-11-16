@@ -2,7 +2,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useChauffeur } from '../src/chauffeur';
 import { emailConnecte } from '../src/serveur';
 import { useStore } from '../src/store';
 import { Couleurs, radius, space } from '../src/theme';
@@ -13,12 +12,11 @@ import { useTheme } from '../src/useTheme';
 export default function Gestion() {
   const { c, type, s } = useTheme(creerStyles);
   const { apparence, setApparence, deconnecterChauffeur } = useStore();
-  const { demo } = useChauffeur();
   const [email, setEmail] = useState<string | null>(null);
   const [sortie, setSortie] = useState(false);
-  useEffect(() => { if (!demo) emailConnecte().then(setEmail); }, [demo]);
+  useEffect(() => { emailConnecte().then(setEmail); }, []);
 
-  const Lien = ({ icone, titre, sous, vers, trait }: { icone: IconName; titre: string; sous: string; vers: '/chiffre-affaires' | '/tarifs' | '/annonces'; trait?: boolean }) => (
+  const Lien = ({ icone, titre, sous, vers, trait }: { icone: IconName; titre: string; sous: string; vers: '/chiffre-affaires' | '/tarifs' | '/annonces' | '/documents' | '/emails'; trait?: boolean }) => (
     <Pressable onPress={() => router.push(vers)} style={({ pressed }) => [s.lien, trait && s.trait, pressed && { opacity: 0.6 }]} accessibilityRole="button">
       <Ionicons name={icone} size={22} color={c.accent} />
       <View style={{ flex: 1 }}>
@@ -32,9 +30,11 @@ export default function Gestion() {
   return (
     <ScrollView style={{ backgroundColor: c.sol }} contentContainerStyle={{ padding: space.l, paddingBottom: space.xxl }}>
       <View style={s.bloc}>
-        <Lien icone="stats-chart-outline" titre="Chiffre d'affaires" sous="Recettes, courses, kilomètres, annulations" vers="/chiffre-affaires" />
+        <Lien icone="receipt-outline" titre="Factures et bons de commande" sous="Totaux HT, TVA, TTC du mois, PDF, export comptable" vers="/documents" />
+        <Lien icone="stats-chart-outline" titre="Chiffre d'affaires" sous="Recettes, courses, kilomètres, annulations" vers="/chiffre-affaires" trait />
         <Lien icone="pricetags-outline" titre="Tarifs et jours fériés" sous="Prix au km, minimums, nuit, week-end, attentes" vers="/tarifs" trait />
         <Lien icone="megaphone-outline" titre="Annonces et absences" sous="Vacances, indisponibilités, informations aux clients" vers="/annonces" trait />
+        <Lien icone="mail-outline" titre="Emails" sous="Activer, copie pour vous, journal des envois" vers="/emails" trait />
       </View>
 
       <Titre>Être prévenu</Titre>
@@ -51,12 +51,12 @@ export default function Gestion() {
 
       <Titre>Compte</Titre>
       <View style={[s.bloc, { padding: space.l, gap: space.m }]}>
-        <Text style={type.body}>{demo ? 'Démonstration (sans compte)' : email ?? 'Compte chauffeur'}</Text>
+        <Text style={type.body}>{email ?? 'Compte chauffeur'}</Text>
         <Text style={type.small}>
-          {demo ? 'Les données sont fictives et rien n’est enregistré.' : 'Ce téléphone reste connecté à l’espace chauffeur jusqu’à la déconnexion.'}
+          Ce téléphone reste connecté à l’espace chauffeur jusqu’à la déconnexion.
         </Text>
         <Bouton
-          titre={demo ? 'Quitter la démonstration' : 'Se déconnecter'}
+          titre="Se déconnecter"
           variante="contour"
           icone="log-out-outline"
           chargement={sortie}

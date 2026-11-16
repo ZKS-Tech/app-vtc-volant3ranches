@@ -111,10 +111,21 @@ règles sont vérifiées par un jeu de 21 tests exécutés sur un PostgreSQL loc
    le client à la confirmation, au refus (motif), à l'annulation, au message, rappel la veille.
    Reste : **email récapitulatif** (Brevo). Test : version de développement (Expo Go Android ne reçoit
    plus les push).
-5. **Comptes clients** : passer du compte invité à un compte email pour retrouver ses courses sur un
+5. ✅ **Comptes clients** (migration 11) : passer du compte invité à un compte email pour retrouver ses courses sur un
    autre téléphone ; adresses favorites.
-6. **Statistiques et confidentialité** : GA4 avec consentement ; politique de confidentialité du site
-   mise à jour.
+6. ✅ **Statistiques et confidentialité** : GA4 avec consentement (fonction `stats`, relais côté
+   serveur, sans IP ni donnée personnelle) ; texte de politique de confidentialité prêt
+   (`docs/politique-confidentialite.md`) à publier sur le site. Suppression du compte depuis l'appli
+   (fonction `supprimer-compte`) et effacement automatique chaque nuit des données anciennes
+   (migration 15, `purger_donnees`).
+6 bis. ✅ **Version anglaise** (migration 16) : interface client en anglais selon la langue du téléphone
+   ou le choix du client, notifications et emails dans sa langue ; espace chauffeur toujours en
+   français. Fabrice se connecte avec ses identifiants depuis Profil › J'ai déjà un compte et arrive
+   directement dans son espace (plus de lien « Espace chauffeur » chez les clients).
+6 ter. ✅ **Avoirs** (migration 17) : avoir total ou partiel sur une facture, motif, remboursement ou
+   « à valoir », PDF et email au client ; totaux du mois nets des avoirs.
+6 quater. ✅ **Sécurité** (migration 18) : faille du rôle chauffeur corrigée, mode démonstration et
+   mode test retirés, limites anti-abus, audit automatique des droits dans les tests.
 7. **Publication** : version de développement (EAS), test par Fabrice et quelques clients, stores.
 
 **Messagerie client ↔ chauffeur** ✅ (demande de Fabrice) : une conversation par course, en temps réel
@@ -128,7 +139,7 @@ règles sont vérifiées par un jeu de 21 tests exécutés sur un PostgreSQL loc
   avant), qui ouvre une page de détail. Pendant une indisponibilité, les dates sont bloquées dans le
   choix de la date (sur deux mois) et la base refuse les demandes sur ces jours. Les courses déjà
   prévues sur la période sont signalées à Fabrice, sans annulation automatique.
-- **Acompte de 10 % pour confirmer** (décision de Fabrice) : Fabrice accepte la demande, le client paie
+- ✅ **Acompte de 10 % pour confirmer** (décision de Fabrice ; migration 8, fonctions `acompte`, `sumup-webhook`, `acompte-rembourser`) : Fabrice accepte la demande, le client paie
   l'acompte dans l'appli, et seulement alors la course passe à « Confirmée ». Sans paiement dans le
   délai, la demande expire. Le reste est payé à bord (terminal SumUp, espèces) ou dans l'appli.
   Prestataire envisagé : **SumUp** (déjà utilisé par Fabrice), paiement en ligne via une fonction
@@ -142,6 +153,17 @@ règles sont vérifiées par un jeu de 21 tests exécutés sur un PostgreSQL loc
   3. Courses saisies par téléphone : Fabrice envoie un lien de paiement, au choix par email
      automatique ou en le partageant lui-même (SMS, WhatsApp…).
   4. Terme retenu : « acompte » (CGV du site à mettre à jour : 10 %, règles de remboursement).
+
+- ✅ **Factures et bons de commande** (demande de Fabrice, modèles V2 ; migration 9, fonction
+  `document-pdf`) : bon de commande automatique à la confirmation, facture à la fin de course avec le
+  mode de paiement, numérotation sans trou, pièces figées, PDF fidèles aux modèles, écran de contrôle
+  mensuel (HT, TVA, TTC, modes de paiement, courses non facturées) et export tableur. À venir : avoirs.
+
+- ✅ **Mode test (faux argent)** (migration 10) : paiements et remboursements simulés pour essayer tout
+  le parcours ; pièces numérotées à part (TEST-…), effaçables, sans toucher aux vrais numéros.
+
+- ✅ **Emails** (Brevo ; migration 12, fonction `emails`) : file d'attente en base, envoi avec PDF
+  (bon de commande, facture), relances automatiques, journal pour Fabrice ; mot de passe oublié par code.
 
 **Ensuite :** SMS, suivi de Fabrice en approche, version anglaise, paiement en ligne, factures
 entreprise, formulaire du site branché sur la même base.

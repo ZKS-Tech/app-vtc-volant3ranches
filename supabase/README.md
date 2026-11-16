@@ -98,6 +98,295 @@ puis **Run**. Fabrice publie ses annonces depuis l'appli (Gestion › Annonces e
 
 Table `annonces` ; visible par tous pour les annonces en cours et à venir, modifiable par Fabrice seul.
 
+## Acompte de 10 % avec SumUp (migration 8 et fonctions serveur)
+
+Quand Fabrice accepte une demande, le client doit régler un acompte (10 % par défaut, 1 h pour payer)
+sur la page de paiement sécurisée de SumUp ; la course n'est confirmée qu'à réception. Sans paiement
+dans le délai, la demande expire. Annulation : acompte remboursé si le client annule plus de 24 h
+avant ou si Fabrice annule, conservé sinon (CGV). Pour une course saisie par Fabrice, il peut envoyer
+un lien de paiement (partage ou email). Réglages : espace chauffeur › Gestion › Tarifs › Acompte
+(0 % = pas d'acompte).
+
+### 1. Base de données (deux fichiers, dans cet ordre)
+
+**SQL Editor** › **New query** : coller [`migrations/20261111000000_acompte_statuts.sql`](migrations/20261111000000_acompte_statuts.sql),
+**Run**. Puis une **nouvelle** requête avec [`migrations/20261111000001_acompte.sql`](migrations/20261111000001_acompte.sql),
+**Run**. (PostgreSQL refuse d'utiliser un nouveau statut dans la même exécution que sa création.)
+
+L'acompte est à **0 %** après la migration : rien ne change pour les clients tant que SumUp n'est pas
+prêt. Une fois les étapes 2 et 3 faites, le passer à 10 % dans l'appli (Gestion › Tarifs › Acompte).
+
+### 2. Clés SumUp (dans l'espace SumUp de Fabrice)
+
+- **Clé API secrète** : rubrique développeurs / clés API de l'espace SumUp (elle commence par
+  `sup_sk_`). Elle donne accès aux paiements : **ne jamais l'envoyer par message ni la mettre dans le
+  code**, la coller uniquement dans Supabase (ci-dessous).
+- **Code marchand** : visible dans le profil SumUp (commence souvent par `M`).
+- Vérifier que les **paiements en ligne** sont activés sur le compte.
+
+Dans Supabase : **Edge Functions** › **Secrets** (ou Project Settings › Edge Functions) › ajouter
+`SUMUP_API_KEY` et `SUMUP_MERCHANT_CODE`.
+
+### 3. Fonctions serveur (trois, depuis le tableau de bord)
+
+**Edge Functions** › **Deploy a new function** › **Via Editor**, pour chacune : nom **exact**, coller
+le contenu du fichier, **Deploy**, puis dans ses réglages **désactiver « Verify JWT »** (les fonctions
+vérifient elles-mêmes la session ; SumUp n'envoie pas de jeton).
+
+| Nom | Fichier | Rôle |
+|---|---|---|
+| `acompte` | [`functions/acompte/index.ts`](functions/acompte/index.ts) | crée la page de paiement SumUp |
+| `sumup-webhook` | [`functions/sumup-webhook/index.ts`](functions/sumup-webhook/index.ts) | reçoit l'avis de SumUp, vérifie le paiement, confirme la course |
+| `acompte-rembourser` | [`functions/acompte-rembourser/index.ts`](functions/acompte-rembourser/index.ts) | rembourse selon les CGV après une annulation |
+
+Avec la CLI Supabase, c'est équivalent : `supabase functions deploy` (les réglages sont dans `config.toml`).
+
+### 4. Premier essai
+
+Réserver une course courte depuis l'appli, l'accepter côté Fabrice, payer l'acompte avec une vraie
+carte (1 € minimum), vérifier que la course passe à « Confirmée », puis l'annuler côté client
+(plus de 24 h avant) : l'acompte doit être remboursé. Contrôles : **Table Editor** › `paiements`, et
+**Edge Functions** › `sumup-webhook` › **Logs**.
+
+Sécurité : le message de SumUp n'est pas signé, la fonction relit donc toujours le paiement chez SumUp
+avant de confirmer ; un client ne peut ni se déclarer payé, ni confirmer sa course, ni déclencher un
+remboursement non prévu par les CGV (vérifié par les tests).
+
+## Factures et bons de commande (migration 9 et fonction document-pdf)
+
+D'après les modèles V2 de Fabrice (logo, mentions légales, TVA 10 %) :
+
+- **Bon de commande** (BC-AAAA-0001) : émis automatiquement à chaque course confirmée (acompte payé,
+  confirmation directe ou course saisie par Fabrice).
+- **Facture** (F-AAAA-0001) : émise par Fabrice quand il marque la course « effectuée » et choisit le
+  mode de paiement (carte, espèces, chèque, virement), ou pour des frais d'annulation. L'acompte payé
+  en ligne est déduit.
+- Numérotation continue par année, sans trou ; une pièce émise ne peut être ni modifiée ni supprimée
+  (même depuis le tableau de bord Supabase). Une erreur se corrigera par un avoir (à venir).
+- Adresse de facturation et entreprise : sur la fiche du client (espace chauffeur › Clients). Chaque
+  fiche a un numéro client (C-0001).
+- Suivi : Gestion › **Factures et bons de commande** (totaux HT, TVA, TTC du mois, répartition par
+  mode de paiement, courses effectuées non facturées, export tableur). Le client retrouve ses pièces
+  dans le détail de sa course.
+
+Mise en place :
+
+1. **SQL Editor** › coller [`migrations/20261112000000_factures.sql`](migrations/20261112000000_factures.sql) › **Run**.
+   Elle crée aussi l'espace de stockage privé `documents` (vérifier dans **Storage** ; sinon le créer
+   à la main : nom `documents`, **non public**).
+2. **Edge Functions** › Deploy a new function › Via Editor › nom `document-pdf`, coller
+   [`functions/document-pdf/index.ts`](functions/document-pdf/index.ts), **Deploy**, puis désactiver
+   « Verify JWT ». Le PDF est créé à la première ouverture puis conservé.
+
+Ligne d'arrondi (migration 14, [`migrations/20261117000000_arrondi.sql`](migrations/20261117000000_arrondi.sql)) :
+le prix au km HT est affiché au millième, et la seule différence restante est l'« Arrondi tarifaire
+à 0,50 € » (les écarts d'un centime sont intégrés à la ligne principale).
+
+Les informations de l'entreprise (raison sociale, siège, SIREN, n° de TVA, taux de TVA) sont dans
+**Table Editor** › `parametres` ; elles sont recopiées dans chaque pièce au moment de l'émission.
+
+## Mode test : faux argent (migration 10) — supprimé
+
+Le mode test a été retiré avant la publication (migration 18) : plus aucun faux paiement possible,
+même par erreur de réglage. Les anciennes pièces TEST-… disparaissent avec la remise à zéro.
+
+## Comptes clients (migration 11)
+
+**SQL Editor** › coller [`migrations/20261114000000_comptes.sql`](migrations/20261114000000_comptes.sql) › **Run**.
+
+Dans l'appli : Profil › **Créer un compte** (nom, téléphone, email, mot de passe). Le compte invité du
+téléphone devient un compte permanent : les courses déjà réservées sont conservées. **J'ai déjà un
+compte** : sur un autre téléphone, les courses réservées en invité y sont rattachées. Les coordonnées
+sont préremplies à chaque réservation.
+
+Réglage Supabase à faire une fois : **Authentication** › **Sign In / Providers** › **Email** :
+- « Email » activé (c'est déjà le cas pour le compte de Fabrice) ;
+- **« Confirm email » désactivé pour l'instant** : le service d'email intégré de Supabase n'envoie
+  qu'aux membres de l'équipe et quelques messages par heure. On le réactivera avec l'envoi d'emails
+  par Brevo (prochaine étape), en même temps que « mot de passe oublié ».
+
+## Droits des fonctions serveur (migration 13) — à faire avant les emails, les PDF et SumUp
+
+**SQL Editor** › coller [`migrations/20261116000000_droits_serveur.sql`](migrations/20261116000000_droits_serveur.sql) › **Run**.
+Les projets Supabase récents ne donnent plus automatiquement accès aux tables au rôle des fonctions
+serveur (`service_role`) : sans cette migration, elles échouent avec « permission denied ». Les
+clients de l'appli ne gagnent aucun droit.
+
+## Emails avec Brevo (migration 12 et fonction emails)
+
+Envoyés au client : demande reçue, acompte à régler, confirmation avec le **bon de commande en PDF**,
+refus, acompte non réglé, annulation, remboursement, **facture en PDF**. À Fabrice (copie, désactivable) :
+nouvelle demande, annulation par un client. La base met chaque email en file d'attente ; la fonction
+`emails` les envoie par Brevo, réessaie en cas d'échec (5 tentatives) et ne renvoie jamais deux fois
+le même. Journal et réglages : espace chauffeur › Gestion › **Emails**.
+
+1. **SQL Editor** › coller [`migrations/20261115000000_emails.sql`](migrations/20261115000000_emails.sql) › **Run**.
+   Les emails restent désactivés tant qu'on ne les active pas dans l'appli.
+2. **Compte Brevo** (brevo.com, offre gratuite : 300 emails par jour) créé avec l'email de l'entreprise.
+3. **Expéditeur**, dans Brevo › *Senders, Domains & Dedicated IPs* :
+   - pour tester tout de suite : ajouter une adresse d'expéditeur et la valider avec le lien reçu ;
+   - pour de vrai : **ajouter le domaine** `volant3ranches-vtc.fr`. Brevo donne 3 ou 4 enregistrements
+     DNS (code Brevo, DKIM, DMARC) à ajouter chez l'hébergeur du domaine, puis « Authenticate ». Sans
+     cela, les emails risquent d'arriver dans les spams.
+4. **Clé API** : Brevo › *SMTP & API* › *API Keys* › Generate. Dans Supabase › Edge Functions ›
+   **Secrets**, ajouter :
+   - `BREVO_API_KEY` = la clé (`xkeysib-…`) — secrète, à ne jamais envoyer par message ;
+   - `EMAIL_EXPEDITEUR` = l'adresse d'expéditeur validée (ex. `reservation@volant3ranches-vtc.fr`) ;
+   - facultatif : `EMAIL_NOM` (par défaut « Volant3ranches VTC ») et `EMAIL_REPONSE` (adresse des réponses).
+5. **Fonctions** : redéployer `document-pdf` (nouveau code : elle fournit les PDF à la fonction
+   d'emails), puis déployer **`emails`** ([`functions/emails/index.ts`](functions/emails/index.ts)),
+   « Verify JWT » désactivé.
+6. **Dans l'appli** (Fabrice) : Gestion › Emails › activer, et indiquer son email pour les copies.
+
+### Mot de passe oublié (code par email)
+
+Les clients reçoivent un **code à 6 chiffres** (pas de lien à ouvrir). Ces emails-là sont envoyés par
+Supabase lui-même, il faut donc lui donner Brevo comme serveur d'envoi :
+
+1. Brevo › *SMTP & API* › onglet **SMTP** : noter le serveur (`smtp-relay.brevo.com`), le port (587),
+   l'identifiant, et générer une **clé SMTP**.
+2. Supabase › **Authentication** › **Emails** (ou Settings › SMTP) › **Enable custom SMTP** : ces valeurs,
+   l'expéditeur (même adresse que ci-dessus) et le nom « Volant3ranches VTC ».
+3. Supabase › Authentication › **Emails** › modèle **Magic Link** : remplacer le contenu par
+
+   ```html
+   <h2>Votre code Volant3ranches</h2>
+   <p>Pour choisir un nouveau mot de passe, saisissez ce code dans l'application :</p>
+   <p style="font-size:28px;font-weight:bold;letter-spacing:4px">{{ .Token }}</p>
+   <p>Il est valable une heure. Si vous n'avez rien demandé, ignorez cet email.</p>
+   ```
+
+   et le sujet par « Votre code Volant3ranches ».
+
+**À surveiller** : la clé SMTP de Brevo expire au bout d'un an (date choisie à sa création, ici
+novembre 2027) et après 90 jours sans aucun email de code. Si un client ne reçoit plus son code :
+Brevo › SMTP et API › SMTP › générer une nouvelle clé, puis la coller dans Supabase (SMTP Settings ›
+Password). La clé API des autres emails (`BREVO_API_KEY`) expire seulement après 90 jours sans envoi.
+
+## Statistiques GA4 (fonction stats)
+
+Seulement pour les clients qui acceptent (question posée une fois sur l'accueil, modifiable dans
+Profil) ; jamais pour Fabrice. L'appli envoie ses événements à la fonction `stats`, qui les relaie à
+Google Analytics depuis Supabase : la clé GA4 reste secrète et Google ne reçoit ni l'adresse IP du
+téléphone, ni nom, téléphone, email ou adresse. Événements : `ouverture_app`, `raccourci_aeroport_gare`,
+`adresse_saisie`, `estimation_affichee`, `offre_choisie`, `coordonnees_saisies`, `demande_envoyee`,
+`demande_echec_envoi`, `demande_confirmee`, `demande_refusee`, `acompte_paye`, `annulation`,
+`appel_chauffeur`, `message_envoye`, `compte_cree`, `connexion_compte`, `document_ouvert`.
+
+1. **Propriété GA4 dédiée à l'appli** (créée avec le compte Google de l'entreprise) : Admin › Créer ›
+   Propriété « Volant3ranches – Application », France, euro. Plateforme : **Web** (le relais utilise un
+   identifiant de flux Web, pas l'outil Firebase), URL du site, flux « Application », **Mesure
+   améliorée désactivée**. Noter l'**ID de mesure** (`G-…`). (La propriété du site peut aussi servir ;
+   les deux se comparent ensuite dans Looker Studio.)
+2. Dans ce flux › **Measurement Protocol API secrets** › Créer (nom « Appli VTC ») : noter le secret.
+3. Supabase › Edge Functions › **Secrets** : `GA4_MEASUREMENT_ID` = `G-…`, `GA4_API_SECRET` = le secret.
+4. Déployer la fonction **`stats`** ([`functions/stats/index.ts`](functions/stats/index.ts)),
+   « Verify JWT » désactivé.
+5. GA4 › Admin › **Conservation des données** : 14 mois (comme annoncé dans la politique de
+   confidentialité). Admin › **Définitions personnalisées** : déclarer les paramètres utiles comme
+   dimensions (`offre`, `type_lieu`, `raccourci`, `majoration`, `statut`) et métriques (`prix`, `km`).
+6. Vérifier : GA4 › Rapports › **Temps réel** après avoir accepté les statistiques et fait une
+   réservation (quelques minutes de délai possibles).
+
+Sans les secrets, la fonction ignore simplement les événements : l'appli n'est jamais gênée.
+
+## Suppression de compte et effacement automatique (migration 15 et fonction supprimer-compte)
+
+Obligatoire pour les stores (Google Play et Apple exigent la suppression du compte depuis l'appli) et
+pour respecter les durées annoncées dans la politique de confidentialité.
+
+1. SQL Editor : exécuter [`20261118000000_effacement.sql`](migrations/20261118000000_effacement.sql).
+2. Edge Functions › Deploy a new function › **`supprimer-compte`**, coller
+   [`functions/supprimer-compte/index.ts`](functions/supprimer-compte/index.ts), **« Verify JWT »
+   désactivé**. Aucun secret à ajouter (elle utilise les clés du projet, déjà présentes).
+3. Essai : dans l'appli, en invité, faire une demande puis l'annuler ; Profil › Confidentialité ›
+   **Effacer mes données** › Supprimer. Dans Table Editor › `courses`, la course porte maintenant
+   « Client supprimé » ; dans Authentication › Users, l'ancien invité a disparu (un nouveau l'a remplacé).
+
+Ce que fait la suppression : refus s'il reste une course à venir (à annuler d'abord) ; courses
+passées anonymisées (nom, téléphone, email, adresses personnelles, commentaire, vol/train) mais
+gardées pour le chiffre d'affaires (date, offre, km, prix, villes, aéroports, gares) ; messages,
+téléphone (notifications), profil, fiche client et accès effacés. Bons de commande et factures déjà
+émis : conservés 10 ans (ils sont figés). Le compte de Fabrice ne peut pas être supprimé ainsi.
+
+Chaque nuit à 3 h 17 (`purger_donnees`, tâche `volant3ranches-effacement`) : courses de plus de 3 ans
+et fiches clients sans course depuis 3 ans anonymisées ; journal des emails de plus d'un an effacé ;
+téléphones inactifs depuis un an oubliés ; invités sans aucune course après 30 jours et comptes
+inactifs depuis 3 ans supprimés ; pièces comptables et paiements de plus de 10 ans effacés. Pour
+lancer l'effacement à la main et voir le bilan : `select public.purger_donnees();`
+
+## Version anglaise (migration 16)
+
+L'appli client s'affiche en anglais quand le téléphone n'est pas en français (modifiable dans
+Profil › Langue). Ses notifications et ses emails suivent la langue du client ; Fabrice reçoit tout
+en français, avec la mention « anglais » sur la demande. Bons de commande et factures : en français.
+
+1. SQL Editor : exécuter [`20261119000000_langue.sql`](migrations/20261119000000_langue.sql).
+2. Edge Functions › **`emails`** › remplacer le code par
+   [`functions/emails/index.ts`](functions/emails/index.ts) › Deploy (« Verify JWT » toujours désactivé).
+3. Essai : téléphone réglé en anglais (ou Profil › Langue › English), faire une demande : la
+   notification de confirmation et l'email arrivent en anglais.
+
+Ajouter un texte dans l'appli : l'écrire en français dans `t('…')`, puis sa traduction dans
+`mobile/src/traductions.ts` ; `node scripts/verifier-traductions.mjs` (dans `mobile/`) liste les oublis.
+
+## Avoirs (migration 17)
+
+Une facture émise ne se modifie pas : pour la corriger ou rembourser un client, Fabrice émet un
+**avoir** depuis la course (Documents › « Avoir sur F-… »).
+- **Partiel** : un montant TTC (geste commercial, attente non due…).
+- **Total** : annule la facture ; la course peut ensuite être refacturée avec un nouveau numéro.
+- Motif obligatoire (imprimé sur l'avoir) ; remboursement par carte, espèces, chèque ou virement, ou
+  « à valoir » sur une prochaine course. Fabrice rembourse lui-même : l'avoir ne déclenche aucun
+  paiement.
+- Numéro AV-AAAA-0001, montants négatifs : dans Factures et bons, le total du mois est net des avoirs.
+- Le client reçoit l'avoir en PDF par email (en anglais si son appli est en anglais).
+
+1. SQL Editor : exécuter [`20261120000000_avoirs.sql`](migrations/20261120000000_avoirs.sql).
+2. Edge Functions : remplacer le code de **`document-pdf`** et de **`emails`** par les nouvelles
+   versions ([`functions/document-pdf/index.ts`](functions/document-pdf/index.ts),
+   [`functions/emails/index.ts`](functions/emails/index.ts)) › Deploy.
+
+## Sécurité (migration 18) — à faire avant la publication
+
+1. SQL Editor : exécuter [`20261121000000_securite.sql`](migrations/20261121000000_securite.sql).
+   - **Faille corrigée** : un client pouvait se donner le rôle « chauffeur » (Supabase ouvre par
+     défaut toutes les tables en écriture ; seule la RLS filtrait, et le rôle n'était protégé que
+     par un droit par colonne). Désormais un déclencheur refuse tout changement de rôle venant de
+     l'appli. Seul le SQL Editor (ou le tableau de bord) peut donner le rôle chauffeur.
+   - Mode test supprimé (fonctions de faux paiement effacées, réglage verrouillé).
+   - Limites anti-abus : 5 demandes en attente et 10 demandes par 24 h par client ; 20 messages
+     par heure.
+   - Les nouvelles fonctions ne sont plus appelables par défaut depuis l'appli.
+2. Edge Functions : redéployer **`acompte`** et **`acompte-rembourser`** (message d'erreur sans
+   détail du compte marchand, diagnostic SumUp retiré).
+3. Contrôle : Supabase › **Advisors › Security Advisor** : aucune alerte « RLS disabled » ni
+   « security definer » ouverte inattendue.
+4. Réglages du tableau de bord :
+   - Authentication › Rate Limits : laisser les limites par défaut (inscriptions anonymes,
+     emails, codes).
+   - Authentication › Attack Protection : activer le **CAPTCHA** (hCaptcha ou Turnstile, gratuits)
+     si des inscriptions anonymes en masse apparaissent.
+5. Google Cloud (projet Firebase) › API et services › Identifiants › clé « Android key » :
+   **restreindre aux applications Android** `fr.volant3ranches.app` (+ empreinte SHA-1 donnée par
+   `npx eas-cli credentials`). La clé est dans l'appli par conception, la restriction empêche de
+   l'utiliser ailleurs.
+
+Les tests de la base (`npm test` dans `supabase/tests`) reproduisent les droits par défaut de
+Supabase et vérifient : RLS active sur toutes les tables, liste exacte des fonctions appelables par
+un visiteur et par un client, impossibilité de devenir chauffeur.
+
+## Avant l'ouverture aux clients : remise à zéro (une seule fois)
+
+Les essais ont consommé de vrais numéros (BC-…, F-…, AV-…) : les factures réelles doivent
+commencer à 0001, sans trou.
+1. SQL Editor : exécuter [`scripts/remise-a-zero-lancement.sql`](scripts/remise-a-zero-lancement.sql).
+   Il efface courses, pièces, emails, fiches et comptes d'essai ; il garde le compte de Fabrice,
+   les tarifs, les réglages et les annonces. Il refuse de tourner s'il trouve plus de 100 pièces
+   réelles (appli déjà en service).
+2. Storage › `documents` › tout sélectionner › Delete (anciens PDF).
+3. Sur les téléphones d'essai : se déconnecter, ou désinstaller et réinstaller l'appli.
+
 ## Tester la confirmation en temps réel
 
 Avec deux téléphones (ou un téléphone et le navigateur) : envoyez une demande côté client, puis
@@ -117,4 +406,10 @@ Les règles de prix et de sécurité sont vérifiées sur un PostgreSQL local, s
 cd supabase/tests && npm install && npm test
 ```
 
-Les 73 vérifications doivent afficher « OK ».
+Les 178 vérifications doivent afficher « OK ».
+
+Fonctions serveur (SumUp et la base simulés, aucun appel réel) :
+
+```bash
+cd supabase/functions && npx deno test --allow-env --allow-net --allow-read tests/
+```

@@ -8,6 +8,7 @@ import type { Course } from './store';
 import { f, space } from './theme';
 import { Bouton, appelerFabrice } from './ui';
 import { useTheme } from './useTheme';
+import { t, L } from './i18n';
 
 // Le délai de confirmation : Fabrice s'engage à répondre sous 30 minutes.
 // L'anneau se remplit avec le temps écoulé depuis l'envoi ; au-delà, on invite à l'appeler.
@@ -16,7 +17,7 @@ const DELAI_MIN = 30;
 const TAILLE = 76, EPAISSEUR = 7, R = (TAILLE - EPAISSEUR) / 2, CIRC = 2 * Math.PI * R;
 const AnimatedCircle = Reanimated.createAnimatedComponent(Circle);
 
-const heure = (d: Date) => `${d.getHours()}h${String(d.getMinutes()).padStart(2, '0')}`;
+const heure = (d: Date) => `${d.getHours()}${L('h', ':')}${String(d.getMinutes()).padStart(2, '0')}`;
 
 export function DelaiConfirmation({ course }: { course: Course }) {
   const { c, type } = useTheme();
@@ -28,14 +29,14 @@ export function DelaiConfirmation({ course }: { course: Course }) {
 
   useEffect(() => {
     // Le temps restant se compte en minutes : une mise à jour toutes les 15 s suffit.
-    const t = setInterval(() => setMaintenant(new Date()), 15000);
+    const id = setInterval(() => setMaintenant(new Date()), 15000);
     if (!calme) {
       souffle.value = withRepeat(withSequence(
         withTiming(1, { duration: 1100, easing: Easing.inOut(Easing.sin) }),
         withTiming(0, { duration: 1100, easing: Easing.inOut(Easing.sin) }),
       ), -1, false);
     }
-    return () => clearInterval(t);
+    return () => clearInterval(id);
   }, [calme]);
 
   const ecouleMin = Math.max(0, (maintenant.getTime() - envoi.getTime()) / 60000);
@@ -57,8 +58,8 @@ export function DelaiConfirmation({ course }: { course: Course }) {
       accessible
       accessibilityLiveRegion="polite"
       accessibilityLabel={depasse
-        ? 'Fabrice n’a pas encore répondu. Appelez-le directement.'
-        : `En attente de Fabrice. Réponse attendue avant ${heure(limite)}, dans ${reste} minutes.`}
+        ? t('Fabrice n’a pas encore répondu. Appelez-le directement.')
+        : t('En attente de Fabrice. Réponse attendue avant {heure}, dans {n} minutes.', { heure: heure(limite), n: reste })}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.l }}>
         <View style={{ width: TAILLE, height: TAILLE }}>
@@ -85,19 +86,19 @@ export function DelaiConfirmation({ course }: { course: Course }) {
         <View style={{ flex: 1 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.s }}>
             <Reanimated.View style={[s.point, { backgroundColor: couleur }, stylePoint]} />
-            <Text style={[type.h3, { flex: 1 }]}>{depasse ? 'Toujours en attente' : 'En attente de Fabrice'}</Text>
+            <Text style={[type.h3, { flex: 1 }]}>{depasse ? t('Toujours en attente') : t('En attente de Fabrice')}</Text>
           </View>
           <Text style={[type.small, { marginTop: 4 }]}>
-            Envoyée à {heure(envoi)} · réponse attendue avant {heure(limite)}
+            {t('Envoyée à {envoi} · réponse attendue avant {limite}', { envoi: heure(envoi), limite: heure(limite) })}
           </Text>
         </View>
       </View>
       {depasse ? (
         <View style={{ marginTop: space.m, gap: space.s }}>
           <Text style={[type.small, { color: c.encre }]}>
-            Fabrice n’a pas encore répondu, il est peut-être en course. Appelez-le : il répond 24h/24.
+            {t('Fabrice n’a pas encore répondu, il est peut-être en course. Appelez-le : il répond 24h/24.')}
           </Text>
-          <Bouton titre="Appeler Fabrice" variante="contour" icone="call-outline" onPress={appelerFabrice} />
+          <Bouton titre={t('Appeler Fabrice')} variante="contour" icone="call-outline" onPress={appelerFabrice} />
         </View>
       ) : null}
     </View>

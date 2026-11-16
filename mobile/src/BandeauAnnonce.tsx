@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Annonce, retourLe, titreAnnonce, useAnnonces } from './annonces';
 import { Couleurs, radius, space } from './theme';
 import { useTheme } from './useTheme';
+import { t, pluriel } from './i18n';
 
 // Bandeau de l'accueil client : l'annonce la plus proche, touchable pour lire le détail.
 export function BandeauAnnonce() {
@@ -22,8 +23,8 @@ export function CarteAnnonce({ a, autres = 0, sansLien }: { a: Annonce; autres?:
       <View style={{ flex: 1 }}>
         <Text style={[type.body, { fontWeight: '700', color: encre }]}>{titreAnnonce(a)}</Text>
         {a.message ? <Text style={[type.small, { color: c.encre, marginTop: 2 }]} numberOfLines={sansLien ? undefined : 2}>{a.message}</Text> : null}
-        {a.bloquer ? <Text style={[type.small, { color: c.encre, marginTop: 2 }]}>Réservations possibles à partir du {retourLe(a)}.</Text> : null}
-        {autres > 0 ? <Text style={[type.label, { color: encre, marginTop: space.xs }]}>+ {autres} autre{autres > 1 ? 's' : ''} annonce{autres > 1 ? 's' : ''}</Text> : null}
+        {a.bloquer ? <Text style={[type.small, { color: c.encre, marginTop: 2 }]}>{t('Réservations possibles à partir du {jour}.', { jour: retourLe(a) })}</Text> : null}
+        {autres > 0 ? <Text style={[type.label, { color: encre, marginTop: space.xs }]}>+ {pluriel(autres, ['autre annonce', 'autres annonces'], ['more notice', 'more notices'])}</Text> : null}
       </View>
       {sansLien ? null : <Ionicons name="chevron-forward" size={18} color={encre} style={{ alignSelf: 'center' }} />}
     </>

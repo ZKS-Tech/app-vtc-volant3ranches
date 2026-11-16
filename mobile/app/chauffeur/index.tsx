@@ -20,7 +20,7 @@ const MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 
 export default function TableauDeBord() {
   const { c, type, s } = useTheme(creerStyles);
   const insets = useSafeAreaInsets();
-  const { missions, demo, chargement, erreur, recharger } = useChauffeur();
+  const { missions, chargement, erreur, recharger } = useChauffeur();
   const maintenant = useMaintenant();
   const { conversationsNonLues, nonLus, messagesDe } = useMessagerie();
   const absence = useAnnonces().visibles.find((a) => a.bloquer);
@@ -55,11 +55,6 @@ export default function TableauDeBord() {
       </View>
 
       <View style={{ paddingHorizontal: space.l }}>
-        {demo ? (
-          <View style={{ marginTop: space.l }}>
-            <Note ton="bain" icone="eye-outline">Démonstration : clients et courses fictifs. Rien n'est enregistré.</Note>
-          </View>
-        ) : null}
         {absence ? (
           <Pressable onPress={() => router.push({ pathname: '/annonce-edition', params: { id: absence.id } })} style={{ marginTop: space.l }} accessibilityRole="button">
             <Note ton="alerte" icone="calendar-outline">

@@ -8,13 +8,16 @@ import { dateCourte, duree, euros, fraisAnnulation, offre } from '../../src/data
 import { Couleurs, f, radius, sansContourWeb, space } from '../../src/theme';
 import { Bouton, Ligne, Note, Teinture, Titre, teintesDe } from '../../src/ui';
 import { useMessagerie } from '../../src/messagerie';
+import { AcompteChauffeur } from '../../src/AcompteChauffeur';
+import { FaireAvoir, Facturer, ListeDocuments, useDocumentsCourse } from '../../src/Documents';
+import { resteFacture } from '../../src/serveur';
 import { useTheme } from '../../src/useTheme';
 
 // Une course vue par Fabrice : le client, le trajet, les actions selon le statut.
 export default function Mission() {
   const { c, type, s } = useTheme(creerStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { missions, fiche, terminer, annuler, noter } = useChauffeur();
+  const { missions, fiche, terminer, annuler, noter, facturer } = useChauffeur();
   const { nonLus } = useMessagerie();
   const maintenant = useMaintenant();
   const m = missions.find((x) => x.id === id);
@@ -24,6 +27,10 @@ export default function Mission() {
   const [frais, setFrais] = useState('');
   const [action, setAction] = useState<string | null>(null);
   const [erreur, setErreur] = useState('');
+  const [finCourse, setFinCourse] = useState(false);
+  const { docs } = useDocumentsCourse(id);
+  // Une facture « en cours » n'est pas entièrement annulée par des avoirs (sinon on peut refacturer).
+  const factureEnCours = docs.some((d) => d.type === 'facture' && resteFacture(d, docs) > 0);
   useEffect(() => { setNote(m?.note_chauffeur ?? ''); setNoteSauvee(true); }, [m?.note_chauffeur]);
   if (!m) return <Text style={[type.small, { padding: space.l }]}>Course introuvable.</Text>;
 
@@ -52,6 +59,7 @@ export default function Mission() {
           <Pressable onPress={() => fi && router.push(`/fiche/${fi.id}`)} disabled={!fi} style={s.client}>
             <View style={{ flex: 1 }}>
               <Text style={type.h3}>{m!.nom}</Text>
+              {m!.langue === 'en' ? <Text style={[type.small, { color: c.accent, fontWeight: '700' }]}>Client anglophone : appli, notifications et emails en anglais</Text> : null}
               <Text style={type.small}>{m!.telephone || 'Pas de téléphone'}{m!.email ? ` · ${m!.email}` : ''}</Text>
               {fi?.notes ? <Text style={[type.small, { color: c.feuilleEncre, marginTop: 4 }]}>{fi.notes}</Text> : null}
             </View>
@@ -92,7 +100,7 @@ export default function Mission() {
 
   return (
     <ScrollView style={{ backgroundColor: c.sol }} contentContainerStyle={{ padding: space.l, paddingBottom: space.xxl, gap: space.l }} keyboardShouldPersistTaps="handled">
-      <View style={[s.entete, { backgroundColor: t.fond }, (m.statut === 'annulee' || m.statut === 'refusee') && { borderWidth: 1, borderColor: c.trait }]}>
+      <View style={[s.entete, { backgroundColor: t.fond }, (m.statut === 'annulee' || m.statut === 'refusee' || m.statut === 'expiree') && { borderWidth: 1, borderColor: c.trait }]}>
         <View style={{ flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' }}>
           <Text style={[type.label, { color: t.texte2 }]}>{t.libelle.replace('par Fabrice', '')}</Text>
           {m.statut === 'confirmee' ? <Text style={[type.label, { color: t.texte2 }]}>{dansCombien(m.date, maintenant)}</Text> : null}
@@ -110,10 +118,37 @@ export default function Mission() {
             <Bouton titre="Waze" icone="navigate-outline" variante="contour" onPress={() => ouvrirGps('waze', m.depart_lat, m.depart_lon, m.depart_libelle)} style={{ flex: 1 }} />
             <Bouton titre="Maps" icone="map-outline" variante="contour" onPress={() => ouvrirGps('maps', m.depart_lat, m.depart_lon, m.depart_libelle)} style={{ flex: 1 }} />
           </View>
-          <Bouton titre="Course effectuée" icone="checkmark-done" chargement={action === 'terminer'} onPress={() => faire('terminer', () => terminer(m.id))} />
+          {finCourse ? null : <Bouton titre="Course effectuée" icone="checkmark-done" onPress={() => setFinCourse(true)} />}
+        </View>
+      ) : null}
+      {m.statut === 'confirmee' && finCourse ? (
+        <View style={{ gap: space.s }}>
+          <Facturer
+            titre="Course effectuée"
+            rappel={m.acompte_paye_le ? `Acompte de ${euros(Number(m.acompte_montant ?? 0))} déjà réglé en ligne : reste ${euros(Math.max(0, m.montant - Number(m.acompte_montant ?? 0)))} encaissé à bord.` : `${euros(m.montant)} encaissés à bord.`}
+            onFacturer={async (mode) => { await facturer(m.id, mode); setFinCourse(false); }}
+          />
+          <Bouton titre="Terminer sans facture pour l'instant" variante="texte" chargement={action === 'terminer'} onPress={() => faire('terminer', async () => { await terminer(m.id); setFinCourse(false); })} />
+        </View>
+      ) : null}
+      {!factureEnCours && (m.statut === 'terminee' || (m.statut === 'annulee' && Number(m.frais_annulation ?? 0) > 0)) ? (
+        <Facturer
+          titre={m.statut === 'annulee' ? `Facturer les frais d'annulation (${euros(Number(m.frais_annulation))})` : 'Facturer la course'}
+          onFacturer={(mode) => facturer(m.id, mode)}
+        />
+      ) : null}
+      {docs.length ? (
+        <View style={{ gap: space.s }}>
+          <Text accessibilityRole="header" style={type.h3}>Documents</Text>
+          <ListeDocuments docs={docs} />
+          {docs.filter((d) => d.type === 'facture').map((f) => <FaireAvoir key={f.id} facture={f} docs={docs} />)}
+          {fi && !fi.adresse && !factureEnCours ? (
+            <Bouton titre="Ajouter l'adresse de facturation du client" variante="texte" icone="business-outline" onPress={() => router.push(`/fiche/${fi.id}`)} style={{ alignSelf: 'flex-start' }} />
+          ) : null}
         </View>
       ) : null}
       {erreur ? <Note ton="erreur">{erreur}</Note> : null}
+      <AcompteChauffeur m={m} />
 
       <Details />
 
@@ -130,11 +165,12 @@ export default function Mission() {
         {!noteSauvee ? <Bouton titre="Enregistrer la note" variante="texte" onPress={() => faire('note', async () => { await noter(m.id, note); setNoteSauvee(true); })} chargement={action === 'note'} style={{ alignSelf: 'flex-start', marginBottom: space.s }} /> : null}
       </View>
 
-      {m.statut === 'confirmee' ? (
+      {m.statut === 'confirmee' || m.statut === 'acompte_attendu' ? (
         annulation ? (
           <View style={[s.bloc, { padding: space.l, gap: space.m }]}>
             <Text style={type.h3}>Annuler la course</Text>
             <Text style={type.small}>Selon les CGV : {conseil.texte} ({euros(m.montant * conseil.taux)})</Text>
+            {m.acompte_paye_le ? <Text style={type.small}>L'acompte de {euros(Number(m.acompte_montant ?? 0))} sera remboursé au client.</Text> : null}
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: space.s }}>
               <Text style={type.body}>Frais facturés</Text>
               <TextInput value={frais} onChangeText={setFrais} keyboardType="decimal-pad" placeholder={String(m.montant * conseil.taux).replace('.', ',')} placeholderTextColor={c.placeholder} style={[s.montant]} />

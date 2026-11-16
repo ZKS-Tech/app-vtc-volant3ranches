@@ -6,6 +6,7 @@ import { enregistrerLieu, useRechercheAdresses } from './geo';
 import { Couleurs, radius, sansContourWeb, space } from './theme';
 import { IconName, Note } from './ui';
 import { useTheme } from './useTheme';
+import { t } from './i18n';
 
 const normaliser = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 
@@ -20,13 +21,13 @@ export function RechercheLieu({ exclure, onChoisir, indication }: {
 
   const sections = useMemo(() => {
     const n = normaliser(q.trim());
-    const raccourcis = lieux.filter((l) => l.id !== exclure && (!n || normaliser(`${l.nom} ${l.detail}`).includes(n)));
+    const raccourcis = lieux.filter((l) => l.id !== exclure && (!n || normaliser(`${l.nom} ${l.detail} ${t(l.nom)}`).includes(n)));
     const transferts = raccourcis.filter((l) => l.type === 'aeroport' || l.type === 'gare');
     const villes = raccourcis.filter((l) => l.type === 'ville');
     return [
-      { title: 'Aéroport et gares', data: transferts },
-      { title: n.length >= 3 ? 'Adresses' : '', data: n.length >= 3 ? resultats : [] },
-      { title: 'Villes desservies', data: n.length >= 3 ? [] : villes },
+      { title: t('Aéroport et gares'), data: transferts },
+      { title: n.length >= 3 ? t('Adresses') : '', data: n.length >= 3 ? resultats : [] },
+      { title: t('Villes desservies'), data: n.length >= 3 ? [] : villes },
     ].filter((x) => x.data.length);
   }, [q, resultats, exclure]);
 
@@ -42,15 +43,15 @@ export function RechercheLieu({ exclure, onChoisir, indication }: {
             autoFocus
             value={q}
             onChangeText={setQ}
-            placeholder="Adresse, ville, gare, aéroport…"
+            placeholder={t('Adresse, ville, gare, aéroport…')}
             placeholderTextColor={c.placeholder}
             style={s.input}
             autoCorrect={false}
-            accessibilityLabel="Rechercher une adresse"
+            accessibilityLabel={t('Rechercher une adresse')}
           />
           {etat === 'chargement' ? <ActivityIndicator size="small" color={c.accent} /> : null}
           {q && etat !== 'chargement' ? (
-            <Pressable onPress={() => setQ('')} accessibilityLabel="Effacer" hitSlop={12}>
+            <Pressable onPress={() => setQ('')} accessibilityLabel={t('Effacer')} hitSlop={12}>
               <Ionicons name="close-circle" size={20} color={c.pierre} />
             </Pressable>
           ) : null}
@@ -69,20 +70,20 @@ export function RechercheLieu({ exclure, onChoisir, indication }: {
               <Ionicons name={icone(item)} size={18} color={c.accent} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={[type.body, { fontWeight: '600' }]} numberOfLines={2}>{item.nom}</Text>
-              {item.detail ? <Text style={type.small}>{item.detail}</Text> : null}
+              <Text style={[type.body, { fontWeight: '600' }]} numberOfLines={2}>{t(item.nom)}</Text>
+              {item.detail ? <Text style={type.small}>{t(item.detail)}</Text> : null}
             </View>
           </Pressable>
         )}
         ListFooterComponent={() =>
           etat === 'erreur' ? (
             <View style={{ marginTop: space.l }}>
-              <Note ton="alerte">La recherche d'adresses ne répond pas. Vérifiez la connexion, ou choisissez un lieu ci-dessus.</Note>
+              <Note ton="alerte">{t("La recherche d'adresses ne répond pas. Vérifiez la connexion, ou choisissez un lieu ci-dessus.")}</Note>
             </View>
           ) : q.trim().length >= 3 && etat === 'repos' && !resultats.length ? (
-            <Text style={[type.small, { marginTop: space.l }]}>Aucune adresse trouvée pour « {q} ». Essayez avec le nom de la ville.</Text>
+            <Text style={[type.small, { marginTop: space.l }]}>{t('Aucune adresse trouvée pour « {q} ». Essayez avec le nom de la ville.', { q })}</Text>
           ) : q.trim().length > 0 && q.trim().length < 3 ? (
-            <Text style={[type.small, { marginTop: space.l }]}>Encore quelques lettres pour chercher l'adresse…</Text>
+            <Text style={[type.small, { marginTop: space.l }]}>{t("Encore quelques lettres pour chercher l'adresse…")}</Text>
           ) : null
         }
       />

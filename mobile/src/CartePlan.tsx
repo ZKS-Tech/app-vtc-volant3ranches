@@ -7,6 +7,7 @@ import Reanimated, {
 } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { lieu } from './data';
+import { t } from './i18n';
 import { Couleurs, clair, f, sombre } from './theme';
 
 // Plan du trajet : la vraie carte de l'IGN (Plan IGN v2, tuiles gratuites sans clé) sous un voile aux
@@ -198,7 +199,7 @@ export function CartePlan({ departId, arriveeId, c, hauteur = 200, style, itiner
   const propsArrivee = useAnimatedProps(() => ({ opacity: dessin.value > 0.97 ? 1 : 0 }));
 
   const a = pts[0], b = pts[pts.length - 1];
-  const nomCourt = (id: string) => lieu(id).nom.replace('Aéroport ', '').replace(', Capitole', '').replace(', la Cité', '');
+  const nomCourt = (id: string) => t(lieu(id).nom).replace('Aéroport ', '').replace(' Airport', '').replace(', Capitole', '').replace(', la Cité', '').replace(', medieval city', '');
   const etiquette = (p: P, nom: string) => {
     const aDroite = p[0] < W * 0.6;
     return (

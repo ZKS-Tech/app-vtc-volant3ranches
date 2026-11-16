@@ -7,7 +7,7 @@ import type { Brouillon, Course, Statut } from './store';
 
 // Connexion à Supabase. Adresse du projet et clé publique dans mobile/.env (variables EXPO_PUBLIC_…).
 // La clé publique peut être dans l'appli : la sécurité repose sur les règles de la base (RLS).
-// Sans ces variables, l'appli reste en mode démonstration.
+// Sans ces variables, l'appli affiche un écran « configuration manquante ».
 const URL_PROJET = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const CLE_PUBLIQUE = process.env.EXPO_PUBLIC_SUPABASE_KEY ?? '';
 
@@ -27,7 +27,13 @@ export const supabase: SupabaseClient | null =
 export async function connexionInvite(): Promise<string> {
   if (!supabase) throw new Error('Serveur non configuré');
   const { data } = await supabase.auth.getSession();
-  if (data.session) return data.session.user.id;
+  if (data.session) {
+    // Compte effacé entre-temps (suppression, ou invité inactif effacé automatiquement) : on repart
+    // en invité tout neuf. Sans réseau, on garde la session telle quelle.
+    const { error: e } = await supabase.auth.getUser();
+    if (!e || !('status' in e) || ![401, 403, 404].includes(Number(e.status))) return data.session.user.id;
+    await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+  }
   const { data: d, error } = await supabase.auth.signInAnonymously();
   if (error || !d.user) throw new Error(error?.message ?? 'Connexion impossible');
   return d.user.id;
@@ -37,7 +43,8 @@ export async function chargerTarifs(): Promise<TarifsServeur> {
   if (!supabase) throw new Error('Serveur non configuré');
   const [o, p, j] = await Promise.all([
     supabase.from('offres').select('id, prix_km_jour, prix_km_majore, minimum, passagers_max, bagages_max').eq('active', true),
-    supabase.from('parametres').select('*').eq('id', 1).maybeSingle(),
+    // Colonnes publiques seulement : les réglages privés de Fabrice ne sont pas lisibles ainsi (migration 19).
+    supabase.from('parametres').select('nuit_debut, nuit_fin, majoration_weekend, coef_aller_retour, arrondi, attente_standard_min, attente_aeroport_min, attente_gare_min, delai_confirmation_min, acompte_pourcent, acompte_delai_min').eq('id', 1).maybeSingle(),
     supabase.from('jours_feries').select('jour'),
   ]);
   const erreur = o.error ?? p.error ?? j.error;
@@ -52,17 +59,22 @@ export type LigneCourse = {
   arrivee_ref: string | null; arrivee_libelle: string; arrivee_detail: string | null; arrivee_type: string | null;
   arrivee_lat: number | null; arrivee_lon: number | null;
   date_heure: string; aller_retour: boolean;
+  /** Langue du client (migration 16) : 'en' pour un client anglophone. */
+  langue?: 'fr' | 'en';
   passagers: number; bagages: number; numero_vol_train: string | null; offre_id: string; montant: number;
   prix_ajuste: boolean; prix_km: number; majorations: string[];
   distance_km: number; duree_min: number | null; nom: string; telephone: string; email: string | null;
   commentaire: string | null; note_chauffeur: string | null;
   statut: Statut; envoyee_le: string; confirmee_le: string | null; refusee_le: string | null; motif_refus: string | null;
   annulee_le: string | null; frais_annulation: number | null; terminee_le: string | null;
+  acompte_montant?: number | null; acompte_limite?: string | null; acompte_paye_le?: string | null; expiree_le?: string | null;
 };
 
 export type Fiche = {
   id: string; nom: string; telephone: string | null; email: string | null; notes: string | null;
   profil_id: string | null; cree_le: string; maj_le: string;
+  // Facturation (migration 9)
+  numero_client?: number | null; entreprise?: string | null; adresse?: string | null; code_postal?: string | null; ville?: string | null;
 };
 
 const deux = (n: number) => String(n).padStart(2, '0');
@@ -98,6 +110,9 @@ export function versCourse(l: LigneCourse): Course | null {
     statut: l.statut as Statut,
     envoyeeLe: new Date(l.envoyee_le),
     motifRefus: l.motif_refus ?? undefined,
+    acompteMontant: l.acompte_montant != null ? Number(l.acompte_montant) : undefined,
+    acompteLimite: l.acompte_limite ? new Date(l.acompte_limite) : undefined,
+    acomptePaye: !!l.acompte_paye_le,
   };
 }
 
@@ -145,15 +160,18 @@ export async function annulerCourse(id: string): Promise<Course> {
 }
 
 // Temps réel : la confirmation de Fabrice arrive sans recharger.
-export function ecouterMesCourses(uid: string, surChangement: (c: Course) => void): RealtimeChannel | null {
+export function ecouterMesCourses(uid: string, surChangement: (c: Course) => void, surCoupure?: () => void): RealtimeChannel | null {
   if (!supabase) return null;
+  // Nom unique : réabonner le même sujet juste après l'avoir quitté peut être ignoré par le serveur.
   return supabase
-    .channel(`courses-${uid}`)
+    .channel(`courses-${uid}-${Date.now()}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'courses', filter: `client_id=eq.${uid}` }, (p) => {
       const c = versCourse(p.new as LigneCourse);
       if (c) surChangement(c);
     })
-    .subscribe();
+    .subscribe((etat) => {
+      if (etat === 'CHANNEL_ERROR' || etat === 'TIMED_OUT') surCoupure?.();
+    });
 }
 
 // ——— Espace chauffeur ———
@@ -165,26 +183,27 @@ export async function estChauffeur(): Promise<boolean> {
   return !!data;
 }
 
-// Connexion de Fabrice : email + mot de passe. Un compte sans le rôle chauffeur est refusé.
-export async function connexionChauffeur(email: string, motDePasse: string): Promise<string> {
-  if (!supabase) throw new Error('Serveur non configuré');
-  const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password: motDePasse });
-  if (error || !data.user) {
-    throw new Error(error?.message === 'Invalid login credentials' ? 'Email ou mot de passe incorrect' : error?.message ?? 'Connexion impossible');
-  }
-  if (!(await estChauffeur())) {
-    await supabase.auth.signOut();
-    await connexionInvite();
-    throw new Error('Ce compte n’a pas accès à l’espace chauffeur');
-  }
-  return data.user.id;
+// Langue du client (fr ou en) : notifications, emails, et signalée à Fabrice sur la course.
+export async function envoyerLangue(langue: 'fr' | 'en') {
+  if (!supabase) return;
+  const { error } = await supabase.rpc('definir_langue', { p_langue: langue });
+  if (error) throw new Error(error.message);
 }
 
-// Déconnexion : le téléphone redevient un client invité.
 export async function deconnexion(): Promise<string> {
   if (!supabase) throw new Error('Serveur non configuré');
   await supabase.auth.signOut();
   return connexionInvite();
+}
+
+// Suppression du compte (ou des données d'un invité) : la fonction serveur « supprimer-compte »
+// efface les données puis l'accès. On repart ensuite en invité tout neuf.
+export async function supprimerCompte(): Promise<{ uid: string; courses: number }> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const r = await fonction<{ ok: boolean; courses: number }>('supprimer-compte', {},
+    'Suppression impossible pour le moment. Réessayez, ou écrivez à contact@volant3ranches-vtc.fr.');
+  await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+  return { uid: await connexionInvite(), courses: r.courses };
 }
 
 export async function emailConnecte(): Promise<string | null> {
@@ -221,6 +240,10 @@ export async function enregistrerFiche(f: Partial<Fiche> & { nom: string }): Pro
     email: f.email?.trim() || null,
     notes: f.notes?.trim() || null,
     maj_le: new Date().toISOString(),
+    // Coordonnées de facturation : envoyées seulement si renseignées (base sans la migration 9 : ignorées).
+    ...Object.fromEntries((['entreprise', 'adresse', 'code_postal', 'ville'] as const)
+      .filter((k) => f[k] !== undefined && (f[k]?.trim() || f[k] === ''))
+      .map((k) => [k, f[k]?.trim() || null])),
   };
   const r = f.id
     ? await supabase.from('fiches_clients').update(ligne).eq('id', f.id).select().single()
@@ -231,7 +254,7 @@ export async function enregistrerFiche(f: Partial<Fiche> & { nom: string }): Pro
 
 export async function majTable(table: 'offres' | 'parametres', id: string | number, valeurs: Record<string, unknown>) {
   if (!supabase) throw new Error('Serveur non configuré');
-  verifier(await supabase.from(table).update(valeurs).eq('id', id).select().single());
+  verifier(await supabase.from(table).update(valeurs).eq('id', id).select('id').single());
 }
 
 export async function ajouterFerie(jour: string) {
@@ -322,4 +345,228 @@ export function ecouterAnnonces(surChangement: () => void): RealtimeChannel | nu
     .channel('annonces')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'annonces' }, surChangement)
     .subscribe();
+}
+
+// ——— Acompte (migration 8 et fonctions serveur SumUp) ———
+export type Paiement = {
+  id: string; course_id: string; montant: number; statut: 'en_attente' | 'paye' | 'echoue' | 'expire' | 'rembourse';
+  lien: string | null; cree_le: string; paye_le: string | null; remboursement_du: number; rembourse: number; rembourse_le: string | null;
+};
+
+async function fonction<T>(nom: string, corps: Record<string, unknown>, defaut = 'Paiement indisponible pour le moment. Réessayez ou appelez Fabrice.'): Promise<T> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const { data, error } = await supabase.functions.invoke(nom, { body: corps });
+  if (error) {
+    // Le message utile est dans le corps de la réponse ({ erreur }).
+    const ctx = (error as { context?: Response }).context;
+    const detail = ctx && typeof ctx.json === 'function' ? await ctx.json().catch(() => null) : null;
+    throw new Error(detail?.erreur ?? defaut);
+  }
+  if (data?.erreur) throw new Error(data.erreur);
+  return data as T;
+}
+
+// Page de paiement SumUp de l'acompte (créée ou réutilisée par le serveur).
+export const lienAcompte = (courseId: string) =>
+  fonction<{ url?: string; montant: number; limite: string | null; deja_paye?: boolean }>('acompte', { course_id: courseId });
+
+// Rembourse ce que la base a décidé après une annulation (rien si l'acompte est conservé).
+export const rembourserAcompte = (courseId: string) => fonction<{ rembourse: number }>('acompte-rembourser', { course_id: courseId });
+
+export async function paiementsDe(courseId: string): Promise<Paiement[]> {
+  if (!supabase) return [];
+  return verifier(await supabase.from('paiements').select('*').eq('course_id', courseId).order('cree_le')) as Paiement[];
+}
+
+// ——— Bons de commande et factures (migration 9 et fonction document-pdf) ———
+export type ModePaiement = 'cb' | 'cheque' | 'especes' | 'virement' | 'en_ligne';
+export const libelleMode: Record<ModePaiement, string> = { cb: 'Carte bancaire', cheque: 'Chèque', especes: 'Espèces', virement: 'Virement', en_ligne: 'CB en ligne' };
+export type DocumentEmis = {
+  id: string; type: 'commande' | 'facture' | 'avoir'; numero: string; course_id: string; emis_le: string;
+  /** Avoir : la facture qu'il corrige. Ses montants sont négatifs. */
+  facture_id?: string | null;
+  total_ht: number; tva: number; total_ttc: number; mode_paiement: ModePaiement | null;
+  contenu: {
+    client?: { nom?: string; entreprise?: string | null }; course?: { date?: string; depart?: string; arrivee?: string }; acompte?: number;
+    facture?: { numero?: string; date?: string }; motif?: string; avoir_total?: boolean;
+  };
+};
+
+/** Reste d'une facture : son montant moins les avoirs déjà émis (0 = entièrement annulée). */
+export const resteFacture = (f: DocumentEmis, docs: DocumentEmis[]) =>
+  Math.round((f.total_ttc + docs.filter((a) => a.type === 'avoir' && a.facture_id === f.id).reduce((t, a) => t + a.total_ttc, 0)) * 100) / 100;
+
+export async function chargerDocuments(filtre?: { courseId?: string; depuis?: Date; jusqua?: Date }): Promise<DocumentEmis[]> {
+  if (!supabase) return [];
+  let r = supabase.from('documents').select('*').order('emis_le', { ascending: false });
+  if (filtre?.courseId) r = r.eq('course_id', filtre.courseId);
+  if (filtre?.depuis) r = r.gte('emis_le', filtre.depuis.toISOString());
+  if (filtre?.jusqua) r = r.lt('emis_le', filtre.jusqua.toISOString());
+  const { data, error } = await r;
+  if (error) {
+    if (/documents/.test(error.message) && /exist|schema cache/.test(error.message)) return []; // migration 9 pas encore faite
+    throw new Error(error.message);
+  }
+  return (data ?? []).map((d) => ({ ...d, total_ht: Number(d.total_ht), tva: Number(d.tva), total_ttc: Number(d.total_ttc) })) as DocumentEmis[];
+}
+
+// Avoir sur une facture (Fabrice). montant : TTC à créditer, null = toute la facture (reste).
+export async function emettreAvoir(factureId: string, montant: number | null, motif: string, mode: ModePaiement | null): Promise<DocumentEmis> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const { data, error } = await supabase.rpc('emettre_avoir', { p_facture: factureId, p_montant: montant, p_motif: motif, p_mode: mode });
+  if (error) throw new Error(error.message);
+  return data as DocumentEmis;
+}
+
+export async function emettreFacture(courseId: string, mode: ModePaiement): Promise<DocumentEmis> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const { data, error } = await supabase.rpc('emettre_facture', { p_course: courseId, p_mode: mode });
+  if (error) throw new Error(error.message);
+  return data as DocumentEmis;
+}
+
+// Lien de téléchargement du PDF (valable 1 h).
+export const lienPdf = (documentId: string) => fonction<{ url: string; numero: string }>('document-pdf', { document_id: documentId }, 'PDF indisponible pour le moment. Réessayez dans un instant.');
+
+export function ecouterDocuments(surDocument: () => void): RealtimeChannel | null {
+  if (!supabase) return null;
+  return supabase.channel('documents').on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'documents' }, surDocument).subscribe();
+}
+
+async function rpc<T>(nom: string, params: Record<string, unknown>): Promise<T> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const { data, error } = await supabase.rpc(nom, params);
+  if (error) throw new Error(error.message);
+  return data as T;
+}
+
+// Rembourse les acomptes dus (SumUp) selon les CGV ; renvoie le total remboursé.
+export async function rembourserTout(courseId: string): Promise<number> {
+  let total = 0;
+  const dus = (await paiementsDe(courseId)).filter((p) => p.statut === 'paye' && Number(p.remboursement_du) > Number(p.rembourse));
+  if (dus.length) total += (await rembourserAcompte(courseId)).rembourse;
+  return total;
+}
+
+// ——— Comptes clients (migration 11) ———
+export type Profil = { nom: string | null; telephone: string | null; email: string | null };
+export type Session = { uid: string; anonyme: boolean; email: string | null };
+
+export async function sessionActuelle(): Promise<Session | null> {
+  if (!supabase) return null;
+  const { data } = await supabase.auth.getSession();
+  const u = data.session?.user;
+  return u ? { uid: u.id, anonyme: !!u.is_anonymous, email: u.email ?? null } : null;
+}
+
+export async function monProfil(): Promise<Profil | null> {
+  if (!supabase) return null;
+  const s = await sessionActuelle();
+  if (!s) return null;
+  const { data } = await supabase.from('profils').select('nom, telephone, email').eq('id', s.uid).maybeSingle();
+  return data as Profil | null;
+}
+
+const messageAuth = (m?: string) =>
+  !m ? 'Opération impossible pour le moment'
+  : /invalid login credentials/i.test(m) ? 'Email ou mot de passe incorrect'
+  : /already (been )?registered|already exists|email_exists/i.test(m) ? 'Un compte existe déjà avec cet email : connectez-vous.'
+  : /password should be at least|weak/i.test(m) ? 'Mot de passe trop court (6 caractères au moins).'
+  : /email.*invalid|invalid.*email/i.test(m) ? 'Adresse email invalide.'
+  : /rate limit|too many/i.test(m) ? 'Trop de tentatives, réessayez dans quelques minutes.'
+  : /not confirmed/i.test(m) ? 'Email pas encore confirmé : ouvrez le lien reçu par email.'
+  : m;
+
+// Transforme le compte invité de ce téléphone en compte permanent (même identifiant : les courses
+// restent). Renvoie « confirmation » si Supabase demande de valider l'email avant le mot de passe.
+export async function creerCompte(p: { nom: string; telephone: string; email: string; motDePasse: string }): Promise<'ok' | 'confirmation'> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  await connexionInvite();
+  const email = p.email.trim().toLowerCase();
+  const r1 = await supabase.auth.updateUser({ email });
+  if (r1.error) throw new Error(messageAuth(r1.error.message));
+  if ((r1.data.user?.email ?? '').toLowerCase() !== email) {
+    // Confirmation d'email activée : le mot de passe se définira après le clic sur le lien.
+    await supabase.rpc('enregistrer_profil', { p_nom: p.nom, p_telephone: p.telephone });
+    return 'confirmation';
+  }
+  const r2 = await supabase.auth.updateUser({ password: p.motDePasse });
+  if (r2.error) throw new Error(messageAuth(r2.error.message));
+  await supabase.auth.refreshSession(); // nouveau jeton : n'est plus « invité »
+  const r3 = await supabase.rpc('enregistrer_profil', { p_nom: p.nom, p_telephone: p.telephone });
+  if (r3.error) throw new Error(r3.error.message);
+  return 'ok';
+}
+
+// Connexion à un compte existant ; les courses réservées en invité sur ce téléphone le suivent.
+export async function connecterClient(email: string, motDePasse: string): Promise<{ uid: string; chauffeur: boolean; rattachees: number }> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const avant = await sessionActuelle();
+  let jeton: string | null = null;
+  if (avant?.anonyme) jeton = ((await supabase.rpc('preparer_fusion')).data as string | null) ?? null;
+  const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: motDePasse });
+  if (error || !data.user) throw new Error(messageAuth(error?.message));
+  // Fabrice se connecte comme un client : il arrive directement dans son espace, et les courses
+  // éventuelles de l'invité de ce téléphone ne lui sont pas rattachées.
+  const chauffeur = await estChauffeur();
+  let rattachees = 0;
+  if (jeton && !chauffeur) rattachees = Number((await supabase.rpc('fusionner_compte', { p_jeton: jeton })).data ?? 0);
+  return { uid: data.user.id, chauffeur, rattachees };
+}
+
+export async function majProfil(nom: string, telephone: string): Promise<Profil> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const { data, error } = await supabase.rpc('enregistrer_profil', { p_nom: nom, p_telephone: telephone });
+  if (error) throw new Error(messageAuth(error.message));
+  return data as Profil;
+}
+
+// ——— Emails (migration 12 et fonction emails) ———
+export type EmailEnvoye = {
+  id: string; type: string; destinataire: string; statut: 'a_envoyer' | 'envoi' | 'envoye' | 'erreur';
+  erreur: string | null; tentatives: number; cree_le: string; envoye_le: string | null; course_id: string | null;
+};
+export type ReglagesEmails = { emails_actifs: boolean; emails_copie_chauffeur: boolean; email_chauffeur: string | null };
+
+export async function chargerReglagesEmails(): Promise<ReglagesEmails | null> {
+  if (!supabase) return null;
+  const { data, error } = await supabase.rpc('reglages_emails');
+  if (error) return null;
+  return ((data as ReglagesEmails[] | null) ?? [])[0] ?? null;
+}
+export async function majReglagesEmails(v: Partial<ReglagesEmails>) {
+  if (!supabase) throw new Error('Serveur non configuré');
+  verifier(await supabase.from('parametres').update(v).eq('id', 1));
+}
+export async function chargerEmails(): Promise<EmailEnvoye[]> {
+  if (!supabase) return [];
+  const { data, error } = await supabase.from('emails').select('id, type, destinataire, statut, erreur, tentatives, cree_le, envoye_le, course_id')
+    .order('cree_le', { ascending: false }).limit(60);
+  if (error) return [];
+  return data as EmailEnvoye[];
+}
+export const renvoyerEmail = (id: string) => rpc<null>('renvoyer_email', { p_email: id });
+
+// ——— Mot de passe oublié : code à 6 chiffres reçu par email ———
+export async function envoyerCodeConnexion(email: string) {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const { error } = await supabase.auth.signInWithOtp({ email: email.trim().toLowerCase(), options: { shouldCreateUser: false } });
+  if (error) throw new Error(/signups? not allowed|not found|user/i.test(error.message) ? 'Aucun compte avec cet email.' : messageAuth(error.message));
+}
+// Vérifie le code, connecte le compte (les courses de l'invité le suivent) et change le mot de passe.
+export async function reinitialiserMotDePasse(email: string, code: string, motDePasse: string): Promise<{ uid: string; chauffeur: boolean; rattachees: number }> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const avant = await sessionActuelle();
+  let jeton: string | null = null;
+  if (avant?.anonyme) jeton = ((await supabase.rpc('preparer_fusion')).data as string | null) ?? null;
+  const { data, error } = await supabase.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code.trim(), type: 'email' });
+  if (error || !data.user) throw new Error(/expired|invalid/i.test(error?.message ?? '') ? 'Code incorrect ou expiré.' : messageAuth(error?.message));
+  const r = await supabase.auth.updateUser({ password: motDePasse });
+  if (r.error) throw new Error(messageAuth(r.error.message));
+  // Fabrice se connecte comme un client : il arrive directement dans son espace, et les courses
+  // éventuelles de l'invité de ce téléphone ne lui sont pas rattachées.
+  const chauffeur = await estChauffeur();
+  let rattachees = 0;
+  if (jeton && !chauffeur) rattachees = Number((await supabase.rpc('fusionner_compte', { p_jeton: jeton })).data ?? 0);
+  return { uid: data.user.id, chauffeur, rattachees };
 }
