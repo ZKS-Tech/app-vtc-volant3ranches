@@ -27,7 +27,7 @@ export default function Compte() {
   const maj = (p: Partial<typeof f>) => setF((x) => ({ ...x, ...p }));
   const emailOk = /.+@.+\..+/.test(f.email.trim());
   const telOk = f.telephone.replace(/\D/g, '').length >= 10;
-  const valide = emailOk && f.motDePasse.length >= 6 && (mode === 'connexion' || (f.nom.trim().length > 1 && telOk));
+  const valide = emailOk && f.motDePasse.length >= 8 && (mode === 'connexion' || (f.nom.trim().length > 1 && telOk));
 
   const valider = async () => {
     setEnvoi(true); setErreur('');
@@ -73,19 +73,19 @@ export default function Compte() {
         <ScrollView contentContainerStyle={{ padding: space.l, paddingBottom: space.xxl }} keyboardShouldPersistTaps="handled">
           <Text style={[type.h2, { marginBottom: space.s }]}>{t('Mot de passe oublié')}</Text>
           <Text style={[type.small, { marginBottom: space.l }]}>
-            {oubli === 'email' ? t('Indiquez l’email de votre compte : vous allez recevoir un code à 6 chiffres.') : t('Code envoyé à {email}. Il est valable une heure ; pensez à regarder dans les spams.', { email: f.email.trim() })}
+            {oubli === 'email' ? t('Indiquez l’email de votre compte : vous allez recevoir un code à 6 chiffres.') : t('Si un compte existe avec {email}, un code vient d’y être envoyé. Il est valable 15 minutes ; pensez à regarder dans les spams.', { email: f.email.trim() })}
           </Text>
           <Champ libelle={t('Email')} value={f.email} onChangeText={(v) => maj({ email: v })} keyboardType="email-address" autoCapitalize="none" autoComplete="email" editable={oubli === 'email'} />
           {oubli === 'code' ? (
             <>
               <Champ libelle={t('Code reçu par email')} value={code} onChangeText={(v) => setCode(v.replace(/\D/g, '').slice(0, 8))} keyboardType="number-pad" autoComplete="one-time-code" textContentType="oneTimeCode" placeholder="123456" />
-              <Champ libelle={t('Nouveau mot de passe')} value={f.motDePasse} onChangeText={(v) => maj({ motDePasse: v })} secureTextEntry autoComplete="new-password" textContentType="newPassword" placeholder={t('6 caractères au moins')} />
+              <Champ libelle={t('Nouveau mot de passe')} value={f.motDePasse} onChangeText={(v) => maj({ motDePasse: v })} secureTextEntry autoComplete="new-password" textContentType="newPassword" placeholder={t('8 caractères au moins')} />
             </>
           ) : null}
           {erreur ? <View style={{ marginBottom: space.l }}><Note ton="erreur">{erreur}</Note></View> : null}
           {oubli === 'email'
             ? <Bouton titre={t('Recevoir un code')} desactive={!emailOk} chargement={envoi} onPress={envoyerCode} />
-            : <Bouton titre={t('Changer le mot de passe')} desactive={code.length < 6 || f.motDePasse.length < 6} chargement={envoi} onPress={changer} />}
+            : <Bouton titre={t('Changer le mot de passe')} desactive={code.length < 6 || f.motDePasse.length < 8} chargement={envoi} onPress={changer} />}
           {oubli === 'code' ? <Bouton titre={t('Renvoyer un code')} variante="texte" onPress={envoyerCode} style={{ marginTop: space.s, alignSelf: 'center' }} /> : null}
           <Bouton titre={t('Retour à la connexion')} variante="texte" onPress={() => { setOubli(null); setErreur(''); }} style={{ marginTop: space.s, alignSelf: 'center' }} />
         </ScrollView>
@@ -109,7 +109,7 @@ export default function Compte() {
           </>
         ) : null}
         <Champ libelle={t('Email')} value={f.email} onChangeText={(v) => maj({ email: v })} placeholder="claire.martin@email.fr" keyboardType="email-address" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" />
-        <Champ libelle={t('Mot de passe')} value={f.motDePasse} onChangeText={(v) => maj({ motDePasse: v })} placeholder={mode === 'creer' ? t('6 caractères au moins') : ''} secureTextEntry
+        <Champ libelle={t('Mot de passe')} value={f.motDePasse} onChangeText={(v) => maj({ motDePasse: v })} placeholder={mode === 'creer' ? t('8 caractères au moins') : ''} secureTextEntry
           autoComplete={mode === 'creer' ? 'new-password' : 'current-password'} textContentType={mode === 'creer' ? 'newPassword' : 'password'} />
         {erreur ? <View style={{ marginBottom: space.l }}><Note ton="erreur">{erreur}</Note></View> : null}
         <Bouton titre={mode === 'creer' ? t('Créer mon compte') : t('Se connecter')} desactive={!valide} chargement={envoi} onPress={valider} />

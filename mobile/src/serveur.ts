@@ -471,7 +471,7 @@ const messageAuth = (m?: string) =>
   !m ? 'Opération impossible pour le moment'
   : /invalid login credentials/i.test(m) ? 'Email ou mot de passe incorrect'
   : /already (been )?registered|already exists|email_exists/i.test(m) ? 'Un compte existe déjà avec cet email : connectez-vous.'
-  : /password should be at least|weak/i.test(m) ? 'Mot de passe trop court (6 caractères au moins).'
+  : /password should be at least|weak/i.test(m) ? 'Mot de passe trop court (8 caractères au moins).'
   : /email.*invalid|invalid.*email/i.test(m) ? 'Adresse email invalide.'
   : /rate limit|too many/i.test(m) ? 'Trop de tentatives, réessayez dans quelques minutes.'
   : /not confirmed/i.test(m) ? 'Email pas encore confirmé : ouvrez le lien reçu par email.'
@@ -551,7 +551,8 @@ export const renvoyerEmail = (id: string) => rpc<null>('renvoyer_email', { p_ema
 export async function envoyerCodeConnexion(email: string) {
   if (!supabase) throw new Error('Serveur non configuré');
   const { error } = await supabase.auth.signInWithOtp({ email: email.trim().toLowerCase(), options: { shouldCreateUser: false } });
-  if (error) throw new Error(/signups? not allowed|not found|user/i.test(error.message) ? 'Aucun compte avec cet email.' : messageAuth(error.message));
+  // Même réponse que le compte existe ou non : l'écran ne doit pas révéler quels emails ont un compte.
+  if (error && !/signups? not allowed|not found|user/i.test(error.message)) throw new Error(messageAuth(error.message));
 }
 // Vérifie le code, connecte le compte (les courses de l'invité le suivent) et change le mot de passe.
 export async function reinitialiserMotDePasse(email: string, code: string, motDePasse: string): Promise<{ uid: string; chauffeur: boolean; rattachees: number }> {
@@ -563,6 +564,8 @@ export async function reinitialiserMotDePasse(email: string, code: string, motDe
   if (error || !data.user) throw new Error(/expired|invalid/i.test(error?.message ?? '') ? 'Code incorrect ou expiré.' : messageAuth(error?.message));
   const r = await supabase.auth.updateUser({ password: motDePasse });
   if (r.error) throw new Error(messageAuth(r.error.message));
+  // Mot de passe changé : toutes les autres sessions (autres téléphones, éventuel intrus) sont fermées.
+  await supabase.auth.signOut({ scope: 'others' }).catch(() => {});
   // Fabrice se connecte comme un client : il arrive directement dans son espace, et les courses
   // éventuelles de l'invité de ce téléphone ne lui sont pas rattachées.
   const chauffeur = await estChauffeur();

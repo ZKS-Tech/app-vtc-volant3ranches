@@ -365,8 +365,8 @@ Une facture émise ne se modifie pas : pour la corriger ou rembourser un client,
 4. Réglages du tableau de bord :
    - Authentication › Rate Limits : laisser les limites par défaut (inscriptions anonymes,
      emails, codes).
-   - Authentication › Attack Protection : activer le **CAPTCHA** (hCaptcha ou Turnstile, gratuits)
-     si des inscriptions anonymes en masse apparaissent.
+   - Authentication › Attack Protection : **ne pas activer le CAPTCHA** sans mise à jour de
+     l'appli (elle n'envoie pas encore de jeton CAPTCHA : toutes les connexions seraient refusées).
 5. Google Cloud (projet Firebase) › API et services › Identifiants › clé « Android key » :
    **restreindre aux applications Android** `fr.volant3ranches.app` (+ empreinte SHA-1 donnée par
    `npx eas-cli credentials`). La clé est dans l'appli par conception, la restriction empêche de
@@ -375,6 +375,26 @@ Une facture émise ne se modifie pas : pour la corriger ou rembourser un client,
 Les tests de la base (`npm test` dans `supabase/tests`) reproduisent les droits par défaut de
 Supabase et vérifient : RLS active sur toutes les tables, liste exacte des fonctions appelables par
 un visiteur et par un client, impossibilité de devenir chauffeur.
+
+## Authentification : réglages Supabase (avant publication)
+
+Authentication › **Sign In / Providers › Email** :
+- **Confirm email** : activé. Sans lui, un invité peut prendre l'adresse de quelqu'un d'autre en
+  créant son compte (l'adresse n'est jamais vérifiée). L'appli gère déjà l'email de confirmation.
+- **Secure email change** : activé (changement d'email confirmé sur l'ancienne ET la nouvelle adresse).
+- **Secure password change** : activé (une session ouverte depuis longtemps doit se reconnecter
+  avant de changer le mot de passe).
+- **Minimum password length** : **8** ; **Password requirements** : « Letters and digits ».
+  (L'appli demande aussi 8 caractères ; c'est la règle de Supabase qui fait foi.)
+- **Email OTP Expiration** : **900** secondes (15 minutes, comme l'annonce l'appli).
+- **Email OTP Length** : **8** (code plus long, plus difficile à deviner ; l'appli accepte 6 à 8 chiffres).
+
+Authentication › **Sessions** : laisser **Detect and revoke compromised refresh tokens** activé.
+Authentication › **Rate Limits** : garder les valeurs par défaut.
+
+Non disponibles en offre gratuite (Pro) : protection contre les mots de passe divulgués
+(« Leaked password protection », base HaveIBeenPwned), durée maximale et inactivité des sessions.
+À activer en passant à l'offre Pro.
 
 ## Avant l'ouverture aux clients : remise à zéro (une seule fois)
 
