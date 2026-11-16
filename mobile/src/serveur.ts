@@ -43,7 +43,8 @@ export async function chargerTarifs(): Promise<TarifsServeur> {
   if (!supabase) throw new Error('Serveur non configuré');
   const [o, p, j] = await Promise.all([
     supabase.from('offres').select('id, prix_km_jour, prix_km_majore, minimum, passagers_max, bagages_max').eq('active', true),
-    supabase.from('parametres').select('*').eq('id', 1).maybeSingle(),
+    // Colonnes publiques seulement : les réglages privés de Fabrice ne sont pas lisibles ainsi (migration 19).
+    supabase.from('parametres').select('nuit_debut, nuit_fin, majoration_weekend, coef_aller_retour, arrondi, attente_standard_min, attente_aeroport_min, attente_gare_min, delai_confirmation_min, acompte_pourcent, acompte_delai_min').eq('id', 1).maybeSingle(),
     supabase.from('jours_feries').select('jour'),
   ]);
   const erreur = o.error ?? p.error ?? j.error;
@@ -253,7 +254,7 @@ export async function enregistrerFiche(f: Partial<Fiche> & { nom: string }): Pro
 
 export async function majTable(table: 'offres' | 'parametres', id: string | number, valeurs: Record<string, unknown>) {
   if (!supabase) throw new Error('Serveur non configuré');
-  verifier(await supabase.from(table).update(valeurs).eq('id', id).select().single());
+  verifier(await supabase.from(table).update(valeurs).eq('id', id).select('id').single());
 }
 
 export async function ajouterFerie(jour: string) {
@@ -529,9 +530,9 @@ export type ReglagesEmails = { emails_actifs: boolean; emails_copie_chauffeur: b
 
 export async function chargerReglagesEmails(): Promise<ReglagesEmails | null> {
   if (!supabase) return null;
-  const { data, error } = await supabase.from('parametres').select('emails_actifs, emails_copie_chauffeur, email_chauffeur').eq('id', 1).maybeSingle();
-  if (error) return null; // migration 12 pas encore faite
-  return data as ReglagesEmails;
+  const { data, error } = await supabase.rpc('reglages_emails');
+  if (error) return null;
+  return ((data as ReglagesEmails[] | null) ?? [])[0] ?? null;
 }
 export async function majReglagesEmails(v: Partial<ReglagesEmails>) {
   if (!supabase) throw new Error('Serveur non configuré');

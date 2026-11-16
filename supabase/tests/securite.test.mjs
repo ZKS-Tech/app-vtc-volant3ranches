@@ -109,6 +109,7 @@ if (process.argv[4]) {
   if (process.argv[18]) { await db.exec(readFileSync(process.argv[18], 'utf8')); ok(true, 'migration 16 (langue) appliquée sans erreur'); }
   if (process.argv[19]) { await db.exec(readFileSync(process.argv[19], 'utf8')); ok(true, 'migration 17 (avoirs) appliquée sans erreur'); }
   if (process.argv[20]) { await db.exec(readFileSync(process.argv[20], 'utf8')); ok(true, 'migration 18 (sécurité) appliquée sans erreur'); }
+  if (process.argv[21]) { await db.exec(readFileSync(process.argv[21], 'utf8')); ok(true, 'migration 19 (réglages privés) appliquée sans erreur'); }
 }
 
 
@@ -914,11 +915,11 @@ if (process.argv[19]) {
 }
 
 // Remise à zéro avant lancement (supabase/scripts/remise-a-zero-lancement.sql), en dernier.
-if (process.argv[21]) {
+if (process.argv[22]) {
   console.log('--- remise à zéro avant lancement');
   await db.exec('reset role');
   const reelles = Number((await db.query(`select count(*)::int n from public.documents where not test`)).rows[0].n);
-  await db.exec(readFileSync(process.argv[21], 'utf8').replace(/^select \(select count[\s\S]*$/m, ''));
+  await db.exec(readFileSync(process.argv[22], 'utf8').replace(/^select \(select count[\s\S]*$/m, ''));
   const n = (await db.query(`select (select count(*)::int from public.courses) c, (select count(*)::int from public.documents) d,
     (select count(*)::int from public.fiches_clients) f, (select count(*)::int from public.compteurs_documents) k,
     (select count(*)::int from auth.users) u, (select count(*)::int from public.offres) o`)).rows[0];
@@ -936,7 +937,7 @@ if (process.argv[21]) {
   await db.exec(`alter table public.documents disable trigger documents_figes`);
   for (let i = 0; i < 101; i++) await db.exec(`insert into public.documents (type, numero, course_id, total_ht, tva, total_ttc, contenu) values ('commande', 'X-${i}', '${c.id}', 1, 0, 1, '{}')`);
   await db.exec(`alter table public.documents enable trigger documents_figes`);
-  try { await db.exec(readFileSync(process.argv[21], 'utf8')); } catch (e) { refus = /Arrêt/.test(e.message); await db.exec('rollback').catch(() => {}); }
+  try { await db.exec(readFileSync(process.argv[22], 'utf8')); } catch (e) { refus = /Arrêt/.test(e.message); await db.exec('rollback').catch(() => {}); }
   ok(refus, 'le script refuse de tourner une fois l\'appli en service');
 }
 
@@ -957,7 +958,7 @@ if (process.argv[20]) {
       'repondre_demande', 'annuler_course_chauffeur', 'creer_course_manuelle', 'modifier_course', 'terminer_course', 'noter_course',
       'participe_a', // utilisée par les règles d'accès aux messages
       'emettre_facture', 'emettre_avoir', 'marquer_remboursement', 'renvoyer_email', 'enregistrer_fiche', 'fusionner_fiches',
-      'remboursements_dus', 'stats_chauffeur'],
+      'remboursements_dus', 'stats_chauffeur', 'reglages_emails'],
   };
   for (const role of ['anon', 'authenticated']) {
     const rows = await srv(`select distinct p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
@@ -965,6 +966,21 @@ if (process.argv[20]) {
     const ouvertes = rows.map((x) => x.proname).filter((f) => !permises[role].includes(f));
     ok(ouvertes.length === 0, `${role} : aucune fonction interne appelable${ouvertes.length ? ' — à fermer : ' + ouvertes.join(', ') : ''}`);
     console.log(`      (${role} : ${rows.map((x) => x.proname).join(', ')})`);
+  }
+  if (process.argv[21]) {
+    await en(null);
+    r = await q(`select nuit_debut, acompte_pourcent, siren from public.parametres`);
+    ok(r.length === 1, 'tarifs et mentions lisibles sans compte');
+    await echoue(() => q(`select email_chauffeur from public.parametres`), 'l\'email de Fabrice n\'est pas lisible avec la clé publique');
+    await echoue(() => q(`select * from public.parametres`), 'la table entière n\'est pas lisible');
+    await en(client);
+    await echoue(() => q(`select * from public.reglages_emails()`), 'un client ne lit pas les réglages des emails');
+    await en(fabrice);
+    r = await q(`select * from public.reglages_emails()`);
+    ok(r.length === 1 && 'email_chauffeur' in r[0], 'Fabrice lit ses réglages d\'emails');
+    await q(`update public.parametres set emails_copie_chauffeur = true where id = 1 returning id`);
+    await q(`update public.parametres set nuit_debut = 22 where id = 1 returning id`);
+    ok(true, 'Fabrice modifie toujours ses réglages');
   }
   r = await srv(`select count(*)::int n from pg_proc where proname in ('payer_acompte_test', 'rembourser_test', 'effacer_documents_test')`);
   ok(r[0].n === 0, 'fonctions du mode test supprimées');
