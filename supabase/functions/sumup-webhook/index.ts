@@ -35,6 +35,11 @@ Deno.serve(async (req) => {
     const marchand = Deno.env.get('SUMUP_MERCHANT_CODE')!;
     const admin = createClient(Deno.env.get('SUPABASE_URL')!, cleProjet('secrete'));
 
+    // Seuls les paiements créés par l'appli sont relus chez SumUp : un identifiant inventé ne coûte
+    // qu'une lecture en base (sinon, des milliers d'appels feraient bloquer la clé SumUp).
+    const { data: connu } = await admin.from('paiements').select('id, statut').eq('checkout_id', id).maybeSingle();
+    if (!connu) return ok();
+
     const r = await fetch(`${SUMUP}/v0.1/checkouts/${id}`, { headers: { Authorization: `Bearer ${cleSumup}` } });
     if (!r.ok) { console.error('SumUp lecture', id, r.status); return ok(); }
     const checkout = await r.json();

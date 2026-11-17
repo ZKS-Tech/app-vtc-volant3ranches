@@ -98,6 +98,7 @@ Deno.test('acompte : un lien encore valable est réutilisé', async () => {
 Deno.test('webhook : relit le paiement chez SumUp avant de confirmer', async () => {
   appels = [];
   reponses = {
+    '/rest/v1/paiements': () => ({ id: 'p0', statut: 'en_attente' }),
     'GET /v0.1/checkouts/chk-123': () => ({ id: 'chk-123', status: 'PAID', amount: 17.3, merchant_code: 'MCTEST', transactions: [{ id: 'tx-9', status: 'SUCCESSFUL' }] }),
     'rpc/confirmer_paiement': () => ({ id: 'p1', remboursement_du: 0, rembourse: 0, transaction_id: 'tx-9' }),
   };
@@ -110,14 +111,23 @@ Deno.test('webhook : relit le paiement chez SumUp avant de confirmer', async () 
 
 Deno.test('webhook : un faux message « payé » ne confirme rien', async () => {
   appels = [];
-  reponses = { 'GET /v0.1/checkouts/chk-faux': () => ({ id: 'chk-faux', status: 'PENDING', amount: 17.3 }) };
+  reponses = { '/rest/v1/paiements': () => ({ id: 'p0', statut: 'en_attente' }), 'GET /v0.1/checkouts/chk-faux': () => ({ id: 'chk-faux', status: 'PENDING', amount: 17.3 }) };
   await webhook(new Request('http://local', { method: 'POST', body: JSON.stringify({ event_type: 'CHECKOUT_STATUS_CHANGED', id: 'chk-faux', status: 'PAID' }) }));
+  assert(!appels.some((a) => a.url.includes('confirmer_paiement')));
+});
+
+Deno.test('webhook : identifiant inconnu de la base → SumUp n’est pas interrogé', async () => {
+  appels = [];
+  reponses = { '/rest/v1/paiements': () => null, 'GET /v0.1/checkouts/': () => ({ status: 'PAID', amount: 1 }) };
+  for (let i = 0; i < 50; i++) await webhook(new Request('http://local', { method: 'POST', body: JSON.stringify({ id: `invente-${i}` }) }));
+  assert(!appels.some((a) => a.url.includes('api.sumup.com')), 'aucun appel à SumUp');
   assert(!appels.some((a) => a.url.includes('confirmer_paiement')));
 });
 
 Deno.test('webhook : payé trop tard → remboursé aussitôt', async () => {
   appels = [];
   reponses = {
+    '/rest/v1/paiements': () => ({ id: 'p0', statut: 'en_attente' }),
     'GET /v0.1/checkouts/chk-tard': () => ({ id: 'chk-tard', status: 'PAID', amount: 17.3, transactions: [{ id: 'tx-tard', status: 'SUCCESSFUL' }] }),
     'rpc/confirmer_paiement': () => ({ id: 'p2', remboursement_du: 17.3, rembourse: 0, transaction_id: 'tx-tard' }),
     'POST /refunds': () => ({}),
