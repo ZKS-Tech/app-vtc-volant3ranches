@@ -6,7 +6,7 @@
 //  3. l'accès (email, mot de passe) est supprimé avec la clé secrète, qui ne quitte jamais Supabase.
 // Les bons de commande et factures déjà émis restent 10 ans (obligation comptable).
 // À déployer SANS « Verify JWT » : la fonction vérifie elle-même la session.
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2.119.0';
 
 function cleProjet(type: 'publique' | 'secrete'): string {
   const [liste, une, ancienne] = type === 'publique'

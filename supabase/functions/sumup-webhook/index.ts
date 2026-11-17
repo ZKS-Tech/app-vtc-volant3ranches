@@ -2,7 +2,7 @@
 // statut d'un paiement. Ce message n'est pas signé : on ne lui fait pas confiance et on relit
 // toujours le paiement directement chez SumUp avant de confirmer la course.
 // À déployer SANS vérification du jeton (« Verify JWT » désactivé) : SumUp n'en envoie pas.
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2.119.0';
 
 const SUMUP = 'https://api.sumup.com';
 // Clés du projet fournies par Supabase : anciens noms (ANON / SERVICE_ROLE) ou nouveaux

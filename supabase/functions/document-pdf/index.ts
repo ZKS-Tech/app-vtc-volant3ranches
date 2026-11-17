@@ -3,7 +3,7 @@
 // de Fabrice. Le PDF est rangé dans l'espace de stockage privé « documents » et un lien de
 // téléchargement valable 1 heure est renvoyé : { url, numero }.
 // Seuls Fabrice et le client de la course peuvent l'obtenir (règles de la base).
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2.119.0';
 import { PDFDocument, PDFFont, PDFPage, StandardFonts, degrees, rgb } from 'npm:pdf-lib@1.17.1';
 
 // Clés du projet fournies par Supabase : anciens noms (ANON / SERVICE_ROLE) ou nouveaux

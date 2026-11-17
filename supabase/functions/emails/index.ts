@@ -8,7 +8,7 @@
 //   EMAIL_EXPEDITEUR   adresse d'envoi validée dans Brevo (ex. reservation@volant3ranches-vtc.fr)
 //   EMAIL_NOM          facultatif, nom affiché (par défaut « Volant3ranches VTC »)
 //   EMAIL_REPONSE      facultatif, adresse de réponse (par défaut l'email de Fabrice dans les réglages)
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2.119.0';
 
 // Clés du projet fournies par Supabase : anciens noms (ANON / SERVICE_ROLE) ou nouveaux
 // (SUPABASE_PUBLISHABLE_KEYS / SUPABASE_SECRET_KEYS, objets JSON { default: "sb_…" }).

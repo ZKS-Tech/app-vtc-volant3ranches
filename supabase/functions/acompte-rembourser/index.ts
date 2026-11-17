@@ -2,7 +2,7 @@
 // base a décidé (CGV : client à plus de 24 h ou annulation par Fabrice → remboursé ; sinon conservé).
 // Appelée par l'application juste après une annulation, et par le bouton « Rembourser » de Fabrice
 // si besoin. Sans effet s'il n'y a rien à rembourser.
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2.119.0';
 
 const SUMUP = 'https://api.sumup.com';
 // Clés du projet fournies par Supabase : anciens noms (ANON / SERVICE_ROLE) ou nouveaux

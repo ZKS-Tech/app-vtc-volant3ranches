@@ -9,7 +9,7 @@
 //
 // Secrets : GA4_MEASUREMENT_ID (G-XXXXXXX) et GA4_API_SECRET (Admin GA4 › Flux de données ›
 // le flux › Measurement Protocol › Créer).
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2.119.0';
 
 function cleProjet(type: 'publique' | 'secrete'): string {
   const [liste, une, ancienne] = type === 'publique'

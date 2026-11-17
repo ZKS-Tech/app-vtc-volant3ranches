@@ -5,7 +5,7 @@
 //
 // Secrets (Supabase › Edge Functions › Secrets) : SUMUP_API_KEY, SUMUP_MERCHANT_CODE.
 // L'adresse et les clés du projet sont fournies automatiquement par Supabase.
-import { createClient } from 'npm:@supabase/supabase-js@2';
+import { createClient } from 'npm:@supabase/supabase-js@2.119.0';
 
 const SUMUP = 'https://api.sumup.com';
 // Clés du projet fournies par Supabase : anciens noms (ANON / SERVICE_ROLE) ou nouveaux

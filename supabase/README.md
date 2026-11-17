@@ -396,6 +396,20 @@ Non disponibles en offre gratuite (Pro) : protection contre les mots de passe di
 (« Leaked password protection », base HaveIBeenPwned), durée maximale et inactivité des sessions.
 À activer en passant à l'offre Pro.
 
+## Limites anti-abus (migration 20)
+
+1. SQL Editor : exécuter [`20261123000000_limites.sql`](migrations/20261123000000_limites.sql).
+   - Emails : 3 par jour au plus vers une même adresse (demande reçue, annulation) ; au-delà de
+     200 emails dans la journée (réglage `emails_plafond_jour`), seuls les emails importants partent,
+     jusqu'à 280 ; Fabrice est prévenu. Les emails retenus apparaissent « retenu » dans Gestion › Emails.
+   - Demandes depuis l'appli : 20 par heure au plus, tous comptes confondus (`demandes_plafond_heure`).
+   - Saisies validées par la base (format d'email, téléphone, longueurs, type de lieu, date ≤ 1 an).
+   - Profil modifiable uniquement par la fonction prévue.
+   - Compteur d'appels pour la fonction `stats` (60 par heure et par compte).
+2. Edge Functions : redéployer **les 7 fonctions** (version de `supabase-js` figée), en particulier
+   `sumup-webhook` (ne relit chez SumUp que les paiements connus) et `stats` (limite d'appels).
+   **Après** la migration : sinon `stats` refuse tout (compteur absent).
+
 ## Avant l'ouverture aux clients : remise à zéro (une seule fois)
 
 Les essais ont consommé de vrais numéros (BC-…, F-…, AV-…) : les factures réelles doivent

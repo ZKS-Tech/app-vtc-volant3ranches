@@ -17,17 +17,17 @@ fermées au changement de mot de passe, clé Firebase restreinte.
 | 2 | Toi | Supabase › Auth › Email : **Confirm email**, **Secure email change**, **Secure password change** activés ; mot de passe **8** caractères, lettres et chiffres ; code **8** chiffres valable **900 s** | Empêche de prendre l'email de quelqu'un ; code impossible à deviner |
 | 3 | Toi | Supabase › Auth › Rate Limits : comptes invités **10/h par IP**, emails d'Auth **~20/h** | Freine la création d'invités en masse, porte d'entrée de tous les abus |
 
-## Priorité 1 — avant la publication (code, ~1 journée)
+## Priorité 1 — avant la publication (code, ~1 journée) — ✅ fait le 17/11 (migration 20)
 
 | # | Qui | Quoi | Pourquoi | Effort |
 |---|---|---|---|---|
-| 4 | Code | **Budget d'emails** : 3 emails/jour max vers une même adresse, plafond global quotidien (≈ 200) en gardant les confirmations, factures et codes prioritaires, alerte à Fabrice | Un script peut vider le quota Brevo (300/jour) en 30 min et spammer des inconnus | moyen |
-| 5 | Code | **Plafond global** de demandes venant de l'appli (≈ 20/h) | Rafale de fausses demandes et de notifications chez Fabrice | petit |
-| 6 | Code | **Validation serveur des saisies** : vrai format d'email, longueurs max (nom 100, téléphone 30, email 254, commentaire 500, vol 20, adresses 200), téléphone en chiffres/espaces/+, type de lieu fermé, date ≤ 1 an ; encoder l'email dans les liens `mailto:` de Fabrice | Injection de destinataire caché dans l'email d'acompte ; textes géants | moyen |
-| 7 | Code | `profils.email` non modifiable depuis l'appli | Incohérence de données | petit |
-| 8 | Code | `sumup-webhook` : vérifier que le paiement existe en base **avant** d'interroger SumUp | 100 000 appels = 100 000 requêtes SumUp avec ta clé | petit |
-| 9 | Code | `stats` : limite par compte (≈ 60 appels/h) | Quota des fonctions et statistiques faussées | petit |
-| 10 | Code | Dépendances : `npx expo install --fix` ; figer `supabase-js` (version exacte) dans les 7 fonctions + `deno.lock` | 8 alertes modérées (outils de build) ; mise à jour non maîtrisée de code qui manipule les clés | petit |
+| 4 | ✅ Code | **Budget d'emails** : 3 emails/jour max vers une même adresse, plafond global quotidien (≈ 200) en gardant les confirmations, factures et codes prioritaires, alerte à Fabrice | Un script peut vider le quota Brevo (300/jour) en 30 min et spammer des inconnus | moyen |
+| 5 | ✅ Code | **Plafond global** de demandes venant de l'appli (≈ 20/h) | Rafale de fausses demandes et de notifications chez Fabrice | petit |
+| 6 | ✅ Code | **Validation serveur des saisies** : vrai format d'email, longueurs max (nom 100, téléphone 30, email 254, commentaire 500, vol 20, adresses 200), téléphone en chiffres/espaces/+, type de lieu fermé, date ≤ 1 an ; encoder l'email dans les liens `mailto:` de Fabrice | Injection de destinataire caché dans l'email d'acompte ; textes géants | moyen |
+| 7 | ✅ Code | `profils.email` non modifiable depuis l'appli | Incohérence de données | petit |
+| 8 | ✅ Code | `sumup-webhook` : vérifier que le paiement existe en base **avant** d'interroger SumUp | 100 000 appels = 100 000 requêtes SumUp avec ta clé | petit |
+| 9 | ✅ Code | `stats` : limite par compte (≈ 60 appels/h) | Quota des fonctions et statistiques faussées | petit |
+| 10 | ✅ Code | Dépendances : mises à jour correctives d'Expo (`npm update`, 8 → 3 alertes, restantes dans un outil de build sans correctif) ; `supabase-js` figé en 2.119.0 dans les 7 fonctions (pas de `deno.lock` : le déploiement depuis le tableau de bord ne l'utilise pas) | 8 alertes modérées (outils de build) ; mise à jour non maîtrisée de code qui manipule les clés | petit |
 
 ## Priorité 1 bis — avant d'activer SumUp (code, ~½ journée)
 
