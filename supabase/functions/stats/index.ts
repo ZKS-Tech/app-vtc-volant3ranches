@@ -75,6 +75,10 @@ Deno.serve(async (req) => {
     // Seule l'appli (session Supabase valide, invité compris) peut envoyer des statistiques.
     const { data: u } = await createClient(Deno.env.get('SUPABASE_URL')!, cleProjet('publique')).auth.getUser(jeton);
     if (!u?.user) return new Response(null, { status: 401, headers: cors });
+    // 60 envois par heure et par compte au plus (largement assez : l'appli regroupe ses événements).
+    const commeUtilisateur = createClient(Deno.env.get('SUPABASE_URL')!, cleProjet('publique'), { global: { headers: { Authorization: `Bearer ${jeton}` } } });
+    const { data: permis } = await commeUtilisateur.rpc('autoriser_appel', { p_cle: 'stats', p_max: 60 });
+    if (permis !== true) return new Response(null, { status: 429, headers: cors });
 
     const events = nettoyer(evenements, Number(session_id) || Date.now());
     if (!events.length) return new Response(null, { status: 204, headers: cors });

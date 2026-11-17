@@ -1004,6 +1004,20 @@ if (process.argv[22]) {
   await echoue(() => q(`update public.profils set nom = 'Autre' where id = '${v}'`), 'profil : le nom passe obligatoirement par enregistrer_profil');
   r = await q(`select * from public.enregistrer_profil('Vrai Nom', '06 12 34 56 78')`);
   ok(r[0].nom === 'Vrai Nom', 'enregistrer_profil fonctionne toujours');
+
+  // Point 9 : compteur d'appels (fonction stats), 60 par heure et par compte.
+  let refus = 0;
+  for (let k = 0; k < 63; k++) if (!(await q(`select public.autoriser_appel('stats', 60) a`))[0].a) refus++;
+  ok(refus === 3, `stats : 60 appels acceptés puis refusés (${refus} refus sur 63)`);
+  await en(client);
+  r = await q(`select public.autoriser_appel('stats', 60) a`);
+  ok(r[0].a === true, 'le compteur est propre à chaque compte');
+  r = await q(`select public.autoriser_appel('autre-usage', 1000) a`);
+  ok(r[0].a === false, 'usage inconnu refusé');
+  r = await q(`select count(*)::int n from public.compteurs_appels`).catch(() => [{ n: 0 }]);
+  ok(r[0].n === 0, 'compteurs illisibles directement');
+  await en(null);
+  await echoue(() => q(`select public.autoriser_appel('stats', 60)`), 'sans connexion : refusé');
 }
 
 // Remise à zéro avant lancement (supabase/scripts/remise-a-zero-lancement.sql), en dernier.
@@ -1050,7 +1064,7 @@ if (process.argv[20]) {
       'repondre_demande', 'annuler_course_chauffeur', 'creer_course_manuelle', 'modifier_course', 'terminer_course', 'noter_course',
       'participe_a', // utilisée par les règles d'accès aux messages
       'emettre_facture', 'emettre_avoir', 'marquer_remboursement', 'renvoyer_email', 'enregistrer_fiche', 'fusionner_fiches',
-      'remboursements_dus', 'stats_chauffeur', 'reglages_emails'],
+      'remboursements_dus', 'stats_chauffeur', 'reglages_emails', 'autoriser_appel'],
   };
   for (const role of ['anon', 'authenticated']) {
     const rows = await srv(`select distinct p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace

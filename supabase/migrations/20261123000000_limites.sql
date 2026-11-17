@@ -185,3 +185,35 @@ revoke update on public.profils from anon, authenticated;
 
 revoke execute on function public.valider_course(), public.valider_profil(),
   public.email_valide(text), public.telephone_valide(text) from public, anon, authenticated;
+
+-- ═══ Point 9 — Compteur d'appels par compte (fonction « stats ») ═══
+-- Les fonctions serveur ne gardent rien en mémoire d'un appel à l'autre : le compteur vit ici, une
+-- ligne par compte, par usage et par heure. Fermée à tous en lecture et écriture directes.
+create table if not exists public.compteurs_appels (
+  user_id uuid not null references auth.users (id) on delete cascade,
+  cle text not null,
+  heure timestamptz not null,
+  n int not null default 0,
+  primary key (user_id, cle, heure)
+);
+alter table public.compteurs_appels enable row level security;
+
+-- Compte un appel et dit s'il reste dans la limite (p_max appels par heure).
+create or replace function public.autoriser_appel(p_cle text, p_max int)
+returns boolean
+language plpgsql security definer set search_path = public
+as $$
+declare
+  moi uuid := auth.uid();
+  n int;
+begin
+  if moi is null or p_cle not in ('stats') or p_max not between 1 and 1000 then return false; end if;
+  insert into public.compteurs_appels (user_id, cle, heure, n) values (moi, p_cle, date_trunc('hour', now()), 1)
+  on conflict (user_id, cle, heure) do update set n = compteurs_appels.n + 1
+  returning compteurs_appels.n into n;
+  delete from public.compteurs_appels where user_id = moi and heure < now() - interval '1 day';
+  return n <= p_max;
+end;
+$$;
+revoke execute on function public.autoriser_appel(text, int) from public, anon;
+grant execute on function public.autoriser_appel(text, int) to authenticated;

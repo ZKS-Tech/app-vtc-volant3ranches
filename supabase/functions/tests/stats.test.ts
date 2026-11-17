@@ -3,10 +3,12 @@ import { assert, assertEquals } from 'jsr:@std/assert@1';
 
 let appels: { url: string; corps: any }[] = [];
 let sessionValide = true;
+let quotaOk = true;
 globalThis.fetch = (async (entree: string | URL | Request, init?: RequestInit) => {
   const url = typeof entree === 'string' ? entree : entree instanceof URL ? entree.href : entree.url;
   const brut = init?.body ?? (entree instanceof Request ? await entree.text() : undefined);
   appels.push({ url, corps: typeof brut === 'string' && brut ? JSON.parse(brut) : undefined });
+  if (url.includes('/rpc/autoriser_appel')) return new Response(JSON.stringify(quotaOk), { status: 200, headers: { 'Content-Type': 'application/json' } });
   if (url.includes('/auth/v1/user')) return new Response(JSON.stringify(sessionValide ? { id: 'u1', aud: 'authenticated' } : { message: 'invalid' }), { status: sessionValide ? 200 : 401, headers: { 'Content-Type': 'application/json' } });
   return new Response(null, { status: 204 });
 }) as typeof fetch;
@@ -55,6 +57,14 @@ Deno.test('GA4 pas encore configuré : l’appli n’est jamais gênée', async 
   assertEquals(r.status, 204);
   assertEquals(appels.length, 0);
   Deno.env.set('GA4_API_SECRET', 'secret-ga4');
+});
+
+Deno.test('au-delà de 60 envois par heure : refusé, rien ne part chez Google', async () => {
+  appels = []; sessionValide = true; quotaOk = false;
+  const r = await envoyer({ client_id: 'abc12345.678', evenements: [{ nom: 'ouverture_app' }] });
+  assertEquals(r.status, 429);
+  assert(!appels.some((a) => a.url.includes('google-analytics')));
+  quotaOk = true;
 });
 
 Deno.test('au plus 25 événements par envoi', () => {
