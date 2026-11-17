@@ -434,4 +434,13 @@ export const EN: Record<string, string> = {
   "Trop de demandes aujourd'hui : appelez Fabrice au 06 16 53 14 91.": "Too many requests today: call Fabrice on +33 6 16 53 14 91.",
   "Vous avez déjà 5 demandes en attente : attendez la réponse de Fabrice ou appelez-le.": "You already have 5 requests waiting: wait for Fabrice's reply or call him.",
   "Beaucoup de demandes en ce moment : appelez Fabrice au 06 16 53 14 91.": "Many requests right now: call Fabrice on +33 6 16 53 14 91.",
+  "Nom invalide (2 à 100 caractères)": "Invalid name (2 to 100 characters)",
+  "Numéro de téléphone invalide": "Invalid phone number",
+  "Adresse email invalide": "Invalid email address",
+  "Commentaire trop long (500 caractères au plus)": "Comment too long (500 characters max)",
+  "Numéro de vol ou de train invalide": "Invalid flight or train number",
+  "Adresse trop longue": "Address too long",
+  "Type de lieu inconnu": "Unknown place type",
+  "Date trop lointaine (un an au plus)": "Date too far ahead (one year max)",
+  "Nom trop long (100 caractères au plus)": "Name too long (100 characters max)",
 };

@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Animated, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Mission, Source, useChauffeur } from './chauffeur';
-import { dateCourte, euros, montantAcompte, offre, regles } from './data';
+import { dateCourte, emailValide, euros, montantAcompte, offre, regles } from './data';
 import { Couleurs, f, radius, space } from './theme';
 import { Bouton, IconName, teintesDe } from './ui';
 import { useTheme } from './useTheme';
@@ -11,9 +11,12 @@ import { useTheme } from './useTheme';
 export const heureDe = (d: Date) => `${d.getHours()}h${String(d.getMinutes()).padStart(2, '0')}`;
 export const iconeSource: Record<Source, IconName> = { appli: 'phone-portrait-outline', telephone: 'call-outline', email: 'mail-outline', autre: 'create-outline' };
 
-export const appeler = (tel?: string | null) => tel && Linking.openURL(`tel:${tel.replace(/\s/g, '')}`).catch(() => {});
-export const ecrireSms = (tel?: string | null) => tel && Linking.openURL(`sms:${tel.replace(/\s/g, '')}`).catch(() => {});
-export const ecrireEmail = (email?: string | null) => email && Linking.openURL(`mailto:${email}`).catch(() => {});
+// Coordonnées saisies par les clients : on ne garde que des caractères sûrs avant d'ouvrir le
+// téléphone ou la messagerie (un « ? » ou un « & » dans l'email ajouterait un destinataire caché).
+const numero = (tel: string) => tel.replace(/[^\d+]/g, '');
+export const appeler = (tel?: string | null) => tel && numero(tel) && Linking.openURL(`tel:${numero(tel)}`).catch(() => {});
+export const ecrireSms = (tel?: string | null) => tel && numero(tel) && Linking.openURL(`sms:${numero(tel)}`).catch(() => {});
+export const ecrireEmail = (email?: string | null) => email && emailValide(email) && Linking.openURL(`mailto:${email.trim()}`).catch(() => {});
 
 // Ouvre le GPS vers le point de prise en charge (ou la destination).
 export function ouvrirGps(appli: 'waze' | 'maps', lat?: number | null, lon?: number | null, libelle?: string) {

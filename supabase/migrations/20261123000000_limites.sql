@@ -98,3 +98,90 @@ begin
 end;
 $$;
 revoke execute on function public.limiter_demandes() from public, anon, authenticated;
+
+-- ═══ Point 6 — Validation des saisies par la base ═══
+-- L'appli contrôle déjà les champs, mais la base ne doit pas lui faire confiance : un script peut
+-- appeler l'API directement. Formats et longueurs maximales vérifiés à chaque nouvelle course et à
+-- chaque enregistrement de profil (appli et saisie de Fabrice).
+--  • Email : un vrai format d'adresse, sans « ? », « & », « , »… (empêche d'ajouter un destinataire
+--    caché quand Fabrice écrit au client depuis son téléphone).
+--  • Téléphone : chiffres, espaces, + . - ( ) seulement.
+--  • Longueurs : nom 100, téléphone 30, email 254, commentaire 500, vol/train 20, adresses 200.
+--  • Type de lieu : aéroport, gare, ville ou adresse. Date : au plus un an à l'avance.
+create or replace function public.email_valide(e text)
+returns boolean
+language sql immutable
+as $$
+  select e is not null and length(e) <= 254
+     and e ~* '^[a-z0-9._%+''-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$';
+$$;
+
+create or replace function public.telephone_valide(t text)
+returns boolean
+language sql immutable
+as $$
+  select t is not null and length(t) <= 30 and t ~ '^[0-9 +.()-]+$'
+     and length(regexp_replace(t, '\D', '', 'g')) between 6 and 15;
+$$;
+
+create or replace function public.valider_course()
+returns trigger
+language plpgsql security definer set search_path = public
+as $$
+begin
+  if length(trim(coalesce(new.nom, ''))) not between 2 and 100 then raise exception 'Nom invalide (2 à 100 caractères)'; end if;
+  if nullif(trim(new.telephone), '') is not null and not public.telephone_valide(trim(new.telephone)) then
+    raise exception 'Numéro de téléphone invalide';
+  end if;
+  if nullif(trim(new.email), '') is not null and not public.email_valide(trim(new.email)) then
+    raise exception 'Adresse email invalide';
+  end if;
+  if length(coalesce(new.commentaire, '')) > 500 then raise exception 'Commentaire trop long (500 caractères au plus)'; end if;
+  if new.numero_vol_train is not null and (length(new.numero_vol_train) > 20 or new.numero_vol_train !~ '^[A-Za-z0-9 -]+$') then
+    raise exception 'Numéro de vol ou de train invalide';
+  end if;
+  if greatest(length(new.depart_libelle), length(new.arrivee_libelle), length(coalesce(new.depart_detail, '')),
+              length(coalesce(new.arrivee_detail, '')), length(coalesce(new.depart_ref, '')), length(coalesce(new.arrivee_ref, ''))) > 200 then
+    raise exception 'Adresse trop longue';
+  end if;
+  if coalesce(new.depart_type, 'adresse') not in ('aeroport', 'gare', 'ville', 'adresse')
+     or coalesce(new.arrivee_type, 'adresse') not in ('aeroport', 'gare', 'ville', 'adresse') then
+    raise exception 'Type de lieu inconnu';
+  end if;
+  if new.date_heure > now() + interval '1 year' then raise exception 'Date trop lointaine (un an au plus)'; end if;
+  new.nom := trim(new.nom);
+  new.telephone := trim(new.telephone);
+  new.email := nullif(lower(trim(new.email)), '');
+  return new;
+end;
+$$;
+drop trigger if exists courses_valider on public.courses;
+create trigger courses_valider before insert on public.courses
+  for each row execute function public.valider_course();
+
+create or replace function public.valider_profil()
+returns trigger
+language plpgsql security definer set search_path = public
+as $$
+begin
+  if new.nom is not null and length(trim(new.nom)) > 100 then raise exception 'Nom trop long (100 caractères au plus)'; end if;
+  if nullif(trim(new.telephone), '') is not null and not public.telephone_valide(trim(new.telephone)) then
+    raise exception 'Numéro de téléphone invalide';
+  end if;
+  if nullif(trim(new.email), '') is not null and not public.email_valide(trim(new.email)) then
+    raise exception 'Adresse email invalide';
+  end if;
+  return new;
+end;
+$$;
+drop trigger if exists profils_valider on public.profils;
+create trigger profils_valider before insert or update of nom, telephone, email on public.profils
+  for each row execute function public.valider_profil();
+
+-- ═══ Point 7 — Profil modifiable seulement par la fonction prévue ═══
+-- L'appli enregistre le profil par enregistrer_profil (l'email vient alors du compte, vérifié par
+-- Supabase). Plus aucune modification directe : on ne peut plus y écrire l'email de quelqu'un d'autre.
+revoke update on public.profils from anon, authenticated;
+
+revoke execute on function public.valider_course(), public.valider_profil(),
+  public.email_valide(text), public.telephone_valide(text) from public, anon, authenticated;

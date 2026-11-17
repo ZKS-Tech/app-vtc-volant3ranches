@@ -103,6 +103,7 @@ export default function Trajet() {
             <Titre>{aeroport ? t('Votre vol') : t('Votre train')}</Titre>
             <Champ
               libelle={aeroport ? t('Numéro de vol (facultatif)') : t('Numéro de train (facultatif)')}
+              maxLength={20}
               placeholder={aeroport ? t('Ex. AF 6127') : t('Ex. TER 873402')}
               autoCapitalize="characters"
               value={b.numero}

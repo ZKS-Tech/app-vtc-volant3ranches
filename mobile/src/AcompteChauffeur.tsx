@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Linking, Share, Text, View } from 'react-native';
 import { Mission, useChauffeur } from './chauffeur';
 import { heureDe } from './chauffeurUi';
-import { dateCourte, euros } from './data';
+import { dateCourte, emailValide, euros } from './data';
 import { Paiement, paiementsDe } from './serveur';
 import { space } from './theme';
 import { Bouton, Note } from './ui';
@@ -66,10 +66,10 @@ export function AcompteChauffeur({ m }: { m: Mission }) {
           <View style={{ flexDirection: 'row', gap: space.s }}>
             <Bouton titre="Partager le lien" icone="share-outline" variante="contour" chargement={action === 'partager'} style={{ flex: 1, paddingHorizontal: space.s }}
               onPress={() => faire('partager', async () => { await Share.share({ message: message(await obtenirLien()) }); })} />
-            <Bouton titre="Par email" icone="mail-outline" variante="contour" desactive={!m.email} chargement={action === 'email'} style={{ flex: 1, paddingHorizontal: space.s }}
+            <Bouton titre="Par email" icone="mail-outline" variante="contour" desactive={!m.email || !emailValide(m.email)} chargement={action === 'email'} style={{ flex: 1, paddingHorizontal: space.s }}
               onPress={() => faire('email', async () => {
                 const url = await obtenirLien();
-                await Linking.openURL(`mailto:${m.email}?subject=${encodeURIComponent('Acompte pour votre course Volant3ranches')}&body=${encodeURIComponent(message(url))}`);
+                await Linking.openURL(`mailto:${m.email!.trim()}?subject=${encodeURIComponent('Acompte pour votre course Volant3ranches')}&body=${encodeURIComponent(message(url))}`);
               })} />
           </View>
         </>

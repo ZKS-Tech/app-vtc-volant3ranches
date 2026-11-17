@@ -2,7 +2,7 @@ import { router } from 'expo-router';
 import { useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { dateCourte, euros, heureAffichee, lieu, offre, prix, trajet } from '../src/data';
+import { dateCourte, emailValide, euros, heureAffichee, lieu, offre, prix, telephoneValide, trajet } from '../src/data';
 import { useStore } from '../src/store';
 import { Couleurs, radius, space } from '../src/theme';
 import { EcranAvecClavier } from '../src/Clavier';
@@ -27,8 +27,8 @@ export default function Coordonnees() {
   const o = offre(b.offreId);
   const dist = trajet(depart, arrivee);
   const p = prix(o, dist.km, b.jour, b.heure, b.allerRetour);
-  const telOk = b.telephone.replace(/\D/g, '').length >= 10;
-  const mailOk = /.+@.+\..+/.test(b.email);
+  const telOk = telephoneValide(b.telephone);
+  const mailOk = emailValide(b.email);
   const complet = b.nom.trim().length > 1 && telOk && mailOk && b.cgv;
   const attente = depart.type === 'aeroport' ? t('30 min après l’atterrissage') : depart.type === 'gare' ? t('15 min en gare') : '10 min';
 
@@ -57,9 +57,9 @@ export default function Coordonnees() {
         <View style={{ marginTop: space.l }}>
           {modifier ? (
             <>
-          <Champ libelle={t('Nom et prénom')} placeholder="Claire Martin" autoComplete="name" textContentType="name" value={b.nom} onChangeText={(v) => maj({ nom: v })} />
+          <Champ libelle={t('Nom et prénom')} maxLength={100} placeholder="Claire Martin" autoComplete="name" textContentType="name" value={b.nom} onChangeText={(v) => maj({ nom: v })} />
           <Champ
-            libelle={t('Téléphone')}
+            libelle={t('Téléphone')} maxLength={30}
             placeholder="06 12 34 56 78"
             keyboardType="phone-pad"
             autoComplete="tel"
@@ -69,7 +69,7 @@ export default function Coordonnees() {
             aide={tente && !telOk ? t('Indiquez un numéro de téléphone valide : Fabrice pourra vous joindre le jour de la course.') : undefined}
           />
           <Champ
-            libelle={t('Email')}
+            libelle={t('Email')} maxLength={254}
             placeholder="claire.martin@email.fr"
             keyboardType="email-address"
             autoCapitalize="none"
@@ -89,7 +89,7 @@ export default function Coordonnees() {
               <Bouton titre={t('Modifier')} variante="texte" onPress={() => setModifier(true)} />
             </View>
           )}
-          <Champ libelle={t('Commentaire (facultatif)')} placeholder={t('Siège enfant, arrêt intermédiaire…')} value={b.commentaire} onChangeText={(v) => maj({ commentaire: v })} multiline />
+          <Champ libelle={t('Commentaire (facultatif)')} maxLength={500} placeholder={t('Siège enfant, arrêt intermédiaire…')} value={b.commentaire} onChangeText={(v) => maj({ commentaire: v })} multiline />
         </View>
 
         <Titre>{t('Récapitulatif')}</Titre>

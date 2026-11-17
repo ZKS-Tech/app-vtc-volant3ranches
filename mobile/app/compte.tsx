@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { EcranAvecClavier } from '../src/Clavier';
+import { emailValide, telephoneValide } from '../src/data';
 import { envoyerCodeConnexion } from '../src/serveur';
 import { useStore } from '../src/store';
 import { space } from '../src/theme';
@@ -25,8 +26,8 @@ export default function Compte() {
   const [erreur, setErreur] = useState('');
   const [fait, setFait] = useState<string | null>(null);
   const maj = (p: Partial<typeof f>) => setF((x) => ({ ...x, ...p }));
-  const emailOk = /.+@.+\..+/.test(f.email.trim());
-  const telOk = f.telephone.replace(/\D/g, '').length >= 10;
+  const emailOk = emailValide(f.email);
+  const telOk = telephoneValide(f.telephone);
   const valide = emailOk && f.motDePasse.length >= 8 && (mode === 'connexion' || (f.nom.trim().length > 1 && telOk));
 
   const valider = async () => {
@@ -75,7 +76,7 @@ export default function Compte() {
           <Text style={[type.small, { marginBottom: space.l }]}>
             {oubli === 'email' ? t('Indiquez l’email de votre compte : vous allez recevoir un code à 6 chiffres.') : t('Si un compte existe avec {email}, un code vient d’y être envoyé. Il est valable 15 minutes ; pensez à regarder dans les spams.', { email: f.email.trim() })}
           </Text>
-          <Champ libelle={t('Email')} value={f.email} onChangeText={(v) => maj({ email: v })} keyboardType="email-address" autoCapitalize="none" autoComplete="email" editable={oubli === 'email'} />
+          <Champ libelle={t('Email')} maxLength={254} value={f.email} onChangeText={(v) => maj({ email: v })} keyboardType="email-address" autoCapitalize="none" autoComplete="email" editable={oubli === 'email'} />
           {oubli === 'code' ? (
             <>
               <Champ libelle={t('Code reçu par email')} value={code} onChangeText={(v) => setCode(v.replace(/\D/g, '').slice(0, 8))} keyboardType="number-pad" autoComplete="one-time-code" textContentType="oneTimeCode" placeholder="123456" />
@@ -104,11 +105,11 @@ export default function Compte() {
         </Text>
         {mode === 'creer' ? (
           <>
-            <Champ libelle={t('Nom et prénom')} value={f.nom} onChangeText={(v) => maj({ nom: v })} placeholder="Claire Martin" autoComplete="name" textContentType="name" />
-            <Champ libelle={t('Téléphone')} value={f.telephone} onChangeText={(v) => maj({ telephone: v })} placeholder="06 12 34 56 78" keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" />
+            <Champ libelle={t('Nom et prénom')} maxLength={100} value={f.nom} onChangeText={(v) => maj({ nom: v })} placeholder="Claire Martin" autoComplete="name" textContentType="name" />
+            <Champ libelle={t('Téléphone')} maxLength={30} value={f.telephone} onChangeText={(v) => maj({ telephone: v })} placeholder="06 12 34 56 78" keyboardType="phone-pad" autoComplete="tel" textContentType="telephoneNumber" />
           </>
         ) : null}
-        <Champ libelle={t('Email')} value={f.email} onChangeText={(v) => maj({ email: v })} placeholder="claire.martin@email.fr" keyboardType="email-address" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" />
+        <Champ libelle={t('Email')} maxLength={254} value={f.email} onChangeText={(v) => maj({ email: v })} placeholder="claire.martin@email.fr" keyboardType="email-address" autoCapitalize="none" autoComplete="email" textContentType="emailAddress" />
         <Champ libelle={t('Mot de passe')} value={f.motDePasse} onChangeText={(v) => maj({ motDePasse: v })} placeholder={mode === 'creer' ? t('8 caractères au moins') : ''} secureTextEntry
           autoComplete={mode === 'creer' ? 'new-password' : 'current-password'} textContentType={mode === 'creer' ? 'newPassword' : 'password'} />
         {erreur ? <View style={{ marginBottom: space.l }}><Note ton="erreur">{erreur}</Note></View> : null}

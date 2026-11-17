@@ -35,8 +35,8 @@ function BlocCompte() {
       <Text style={type.label}>{t('Mon compte')}</Text>
       {edition ? (
         <View style={{ marginTop: space.m }}>
-          <Champ libelle={t('Nom et prénom')} value={f.nom} onChangeText={(v) => setF((x) => ({ ...x, nom: v }))} />
-          <Champ libelle={t('Téléphone')} value={f.telephone} onChangeText={(v) => setF((x) => ({ ...x, telephone: v }))} keyboardType="phone-pad" />
+          <Champ libelle={t('Nom et prénom')} maxLength={100} value={f.nom} onChangeText={(v) => setF((x) => ({ ...x, nom: v }))} />
+          <Champ libelle={t('Téléphone')} maxLength={30} value={f.telephone} onChangeText={(v) => setF((x) => ({ ...x, telephone: v }))} keyboardType="phone-pad" />
           {erreur ? <View style={{ marginBottom: space.m }}><Note ton="erreur">{erreur}</Note></View> : null}
           <View style={{ flexDirection: 'row', gap: space.s }}>
             <Bouton titre={t('Annuler')} variante="contour" onPress={() => { setEdition(false); setErreur(''); }} style={{ flex: 1 }} />

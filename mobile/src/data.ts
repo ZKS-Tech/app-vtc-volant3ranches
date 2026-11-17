@@ -341,6 +341,15 @@ export function fraisAnnulation(depart: Date, maintenant = new Date()) {
   return { taux: 1, texte: t('Moins de 12 h avant la course : 100 % du montant.') };
 }
 
+// Mêmes règles que la base (fonctions email_valide et telephone_valide) : refus affiché tout de suite.
+export const emailValide = (e: string) =>
+  e.trim().length <= 254 && /^[a-z0-9._%+'-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$/i.test(e.trim());
+export const telephoneValide = (t: string) => {
+  const v = t.trim();
+  const chiffres = v.replace(/\D/g, '').length;
+  return v.length <= 30 && /^[0-9 +.()-]+$/.test(v) && chiffres >= 10 && chiffres <= 15;
+};
+
 // Montant de l'acompte pour un prix (même calcul que la fonction montant_acompte de la base).
 export const montantAcompte = (prixCourse: number) =>
   regles.acomptePourcent > 0 ? Math.max(1, Math.round(prixCourse * regles.acomptePourcent) / 100) : 0;

@@ -938,7 +938,7 @@ if (process.argv[22]) {
   await srv(`insert into public.emails (type, destinataire, statut) select 'facture', 'f' || g || '@x.fr', 'envoye' from generate_series(1, 10) g`);
   await srv(`delete from net.envois`);
   const cP = (await srv(`insert into public.courses (depart_libelle, arrivee_libelle, date_heure, passagers, bagages, offre_id, distance_km, montant, prix_km, nom, telephone, email, source)
-    values ('a', 'b', now() + interval '40 days', 1, 0, 'tesla', 10, 20, 1.8, 'P', '0600000000', 'p@x.fr', 'telephone') returning id`))[0];
+    values ('a', 'b', now() + interval '40 days', 1, 0, 'tesla', 10, 20, 1.8, 'Pierre', '0600000000', 'p@x.fr', 'telephone') returning id`))[0];
   await srv(`select public.mettre_email('demande_recue', '${cP.id}', null, 'nouveau@x.fr', 'X')`);
   await srv(`select public.mettre_email('chauffeur_demande', '${cP.id}', null, 'fabrice@x.fr', 'F')`);
   await srv(`select public.mettre_email('confirmation', '${cP.id}', null, 'nouveau@x.fr', 'X')`);
@@ -977,6 +977,33 @@ if (process.argv[22]) {
     now() + interval '7 days', false, 1, 1, null, 'tesla', 50, 45, null, 'telephone', null)`))[0];
   ok(!!m.id, 'les courses saisies par Fabrice ne sont jamais bloquées');
   await srv(`update public.parametres set demandes_plafond_heure = 200`);
+
+  // Point 6 : saisies validées par la base, même en appelant l'API directement.
+  const v = 'abcdef00-0000-0000-0000-0000000000aa';
+  await srv(`insert into auth.users (id) values ('${v}') on conflict do nothing`);
+  await en(v);
+  const dem = (champs) => q(`select * from public.creer_demande(
+    '{"ref":"castres-gare","libelle":"Gare de Castres","lat":43.6,"lon":2.23,"type":"${champs.type ?? 'gare'}"}',
+    '{"ref":"tls","libelle":"Aéroport Toulouse-Blagnac","lat":43.63,"lon":1.36,"type":"aeroport"}',
+    now() + interval '${champs.jours ?? 3} days', false, 1, 1, ${champs.vol ? `'${champs.vol}'` : 'null'}, 'tesla', 87.5, 75,
+    '${champs.nom ?? 'Claire Martin'}', '${champs.tel ?? '06 12 34 56 78'}', '${champs.email ?? 'claire@exemple.fr'}', ${champs.comm ? `'${champs.comm}'` : 'null'})`);
+  await echoue(() => dem({ email: 'moi@x.fr?bcc=pirate@y.com&' }), 'email avec destinataire caché refusé');
+  await echoue(() => dem({ email: 'pas-un-email' }), 'email sans domaine refusé');
+  await echoue(() => dem({ tel: '06 11 22 33 44 ;*#31#' }), 'téléphone avec caractères spéciaux refusé');
+  await echoue(() => dem({ nom: 'x'.repeat(101) }), 'nom de plus de 100 caractères refusé');
+  await echoue(() => dem({ comm: 'x'.repeat(501) }), 'commentaire de plus de 500 caractères refusé');
+  await echoue(() => dem({ vol: 'AF 1234<script>' }), 'numéro de vol invalide refusé');
+  await echoue(() => dem({ type: 'piege' }), 'type de lieu inconnu refusé');
+  await echoue(() => dem({ jours: 400 }), 'date à plus d\'un an refusée');
+  r = await dem({ email: 'Claire.Martin+vtc@Exemple.FR', tel: '+33 6 12 34 56 78' });
+  ok(r[0].email === 'claire.martin+vtc@exemple.fr' && r[0].telephone === '+33 6 12 34 56 78', `saisie normale acceptée, email mis en minuscules (${r[0].email})`);
+  await echoue(() => q(`select public.enregistrer_profil('${'y'.repeat(101)}', '06 12 34 56 78')`), 'profil : nom trop long refusé');
+
+  // Point 7 : plus aucune modification directe du profil.
+  await echoue(() => q(`update public.profils set email = 'b@x.fr' where id = '${v}'`), 'profil : l\'email ne se modifie plus directement');
+  await echoue(() => q(`update public.profils set nom = 'Autre' where id = '${v}'`), 'profil : le nom passe obligatoirement par enregistrer_profil');
+  r = await q(`select * from public.enregistrer_profil('Vrai Nom', '06 12 34 56 78')`);
+  ok(r[0].nom === 'Vrai Nom', 'enregistrer_profil fonctionne toujours');
 }
 
 // Remise à zéro avant lancement (supabase/scripts/remise-a-zero-lancement.sql), en dernier.
