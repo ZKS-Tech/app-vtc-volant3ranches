@@ -433,4 +433,5 @@ export const EN: Record<string, string> = {
   "Trop de messages en peu de temps : appelez Fabrice si c'est urgent.": "Too many messages in a short time: call Fabrice if it is urgent.",
   "Trop de demandes aujourd'hui : appelez Fabrice au 06 16 53 14 91.": "Too many requests today: call Fabrice on +33 6 16 53 14 91.",
   "Vous avez déjà 5 demandes en attente : attendez la réponse de Fabrice ou appelez-le.": "You already have 5 requests waiting: wait for Fabrice's reply or call him.",
+  "Beaucoup de demandes en ce moment : appelez Fabrice au 06 16 53 14 91.": "Many requests right now: call Fabrice on +33 6 16 53 14 91.",
 };

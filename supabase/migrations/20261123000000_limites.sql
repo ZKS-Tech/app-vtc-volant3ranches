@@ -67,3 +67,34 @@ begin
 end;
 $$;
 revoke execute on function public.mettre_email(text, uuid, uuid, text, text, jsonb) from public, anon, authenticated;
+
+-- ═══ Point 5 — Plafond global de demandes depuis l'appli ═══
+-- Les limites par compte (5 en attente, 10 par jour) se contournent en créant des comptes invités.
+-- Toutes appli confondues : au plus 20 demandes par heure (réglable). Au-delà, le client est invité à
+-- appeler Fabrice ; les courses saisies par Fabrice ne sont jamais bloquées.
+alter table public.parametres add column if not exists demandes_plafond_heure int not null default 20
+  check (demandes_plafond_heure between 5 and 200);
+
+create or replace function public.limiter_demandes()
+returns trigger
+language plpgsql security definer set search_path = public
+as $$
+begin
+  if new.source = 'appli' and new.client_id is not null then
+    if (select count(*) from public.courses where source = 'appli' and envoyee_le > now() - interval '1 hour')
+       >= coalesce((select demandes_plafond_heure from public.parametres where id = 1), 20) then
+      raise exception 'Beaucoup de demandes en ce moment : appelez Fabrice au 06 16 53 14 91.';
+    end if;
+    if (select count(*) from public.courses where client_id = new.client_id
+         and statut in ('envoyee', 'acompte_attendu') and date_heure > now()) >= 5 then
+      raise exception 'Vous avez déjà 5 demandes en attente : attendez la réponse de Fabrice ou appelez-le.';
+    end if;
+    if (select count(*) from public.courses where client_id = new.client_id
+         and envoyee_le > now() - interval '24 hours') >= 10 then
+      raise exception 'Trop de demandes aujourd''hui : appelez Fabrice au 06 16 53 14 91.';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+revoke execute on function public.limiter_demandes() from public, anon, authenticated;

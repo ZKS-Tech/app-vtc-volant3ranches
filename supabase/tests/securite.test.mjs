@@ -110,7 +110,8 @@ if (process.argv[4]) {
   if (process.argv[19]) { await db.exec(readFileSync(process.argv[19], 'utf8')); ok(true, 'migration 17 (avoirs) appliquée sans erreur'); }
   if (process.argv[20]) { await db.exec(readFileSync(process.argv[20], 'utf8')); ok(true, 'migration 18 (sécurité) appliquée sans erreur'); }
   if (process.argv[21]) { await db.exec(readFileSync(process.argv[21], 'utf8')); ok(true, 'migration 19 (réglages privés) appliquée sans erreur'); }
-  if (process.argv[22]) { await db.exec(readFileSync(process.argv[22], 'utf8')); ok(true, 'migration 20 (limites) appliquée sans erreur'); }
+  if (process.argv[22]) { await db.exec(readFileSync(process.argv[22], 'utf8')); ok(true, 'migration 20 (limites) appliquée sans erreur');
+    await db.exec(`update public.parametres set demandes_plafond_heure = 200`); } // les tests enchaînent beaucoup de demandes
 }
 
 
@@ -956,6 +957,26 @@ if (process.argv[22]) {
   ok(r[0].statut === 'ignore', 'au-delà de 280, plus rien : places gardées pour les codes de connexion');
   await srv(`delete from public.emails`);
   await srv(`update public.parametres set emails_plafond_jour = 200, emails_actifs = false`);
+
+  // Point 5 : plafond global de demandes venant de l'appli (tous comptes confondus).
+  const deja = (await srv(`select count(*)::int n from public.courses where source = 'appli' and envoyee_le > now() - interval '1 hour'`))[0].n;
+  const plafond = deja + 3;
+  await srv(`update public.parametres set demandes_plafond_heure = ${plafond}`);
+  let bloque = '', passees = 0;
+  for (let k = 0; k < 8 && !bloque; k++) {
+    const u = `abcdef00-0000-0000-0000-00000000000${k}`;
+    await srv(`insert into auth.users (id) values ('${u}') on conflict do nothing`);
+    await en(u);
+    try { await demande(u); passees++; } catch (e) { bloque = e.message; }
+  }
+  ok(/Beaucoup de demandes/.test(bloque) && deja + passees === plafond, `nouveaux invités bloqués au-delà du plafond horaire (${deja} déjà + ${passees} passées, puis « ${bloque} »)`);
+  await en(fabrice);
+  const m = (await q(`select * from public.creer_course_manuelle(null, 'Tel Client', '06 33 33 33 33', null,
+    '{"ref":"lavaur","libelle":"Lavaur","lat":43.6989,"lon":1.8191,"type":"ville"}',
+    '{"ref":"tls","libelle":"Aéroport Toulouse-Blagnac","lat":43.6293,"lon":1.3638,"type":"aeroport"}',
+    now() + interval '7 days', false, 1, 1, null, 'tesla', 50, 45, null, 'telephone', null)`))[0];
+  ok(!!m.id, 'les courses saisies par Fabrice ne sont jamais bloquées');
+  await srv(`update public.parametres set demandes_plafond_heure = 200`);
 }
 
 // Remise à zéro avant lancement (supabase/scripts/remise-a-zero-lancement.sql), en dernier.
