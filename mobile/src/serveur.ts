@@ -523,7 +523,7 @@ export async function majProfil(nom: string, telephone: string): Promise<Profil>
 
 // ——— Emails (migration 12 et fonction emails) ———
 export type EmailEnvoye = {
-  id: string; type: string; destinataire: string; statut: 'a_envoyer' | 'envoi' | 'envoye' | 'erreur';
+  id: string; type: string; destinataire: string; statut: 'a_envoyer' | 'envoi' | 'envoye' | 'erreur' | 'ignore';
   erreur: string | null; tentatives: number; cree_le: string; envoye_le: string | null; course_id: string | null;
 };
 export type ReglagesEmails = { emails_actifs: boolean; emails_copie_chauffeur: boolean; email_chauffeur: string | null };

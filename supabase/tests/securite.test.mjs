@@ -110,6 +110,7 @@ if (process.argv[4]) {
   if (process.argv[19]) { await db.exec(readFileSync(process.argv[19], 'utf8')); ok(true, 'migration 17 (avoirs) appliquée sans erreur'); }
   if (process.argv[20]) { await db.exec(readFileSync(process.argv[20], 'utf8')); ok(true, 'migration 18 (sécurité) appliquée sans erreur'); }
   if (process.argv[21]) { await db.exec(readFileSync(process.argv[21], 'utf8')); ok(true, 'migration 19 (réglages privés) appliquée sans erreur'); }
+  if (process.argv[22]) { await db.exec(readFileSync(process.argv[22], 'utf8')); ok(true, 'migration 20 (limites) appliquée sans erreur'); }
 }
 
 
@@ -914,12 +915,55 @@ if (process.argv[19]) {
   ok(r[0].n === 0, 'un autre client ne voit pas les avoirs');
 }
 
-// Remise à zéro avant lancement (supabase/scripts/remise-a-zero-lancement.sql), en dernier.
 if (process.argv[22]) {
+  console.log('--- limites anti-abus');
+  const srv = async (sql) => { await db.exec('reset role'); return (await db.query(sql)).rows; };
+  await srv(`update public.parametres set emails_actifs = true, emails_plafond_jour = 200`);
+  await srv(`delete from public.emails`);
+  const mettre = (type, dest, k) => srv(`select public.mettre_email('${type}', null, null, '${dest}', 'X', '{"k":${k}}')`);
+  // Point 4 : 3 emails par jour vers une même adresse (emails déclenchés par un client).
+  for (let k = 0; k < 5; k++) {
+    const c = (await srv(`insert into public.courses (depart_libelle, arrivee_libelle, date_heure, passagers, bagages, offre_id, distance_km, montant, prix_km, nom, telephone, email, source)
+      values ('a', 'b', now() + interval '${30 + k} days', 1, 0, 'tesla', 10, 20, 1.8, 'Spam ${k}', '0600000000', 'victime@x.fr', 'telephone') returning id`))[0];
+    await srv(`select public.mettre_email('demande_recue', '${c.id}', null, 'victime@x.fr', 'X')`);
+  }
+  r = await srv(`select statut, count(*)::int n from public.emails where destinataire = 'victime@x.fr' group by 1 order by 1`);
+  const parStatut = Object.fromEntries(r.map((x) => [x.statut, x.n]));
+  ok(parStatut.a_envoyer === 3 && parStatut.ignore === 2, `même adresse : 3 emails partent, les suivants sont retenus (${JSON.stringify(parStatut)})`);
+  r = await srv(`select erreur from public.emails where statut = 'ignore' limit 1`);
+  ok(/3 emails par jour/.test(r[0].erreur), `raison notée dans le journal (« ${r[0].erreur} »)`);
+  // Plafond quotidien : au-delà, seuls les emails importants partent.
+  await srv(`update public.parametres set emails_plafond_jour = 10`);
+  await srv(`insert into public.emails (type, destinataire, statut) select 'facture', 'f' || g || '@x.fr', 'envoye' from generate_series(1, 10) g`);
+  await srv(`delete from net.envois`);
+  const cP = (await srv(`insert into public.courses (depart_libelle, arrivee_libelle, date_heure, passagers, bagages, offre_id, distance_km, montant, prix_km, nom, telephone, email, source)
+    values ('a', 'b', now() + interval '40 days', 1, 0, 'tesla', 10, 20, 1.8, 'P', '0600000000', 'p@x.fr', 'telephone') returning id`))[0];
+  await srv(`select public.mettre_email('demande_recue', '${cP.id}', null, 'nouveau@x.fr', 'X')`);
+  await srv(`select public.mettre_email('chauffeur_demande', '${cP.id}', null, 'fabrice@x.fr', 'F')`);
+  await srv(`select public.mettre_email('confirmation', '${cP.id}', null, 'nouveau@x.fr', 'X')`);
+  r = await srv(`select type, statut from public.emails where course_id = '${cP.id}' order by type`);
+  const st = Object.fromEntries(r.map((x) => [x.type, x.statut]));
+  ok(st.demande_recue === 'ignore' && st.chauffeur_demande === 'ignore' && st.confirmation === 'a_envoyer', `plafond atteint : emails non urgents retenus, confirmation envoyée (${JSON.stringify(st)})`);
+  r = await srv(`select body from net.envois`);
+  const alertes = r.map((x) => x.body).flat().filter((m) => m && m.title === 'Emails : plafond du jour atteint');
+  ok(alertes.length >= 1, 'Fabrice prévenu que le plafond est atteint');
+  await srv(`select public.mettre_email('annulation', '${cP.id}', null, 'autre@x.fr', 'X')`);
+  r = await srv(`select body from net.envois`);
+  ok(r.map((x) => x.body).flat().filter((m) => m && m.title === 'Emails : plafond du jour atteint').length === alertes.length, 'une seule alerte par jour');
+  await srv(`insert into public.emails (type, destinataire, statut) select 'facture', 'g' || g || '@x.fr', 'envoye' from generate_series(1, 270) g`);
+  await srv(`select public.mettre_email('facture', '${cP.id}', null, 'derniere@x.fr', 'X')`);
+  r = await srv(`select statut from public.emails where destinataire = 'derniere@x.fr'`);
+  ok(r[0].statut === 'ignore', 'au-delà de 280, plus rien : places gardées pour les codes de connexion');
+  await srv(`delete from public.emails`);
+  await srv(`update public.parametres set emails_plafond_jour = 200, emails_actifs = false`);
+}
+
+// Remise à zéro avant lancement (supabase/scripts/remise-a-zero-lancement.sql), en dernier.
+if (process.argv[23]) {
   console.log('--- remise à zéro avant lancement');
   await db.exec('reset role');
   const reelles = Number((await db.query(`select count(*)::int n from public.documents where not test`)).rows[0].n);
-  await db.exec(readFileSync(process.argv[22], 'utf8').replace(/^select \(select count[\s\S]*$/m, ''));
+  await db.exec(readFileSync(process.argv[23], 'utf8').replace(/^select \(select count[\s\S]*$/m, ''));
   const n = (await db.query(`select (select count(*)::int from public.courses) c, (select count(*)::int from public.documents) d,
     (select count(*)::int from public.fiches_clients) f, (select count(*)::int from public.compteurs_documents) k,
     (select count(*)::int from auth.users) u, (select count(*)::int from public.offres) o`)).rows[0];
@@ -937,7 +981,7 @@ if (process.argv[22]) {
   await db.exec(`alter table public.documents disable trigger documents_figes`);
   for (let i = 0; i < 101; i++) await db.exec(`insert into public.documents (type, numero, course_id, total_ht, tva, total_ttc, contenu) values ('commande', 'X-${i}', '${c.id}', 1, 0, 1, '{}')`);
   await db.exec(`alter table public.documents enable trigger documents_figes`);
-  try { await db.exec(readFileSync(process.argv[22], 'utf8')); } catch (e) { refus = /Arrêt/.test(e.message); await db.exec('rollback').catch(() => {}); }
+  try { await db.exec(readFileSync(process.argv[23], 'utf8')); } catch (e) { refus = /Arrêt/.test(e.message); await db.exec('rollback').catch(() => {}); }
   ok(refus, 'le script refuse de tourner une fois l\'appli en service');
 }
 

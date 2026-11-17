@@ -95,13 +95,13 @@ export default function Emails() {
         <View style={s.bloc}>
           {journal.map((e, i) => (
             <Pressable key={e.id} onPress={() => e.course_id && router.push(`/mission/${e.course_id}`)} style={[s.email, i > 0 && s.trait]}>
-              <Ionicons name={e.statut === 'envoye' ? 'checkmark-circle' : e.statut === 'erreur' ? 'alert-circle' : 'time-outline'} size={20}
+              <Ionicons name={e.statut === 'envoye' ? 'checkmark-circle' : e.statut === 'erreur' ? 'alert-circle' : e.statut === 'ignore' ? 'remove-circle-outline' : 'time-outline'} size={20}
                 color={e.statut === 'envoye' ? c.accent : e.statut === 'erreur' ? c.erreur : c.pierre} style={{ marginTop: 2 }} />
               <View style={{ flex: 1 }}>
                 <Text style={[type.body, { fontWeight: '600' }]}>{LIBELLES[e.type] ?? e.type}</Text>
                 <Text style={type.small} numberOfLines={1}>{nomClient(e.course_id) ? `${nomClient(e.course_id)} · ` : ''}{e.destinataire}</Text>
                 <Text style={[type.label, { fontSize: 12 }]}>
-                  {dateCourte(new Date(e.cree_le))} {heureDe(new Date(e.cree_le))} · {e.statut === 'envoye' ? 'envoyé' : e.statut === 'erreur' ? 'échec' : e.statut === 'envoi' ? 'en cours' : 'en attente'}
+                  {dateCourte(new Date(e.cree_le))} {heureDe(new Date(e.cree_le))} · {e.statut === 'envoye' ? 'envoyé' : e.statut === 'erreur' ? 'échec' : e.statut === 'ignore' ? 'retenu (limite anti-abus)' : e.statut === 'envoi' ? 'en cours' : 'en attente'}
                 </Text>
                 {e.erreur && e.statut !== 'envoye' ? <Text style={[type.small, { color: c.erreur }]} numberOfLines={2}>{e.erreur}</Text> : null}
               </View>
