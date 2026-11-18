@@ -38,7 +38,8 @@ const gestionnaires: ((r: Request) => Promise<Response>)[] = [];
 await import('../acompte/index.ts');
 await import('../sumup-webhook/index.ts');
 await import('../acompte-rembourser/index.ts');
-const [acompte, webhook, rembourser] = gestionnaires;
+await import('../paiements-rattrapage/index.ts');
+const [acompte, webhook, rembourser, rattrapage] = gestionnaires;
 const requete = (corps: unknown, jeton = 'jeton-client') =>
   new Request('http://local', { method: 'POST', headers: { Authorization: `Bearer ${jeton}`, 'Content-Type': 'application/json' }, body: JSON.stringify(corps) });
 const COURSE = '11111111-2222-3333-4444-555555555555';
@@ -130,6 +131,7 @@ Deno.test('webhook : payé trop tard → remboursé aussitôt', async () => {
     '/rest/v1/paiements': () => ({ id: 'p0', statut: 'en_attente' }),
     'GET /v0.1/checkouts/chk-tard': () => ({ id: 'chk-tard', status: 'PAID', amount: 17.3, transactions: [{ id: 'tx-tard', status: 'SUCCESSFUL' }] }),
     'rpc/confirmer_paiement': () => ({ id: 'p2', remboursement_du: 17.3, rembourse: 0, transaction_id: 'tx-tard' }),
+    'rpc/reserver_remboursement': () => [{ reservation: 'res-1', montant: 17.3, transaction_id: 'tx-tard' }],
     'POST /refunds': () => ({}),
     'rpc/remboursement_effectue': () => ({}),
   };
@@ -137,7 +139,7 @@ Deno.test('webhook : payé trop tard → remboursé aussitôt', async () => {
   const rb = appels.find((a) => a.url.includes('/refunds'))!;
   assertEquals(rb.url, 'https://api.sumup.com/v1.0/merchants/MCTEST/payments/tx-tard/refunds');
   assertEquals(rb.corps, { amount: 17.3 });
-  assert(appels.some((a) => a.url.includes('remboursement_effectue')));
+  assertEquals(appels.find((a) => a.url.includes('remboursement_effectue'))!.corps, { p_paiement: 'p2', p_montant: 17.3, p_reservation: 'res-1' });
 });
 
 Deno.test('rembourser : rembourse ce que la base a décidé, rien de plus', async () => {
@@ -145,6 +147,7 @@ Deno.test('rembourser : rembourse ce que la base a décidé, rien de plus', asyn
   reponses = {
     '/rest/v1/courses': () => ({ id: COURSE }),
     'rpc/remboursements_dus': () => [{ id: 'p1', transaction_id: 'tx-9', remboursement_du: 17.3, rembourse: 0 }],
+    'rpc/reserver_remboursement': () => [{ reservation: 'res-9', montant: 17.3, transaction_id: 'tx-9' }],
     'POST /refunds': () => ({}),
     'rpc/remboursement_effectue': () => ({}),
   };
@@ -157,6 +160,82 @@ Deno.test('rembourser : rembourse ce que la base a décidé, rien de plus', asyn
   const r2 = await rembourser(requete({ course_id: COURSE }));
   assertEquals((await r2.json()).rembourse, 0);
   assert(!appels.some((a) => a.url.includes('/refunds')), 'acompte conservé : aucun remboursement');
+});
+
+Deno.test('rembourser : remboursement déjà réservé par un autre appel → aucun second remboursement', async () => {
+  appels = [];
+  reponses = {
+    '/rest/v1/courses': () => ({ id: COURSE }),
+    'rpc/remboursements_dus': () => [{ id: 'p1', transaction_id: 'tx-9', remboursement_du: 17.3, rembourse: 0 }],
+    'rpc/reserver_remboursement': () => [],
+  };
+  const r = await rembourser(requete({ course_id: COURSE }));
+  assertEquals((await r.json()).rembourse, 0);
+  assert(!appels.some((a) => a.url.includes('/refunds')));
+});
+
+Deno.test('rembourser : SumUp refuse → réservation libérée pour un nouvel essai', async () => {
+  appels = [];
+  reponses = {
+    '/rest/v1/courses': () => ({ id: COURSE }),
+    'rpc/remboursements_dus': () => [{ id: 'p1', transaction_id: 'tx-9', remboursement_du: 17.3, rembourse: 0 }],
+    'rpc/reserver_remboursement': () => [{ reservation: 'res-9', montant: 17.3, transaction_id: 'tx-9' }],
+    'POST /refunds': () => new Response('{"error":"down"}', { status: 500 }),
+  };
+  const r = await rembourser(requete({ course_id: COURSE }));
+  assertEquals(r.status, 502);
+  assertEquals(appels.find((a) => a.url.includes('liberer_remboursement'))!.corps, { p_paiement: 'p1', p_reservation: 'res-9' });
+  assert(!appels.some((a) => a.url.includes('remboursement_effectue')));
+});
+
+Deno.test('webhook : base ou SumUp indisponible → erreur, pour que SumUp réessaie', async () => {
+  appels = [];
+  reponses = {
+    '/rest/v1/paiements': () => ({ id: 'p0', statut: 'en_attente' }),
+    'GET /v0.1/checkouts/chk-panne': () => new Response('{}', { status: 500 }),
+  };
+  let r = await webhook(new Request('http://local', { method: 'POST', body: JSON.stringify({ id: 'chk-panne' }) }));
+  assertEquals(r.status, 503);
+  reponses = {
+    '/rest/v1/paiements': () => ({ id: 'p0', statut: 'en_attente' }),
+    'GET /v0.1/checkouts/chk-panne': () => ({ id: 'chk-panne', status: 'PAID', amount: 17.3, transactions: [{ id: 'tx', status: 'SUCCESSFUL' }] }),
+    'rpc/confirmer_paiement': () => new Response(JSON.stringify({ message: 'could not serialize access' }), { status: 500, headers: { 'Content-Type': 'application/json' } }),
+  };
+  r = await webhook(new Request('http://local', { method: 'POST', body: JSON.stringify({ id: 'chk-panne' }) }));
+  assertEquals(r.status, 503);
+  reponses['rpc/confirmer_paiement'] = () => new Response(JSON.stringify({ message: 'Montant payé insuffisant' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  r = await webhook(new Request('http://local', { method: 'POST', body: JSON.stringify({ id: 'chk-panne' }) }));
+  assertEquals(r.status, 200, 'refus définitif : inutile de réessayer');
+});
+
+Deno.test('rattrapage : sans le jeton interne, rien n’est fait', async () => {
+  appels = [];
+  reponses = { '/rest/v1/jetons_internes': () => ({ valeur: 'jeton-secret-de-la-base' }) };
+  const r = await rattrapage(new Request('http://local', { method: 'POST', headers: { 'x-jeton-interne': 'devine' } }));
+  assertEquals(r.status, 401);
+  assert(!appels.some((a) => a.url.includes('sumup.com') || a.url.includes('paiements_a_verifier')));
+});
+
+Deno.test('rattrapage : paiement payé dont l’avis s’est perdu → course confirmée ; remboursement en retard → relancé', async () => {
+  appels = [];
+  reponses = {
+    '/rest/v1/jetons_internes': () => ({ valeur: 'jeton-secret-de-la-base' }),
+    'rpc/paiements_a_verifier': () => [
+      { id: 'p1', checkout_id: 'chk-perdu', statut: 'en_attente', a_rembourser: false },
+      { id: 'p2', checkout_id: 'chk-echec', statut: 'en_attente', a_rembourser: false },
+      { id: 'p3', checkout_id: 'chk-rb', statut: 'paye', a_rembourser: true },
+    ],
+    'GET /v0.1/checkouts/chk-perdu': () => ({ id: 'chk-perdu', status: 'PAID', amount: 17.3, transactions: [{ id: 'tx-p', status: 'SUCCESSFUL' }] }),
+    'GET /v0.1/checkouts/chk-echec': () => ({ id: 'chk-echec', status: 'FAILED', amount: 17.3 }),
+    'rpc/confirmer_paiement': () => ({ id: 'p1', remboursement_du: 0, rembourse: 0 }),
+    'rpc/reserver_remboursement': () => [{ reservation: 'res-3', montant: 8, transaction_id: 'tx-rb' }],
+    'POST /refunds': () => ({}),
+  };
+  const r = await rattrapage(new Request('http://local', { method: 'POST', headers: { 'x-jeton-interne': 'jeton-secret-de-la-base' } }));
+  assertEquals(await r.json(), { verifies: 2, confirmes: 1, echoues: 1, rembourse: 8 });
+  assertEquals(appels.find((a) => a.url.includes('confirmer_paiement'))!.corps, { p_checkout: 'chk-perdu', p_transaction: 'tx-p', p_montant: 17.3 });
+  assert(appels.some((a) => a.url.includes('paiement_echoue')));
+  assertEquals(appels.find((a) => a.url.includes('/refunds'))!.url, 'https://api.sumup.com/v1.0/merchants/MCTEST/payments/tx-rb/refunds');
 });
 
 Deno.test('rembourser : course invisible pour l’utilisateur → refusé', async () => {

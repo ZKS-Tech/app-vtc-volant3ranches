@@ -52,16 +52,21 @@ Deno.serve(async (req) => {
     if (error) throw new Error(error.message);
     let rembourse = 0;
     for (const p of dus ?? []) {
-      const montant = Math.round((Number(p.remboursement_du) - Number(p.rembourse)) * 100) / 100;
-      const r = await fetch(`${SUMUP}/v1.0/merchants/${marchand}/payments/${p.transaction_id}/refunds`, {
+      // Réservation en base avant d'appeler SumUp : un second appel simultané ne trouve rien à rembourser.
+      const { data: res } = await admin.rpc('reserver_remboursement', { p_paiement: p.id });
+      const r0 = (res as { reservation: string; montant: number; transaction_id: string }[] | null)?.[0];
+      if (!r0) continue;
+      const montant = Math.round(Number(r0.montant) * 100) / 100;
+      const r = await fetch(`${SUMUP}/v1.0/merchants/${marchand}/payments/${r0.transaction_id}/refunds`, {
         method: 'POST', headers: { Authorization: `Bearer ${cleSumup}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: montant }),
       });
       if (!r.ok) {
         console.error('SumUp remboursement', r.status, await r.text());
-        return reponse({ erreur: 'SumUp a refusé le remboursement. Réessayez plus tard ou remboursez depuis SumUp.', rembourse }, 502);
+        await admin.rpc('liberer_remboursement', { p_paiement: p.id, p_reservation: r0.reservation });
+        return reponse({ erreur: 'SumUp a refusé le remboursement. Il sera retenté automatiquement ; sinon, remboursez depuis SumUp.', rembourse }, 502);
       }
-      await admin.rpc('remboursement_effectue', { p_paiement: p.id, p_montant: montant });
+      await admin.rpc('remboursement_effectue', { p_paiement: p.id, p_montant: montant, p_reservation: r0.reservation });
       rembourse += montant;
     }
     return reponse({ rembourse });

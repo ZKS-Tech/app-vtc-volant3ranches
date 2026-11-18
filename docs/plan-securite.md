@@ -29,14 +29,14 @@ fermées au changement de mot de passe, clé Firebase restreinte.
 | 9 | ✅ Code | `stats` : limite par compte (≈ 60 appels/h) | Quota des fonctions et statistiques faussées | petit |
 | 10 | ✅ Code | Dépendances : mises à jour correctives d'Expo (`npm update`, 8 → 3 alertes, restantes dans un outil de build sans correctif) ; `supabase-js` figé en 2.119.0 dans les 7 fonctions (pas de `deno.lock` : le déploiement depuis le tableau de bord ne l'utilise pas) | 8 alertes modérées (outils de build) ; mise à jour non maîtrisée de code qui manipule les clés | petit |
 
-## Priorité 1 bis — avant d'activer SumUp (code, ~½ journée)
+## Priorité 1 bis — avant d'activer SumUp (code, ~½ journée) — ✅ fait le 18/11 (migration 21)
 
 | # | Qui | Quoi | Pourquoi | Effort |
 |---|---|---|---|---|
-| 11 | Code | **Double paiement** : si l'acompte est déjà payé, le second paiement est remboursé automatiquement | Prouvé : un client peut payer 2 fois, rien n'est rendu | petit |
-| 12 | Code | Webhook : répondre en **erreur 500** quand la base ou SumUp échoue (SumUp réessaie) | Aujourd'hui un incident = client débité, course expirée, pas remboursé | petit |
-| 13 | Code | **Rattrapage** toutes les 15 min : relire chez SumUp les paiements en attente, relancer les remboursements dus | Webhook perdu = même conséquence | moyen |
-| 14 | Code | **Remboursements sans doublon** : réservation en base avant l'appel SumUp + référence unique | Deux appels simultanés = remboursement compté deux fois | petit |
+| 11 | ✅ Code | **Double paiement** : si l'acompte est déjà payé, le second paiement est remboursé automatiquement | Prouvé : un client peut payer 2 fois, rien n'est rendu | petit |
+| 12 | ✅ Code | Webhook : répondre en **erreur 500** quand la base ou SumUp échoue (SumUp réessaie) | Aujourd'hui un incident = client débité, course expirée, pas remboursé | petit |
+| 13 | ✅ Code | **Rattrapage** toutes les 15 min : relire chez SumUp les paiements en attente, relancer les remboursements dus | Webhook perdu = même conséquence | moyen |
+| 14 | ✅ Code | **Remboursements sans doublon** : réservation en base avant l'appel SumUp + référence unique | Deux appels simultanés = remboursement compté deux fois | petit |
 
 ## Priorité 2 — renforcement (nouvelle version de l'appli, rebuild EAS)
 

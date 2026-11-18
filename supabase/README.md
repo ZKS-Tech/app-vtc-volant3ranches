@@ -410,6 +410,20 @@ Non disponibles en offre gratuite (Pro) : protection contre les mots de passe di
    `sumup-webhook` (ne relit chez SumUp que les paiements connus) et `stats` (limite d'appels).
    **Après** la migration : sinon `stats` refuse tout (compteur absent).
 
+## Paiements sûrs (migration 21) — avant d'activer SumUp
+
+1. SQL Editor : exécuter [`20261124000000_paiements_surs.sql`](migrations/20261124000000_paiements_surs.sql).
+   - Double paiement d'un même acompte : le second est remboursé automatiquement, Fabrice est prévenu.
+   - Remboursements sans doublon : réservés en base avant l'appel à SumUp, comptés une seule fois.
+   - Rattrapage toutes les 15 minutes (tâche `volant3ranches-paiements`) : relit chez SumUp les
+     paiements restés en attente et relance les remboursements non faits.
+2. Edge Functions :
+   - créer **`paiements-rattrapage`** ([`functions/paiements-rattrapage/index.ts`](functions/paiements-rattrapage/index.ts)),
+     « Verify JWT » désactivé. Aucun secret à ajouter : elle utilise ceux de SumUp déjà en place, et
+     n'obéit qu'à la base (jeton interne tiré au hasard par la migration, jamais visible dans l'appli).
+   - redéployer **`sumup-webhook`** (erreur 503 quand la base ou SumUp est indisponible, pour que
+     SumUp renvoie l'avis) et **`acompte-rembourser`**.
+
 ## Avant l'ouverture aux clients : remise à zéro (une seule fois)
 
 Les essais ont consommé de vrais numéros (BC-…, F-…, AV-…) : les factures réelles doivent

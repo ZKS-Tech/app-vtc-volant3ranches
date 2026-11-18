@@ -4,3 +4,6 @@ verify_jwt = false
 
 [functions.supprimer-compte]
 verify_jwt = false
+
+[functions.paiements-rattrapage]
+verify_jwt = false

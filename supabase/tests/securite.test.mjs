@@ -112,6 +112,7 @@ if (process.argv[4]) {
   if (process.argv[21]) { await db.exec(readFileSync(process.argv[21], 'utf8')); ok(true, 'migration 19 (réglages privés) appliquée sans erreur'); }
   if (process.argv[22]) { await db.exec(readFileSync(process.argv[22], 'utf8')); ok(true, 'migration 20 (limites) appliquée sans erreur');
     await db.exec(`update public.parametres set demandes_plafond_heure = 200`); } // les tests enchaînent beaucoup de demandes
+  if (process.argv[23]) { await db.exec(readFileSync(process.argv[23], 'utf8')); ok(true, 'migration 21 (paiements sûrs) appliquée sans erreur'); }
 }
 
 
@@ -429,7 +430,8 @@ if (process.argv[10]) {
   r = await serveur(`select * from public.remboursements_dus('${d1.id}')`);
   ok(r.length === 1 && Number(r[0].remboursement_du) === attendu, 'annulation à 3 jours : acompte à rembourser');
   await vider();
-  await serveur(`select public.remboursement_effectue('${r[0].id}', ${attendu})`);
+  const resa = await serveur(`select * from public.reserver_remboursement('${r[0].id}')`);
+  await serveur(`select public.remboursement_effectue('${r[0].id}', ${attendu}, '${resa[0].reservation}')`);
   r = await serveur(`select statut from public.paiements where course_id = '${d1.id}'`);
   e = await envois();
   ok(r[0].statut === 'rembourse' && e.some((x) => x.title === 'Acompte remboursé'), 'remboursement noté, client prévenu');
@@ -1020,12 +1022,79 @@ if (process.argv[22]) {
   await echoue(() => q(`select public.autoriser_appel('stats', 60)`), 'sans connexion : refusé');
 }
 
-// Remise à zéro avant lancement (supabase/scripts/remise-a-zero-lancement.sql), en dernier.
 if (process.argv[23]) {
+  console.log('--- paiements sûrs');
+  const srv = async (sql) => { await db.exec('reset role'); return (await db.query(sql)).rows; };
+  const C = 'cccccccc-2222-2222-2222-cccccccccccc';
+  await srv(`insert into auth.users (id) values ('${C}') on conflict do nothing`);
+  const c = (await srv(`insert into public.courses (client_id, depart_libelle, arrivee_libelle, date_heure, passagers, bagages, offre_id, distance_km, montant, prix_km, nom, telephone, email, statut, source, acompte_montant, acompte_limite)
+    values ('${C}', 'A', 'B', now() + interval '10 days', 1, 0, 'tesla', 50, 90, 1.8, 'Client Double', '0600000000', 'c@x.fr', 'acompte_attendu', 'telephone', 9, now() + interval '1 hour') returning id`))[0];
+  // Point 11 : deux liens, deux paiements.
+  await srv(`select public.enregistrer_checkout('${c.id}', 9, 'dbl-1', 'https://pay/1')`);
+  await srv(`select public.enregistrer_checkout('${c.id}', 9, 'dbl-2', 'https://pay/2')`);
+  await srv(`delete from net.envois`);
+  await srv(`select public.confirmer_paiement('dbl-1', 'tx-d1', 9)`);
+  await srv(`select public.confirmer_paiement('dbl-2', 'tx-d2', 9)`);
+  r = await srv(`select checkout_id, remboursement_du from public.paiements where course_id = '${c.id}' order by cree_le`);
+  ok(Number(r[0].remboursement_du) === 0 && Number(r[1].remboursement_du) === 9, `double paiement : le second est à rembourser (${r.map((x) => `${x.checkout_id} ${x.remboursement_du}`).join(', ')})`);
+  r = await srv(`select checkout_id from public.remboursements_dus('${c.id}')`);
+  ok(r.length === 1 && r[0].checkout_id === 'dbl-2', 'il apparaît dans les remboursements dus');
+  r = await srv(`select statut from public.courses where id = '${c.id}'`);
+  ok(r[0].statut === 'confirmee', 'la course reste confirmée');
+  r = (await srv(`select body from net.envois`)).map((x) => x.body).flat();
+  ok(r.some((m) => m.title?.startsWith('Acompte payé deux fois')), 'Fabrice est prévenu du doublon');
+  // Point 14 : réservation avant l'appel à SumUp.
+  const p2 = (await srv(`select id from public.paiements where checkout_id = 'dbl-2'`))[0].id;
+  const res1 = await srv(`select * from public.reserver_remboursement('${p2}')`);
+  const res2 = await srv(`select * from public.reserver_remboursement('${p2}')`);
+  ok(res1.length === 1 && Number(res1[0].montant) === 9 && res2.length === 0, 'remboursement réservé une seule fois (second appel simultané : rien)');
+  r = await srv(`select public.remboursement_effectue('${p2}', 9, gen_random_uuid()) x`);
+  r = await srv(`select rembourse from public.paiements where id = '${p2}'`);
+  ok(Number(r[0].rembourse) === 0, 'mauvaise référence : rien n\'est compté');
+  await srv(`select public.remboursement_effectue('${p2}', 9, '${res1[0].reservation}')`);
+  await srv(`select public.remboursement_effectue('${p2}', 9, '${res1[0].reservation}')`);
+  r = await srv(`select rembourse, statut from public.paiements where id = '${p2}'`);
+  ok(Number(r[0].rembourse) === 9 && r[0].statut === 'rembourse', `remboursement compté une seule fois même confirmé deux fois (${r[0].rembourse} €, ${r[0].statut})`);
+  r = await srv(`select * from public.reserver_remboursement('${p2}')`);
+  ok(r.length === 0, 'plus rien à rembourser ensuite');
+  // Échec chez SumUp : la réservation se libère ; une réservation oubliée expire après 10 minutes.
+  const c2 = (await srv(`insert into public.courses (client_id, depart_libelle, arrivee_libelle, date_heure, passagers, bagages, offre_id, distance_km, montant, prix_km, nom, telephone, email, statut, source, acompte_montant)
+    values ('${C}', 'A', 'B', now() + interval '11 days', 1, 0, 'tesla', 50, 90, 1.8, 'Client Annule', '0600000000', 'c@x.fr', 'annulee', 'telephone', 9) returning id`))[0];
+  await srv(`insert into public.paiements (course_id, montant, statut, checkout_id, transaction_id, remboursement_du) values ('${c2.id}', 9, 'paye', 'ann-1', 'tx-a', 9)`);
+  const p3 = (await srv(`select id from public.paiements where checkout_id = 'ann-1'`))[0].id;
+  const ra = await srv(`select * from public.reserver_remboursement('${p3}')`);
+  await srv(`select public.liberer_remboursement('${p3}', '${ra[0].reservation}')`);
+  r = await srv(`select * from public.reserver_remboursement('${p3}')`);
+  ok(r.length === 1, 'après un échec SumUp, le remboursement peut être retenté');
+  await srv(`update public.paiements set remboursement_reserve_le = now() - interval '11 minutes' where id = '${p3}'`);
+  r = await srv(`select * from public.reserver_remboursement('${p3}')`);
+  ok(r.length === 1, 'une réservation oubliée expire après 10 minutes');
+  // Point 13 : rattrapage.
+  await srv(`select public.enregistrer_checkout('${c2.id}', 9, 'att-1', 'x')`);
+  await srv(`update public.paiements set cree_le = now() - interval '20 minutes' where checkout_id = 'att-1'`);
+  r = await srv(`select checkout_id, a_rembourser from public.paiements_a_verifier()`);
+  ok(r.some((x) => x.checkout_id === 'att-1' && !x.a_rembourser) && r.some((x) => x.checkout_id === 'ann-1' && x.a_rembourser), `paiements à revoir : en attente et remboursements non faits (${r.map((x) => x.checkout_id).join(', ')})`);
+  await srv(`delete from net.envois`);
+  await srv(`select public.reveiller_rattrapage()`);
+  r = await srv(`select url, body from net.envois`);
+  const jeton = (await srv(`select valeur from public.jetons_internes where nom = 'rattrapage'`))[0].valeur;
+  ok(r.length === 1 && r[0].url.endsWith('/functions/v1/paiements-rattrapage') && jeton.length >= 60, 'la base réveille le rattrapage');
+  r = await srv(`select count(*)::int n from cron.taches where nom = 'volant3ranches-paiements' and quand = '*/15 * * * *'`);
+  ok(r[0].n === 1, 'rattrapage programmé toutes les 15 minutes');
+  await en(C);
+  r = await q(`select * from public.jetons_internes`).catch(() => []);
+  ok(r.length === 0, 'le jeton interne est illisible depuis l\'appli');
+  for (const f of [`public.reserver_remboursement('${p3}')`, `public.reveiller_rattrapage()`, `public.paiements_a_verifier()`]) {
+    await echoue(() => q(`select ${f}`), `un client ne peut pas appeler ${f.split('(')[0]}`);
+  }
+}
+
+// Remise à zéro avant lancement (supabase/scripts/remise-a-zero-lancement.sql), en dernier.
+if (process.argv[24]) {
   console.log('--- remise à zéro avant lancement');
   await db.exec('reset role');
   const reelles = Number((await db.query(`select count(*)::int n from public.documents where not test`)).rows[0].n);
-  await db.exec(readFileSync(process.argv[23], 'utf8').replace(/^select \(select count[\s\S]*$/m, ''));
+  await db.exec(readFileSync(process.argv[24], 'utf8').replace(/^select \(select count[\s\S]*$/m, ''));
   const n = (await db.query(`select (select count(*)::int from public.courses) c, (select count(*)::int from public.documents) d,
     (select count(*)::int from public.fiches_clients) f, (select count(*)::int from public.compteurs_documents) k,
     (select count(*)::int from auth.users) u, (select count(*)::int from public.offres) o`)).rows[0];
@@ -1043,7 +1112,7 @@ if (process.argv[23]) {
   await db.exec(`alter table public.documents disable trigger documents_figes`);
   for (let i = 0; i < 101; i++) await db.exec(`insert into public.documents (type, numero, course_id, total_ht, tva, total_ttc, contenu) values ('commande', 'X-${i}', '${c.id}', 1, 0, 1, '{}')`);
   await db.exec(`alter table public.documents enable trigger documents_figes`);
-  try { await db.exec(readFileSync(process.argv[23], 'utf8')); } catch (e) { refus = /Arrêt/.test(e.message); await db.exec('rollback').catch(() => {}); }
+  try { await db.exec(readFileSync(process.argv[24], 'utf8')); } catch (e) { refus = /Arrêt/.test(e.message); await db.exec('rollback').catch(() => {}); }
   ok(refus, 'le script refuse de tourner une fois l\'appli en service');
 }
 
