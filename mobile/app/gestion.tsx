@@ -5,6 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { emailConnecte } from '../src/serveur';
 import { useStore } from '../src/store';
 import { Couleurs, radius, space } from '../src/theme';
+import { DoubleAuth } from '../src/DoubleAuth';
 import { LigneNotifications } from '../src/LigneNotifications';
 import { Bouton, IconName, Segment, Titre } from '../src/ui';
 import { useTheme } from '../src/useTheme';
@@ -48,6 +49,9 @@ export default function Gestion() {
         valeur={apparence}
         onChange={setApparence}
       />
+
+      <Titre>Sécurité du compte</Titre>
+      <DoubleAuth />
 
       <Titre>Compte</Titre>
       <View style={[s.bloc, { padding: space.l, gap: space.m }]}>

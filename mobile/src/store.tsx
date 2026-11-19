@@ -8,7 +8,7 @@ import { OffreId, appliquerTarifs, lieu, trajet } from './data';
 import {
   annulerCourse, chargerTarifs, lienAcompte, rembourserTout,
   Profil, reinitialiserMotDePasse as reinitialiserServeur, connecterClient as connecterClientServeur, creerCompte as creerCompteServeur, majProfil as majProfilServeur, monProfil, sessionActuelle, connexionInvite, creerDemande, deconnexion, supprimerCompte as supprimerCompteServeur, ecouterMesCourses,
-  envoyerLangue, estChauffeur, mesCourses, supabase,
+  codeMfaRequis, envoyerLangue, repartirEnInvite, estChauffeur, mesCourses, supabase, validerCodeMfa,
 } from './serveur';
 
 export type Statut = 'envoyee' | 'acompte_attendu' | 'confirmee' | 'refusee' | 'expiree' | 'terminee' | 'annulee';
@@ -107,9 +107,12 @@ type Store = {
   // Compte client : null = invité (compte anonyme du téléphone).
   compte: (Profil & { email: string | null }) | null;
   creerCompte: (p: { nom: string; telephone: string; email: string; motDePasse: string }) => Promise<'ok' | 'confirmation'>;
-  connecterClient: (email: string, motDePasse: string) => Promise<number>;
+  /** Nombre de courses rattachées, ou « mfa » : le code de double authentification est demandé. */
+  connecterClient: (email: string, motDePasse: string) => Promise<number | 'mfa'>;
   /** Mot de passe oublié : code reçu par email + nouveau mot de passe ; connecte le compte. */
-  reinitialiserMotDePasse: (email: string, code: string, motDePasse: string) => Promise<number>;
+  reinitialiserMotDePasse: (email: string, code: string, motDePasse: string) => Promise<number | 'mfa'>;
+  /** Termine une connexion protégée par la double authentification (code à 6 chiffres). */
+  validerMfa: (code: string) => Promise<void>;
   deconnecterClient: () => Promise<void>;
   /** Supprime le compte (ou les données de l'invité) et repart en invité tout neuf. */
   supprimerCompte: () => Promise<number>;
@@ -137,6 +140,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [compte, setCompte] = useState<Store['compte']>(null);
   const [cleSession, setCleSession] = useState('');
   const canal = useRef<ReturnType<typeof ecouterMesCourses>>(null);
+  const motDePasseEnAttente = useRef<string | undefined>(undefined);
 
   // Côté client : les courses de ce téléphone, puis la confirmation de Fabrice en temps réel.
   const uidClient = useRef<string | null>(null);
@@ -208,7 +212,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     let actif = true;
     (async () => {
       try {
-        const uid = await connexionInvite();
+        let uid = await connexionInvite();
+        // Session restée à mi-chemin (mot de passe saisi, code de double authentification jamais
+        // validé) : elle ne donne aucun droit ; on repart en invité.
+        if (await codeMfaRequis()) uid = await repartirEnInvite();
         appliquerTarifs(await chargerTarifs());
         const chauffeur = await estChauffeur();
         if (!actif) return;
@@ -276,6 +283,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       reinitialiserMotDePasse: async (email, code, motDePasse) => {
         await oublierTelephone().catch(() => {});
         const r = await reinitialiserServeur(email, code, motDePasse);
+        if (r.mfa) { motDePasseEnAttente.current = motDePasse; return 'mfa'; }
         if (r.chauffeur) { canal.current?.unsubscribe(); setCourses([]); setRole('chauffeur'); activerNotifications(); return 0; }
         setBrouillon((b) => ({ ...b, nom: '', telephone: '', email: '' }));
         await demarrerClient(r.uid);
@@ -286,6 +294,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       connecterClient: async (email, motDePasse) => {
         await oublierTelephone().catch(() => {});
         const r = await connecterClientServeur(email, motDePasse);
+        if (r.mfa) { motDePasseEnAttente.current = undefined; return 'mfa'; }
         if (!r.chauffeur) evenement('connexion_compte');
         if (r.chauffeur) { canal.current?.unsubscribe(); setCourses([]); setRole('chauffeur'); activerNotifications(); return 0; }
         setBrouillon((b) => ({ ...b, nom: '', telephone: '', email: '' }));
@@ -293,6 +302,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         await chargerProfil();
         activerNotifications();
         return r.rattachees;
+      },
+      validerMfa: async (code) => {
+        const { chauffeur } = await validerCodeMfa(code, motDePasseEnAttente.current);
+        motDePasseEnAttente.current = undefined;
+        if (chauffeur) { canal.current?.unsubscribe(); setCourses([]); setRole('chauffeur'); activerNotifications(); return; }
+        const s = await sessionActuelle();
+        if (s) { await demarrerClient(s.uid); await chargerProfil(); activerNotifications(); }
       },
       deconnecterClient: async () => {
         await oublierTelephone().catch(() => {});

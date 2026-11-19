@@ -207,6 +207,13 @@ export async function supprimerCompte(): Promise<{ uid: string; courses: number 
   return { uid: await connexionInvite(), courses: r.courses };
 }
 
+// Quitte la session de CE téléphone seulement (les autres appareils du compte restent connectés).
+export async function repartirEnInvite(): Promise<string> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
+  return connexionInvite();
+}
+
 export async function emailConnecte(): Promise<string | null> {
   if (!supabase) return null;
   const { data } = await supabase.auth.getUser();
@@ -500,13 +507,15 @@ export async function creerCompte(p: { nom: string; telephone: string; email: st
 }
 
 // Connexion à un compte existant ; les courses réservées en invité sur ce téléphone le suivent.
-export async function connecterClient(email: string, motDePasse: string): Promise<{ uid: string; chauffeur: boolean; rattachees: number }> {
+export async function connecterClient(email: string, motDePasse: string): Promise<{ uid: string; chauffeur: boolean; rattachees: number; mfa?: boolean }> {
   if (!supabase) throw new Error('Serveur non configuré');
   const avant = await sessionActuelle();
   let jeton: string | null = null;
   if (avant?.anonyme) jeton = ((await supabase.rpc('preparer_fusion')).data as string | null) ?? null;
   const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: motDePasse });
   if (error || !data.user) throw new Error(messageAuth(error?.message));
+  // Double authentification activée (compte de Fabrice) : le code est demandé avant tout le reste.
+  if (await codeMfaRequis()) return { uid: data.user.id, chauffeur: false, rattachees: 0, mfa: true };
   // Fabrice se connecte comme un client : il arrive directement dans son espace, et les courses
   // éventuelles de l'invité de ce téléphone ne lui sont pas rattachées.
   const chauffeur = await estChauffeur();
@@ -556,13 +565,15 @@ export async function envoyerCodeConnexion(email: string) {
   if (error && !/signups? not allowed|not found|user/i.test(error.message)) throw new Error(messageAuth(error.message));
 }
 // Vérifie le code, connecte le compte (les courses de l'invité le suivent) et change le mot de passe.
-export async function reinitialiserMotDePasse(email: string, code: string, motDePasse: string): Promise<{ uid: string; chauffeur: boolean; rattachees: number }> {
+export async function reinitialiserMotDePasse(email: string, code: string, motDePasse: string): Promise<{ uid: string; chauffeur: boolean; rattachees: number; mfa?: boolean }> {
   if (!supabase) throw new Error('Serveur non configuré');
   const avant = await sessionActuelle();
   let jeton: string | null = null;
   if (avant?.anonyme) jeton = ((await supabase.rpc('preparer_fusion')).data as string | null) ?? null;
   const { data, error } = await supabase.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code.trim(), type: 'email' });
   if (error || !data.user) throw new Error(/expired|invalid/i.test(error?.message ?? '') ? 'Code incorrect ou expiré.' : messageAuth(error?.message));
+  // Double authentification : le nouveau mot de passe n'est enregistré qu'après le code (voir validerCodeMfa).
+  if (await codeMfaRequis()) return { uid: data.user.id, chauffeur: false, rattachees: 0, mfa: true };
   const r = await supabase.auth.updateUser({ password: motDePasse });
   if (r.error) throw new Error(messageAuth(r.error.message));
   // Mot de passe changé : toutes les autres sessions (autres téléphones, éventuel intrus) sont fermées.
@@ -573,4 +584,69 @@ export async function reinitialiserMotDePasse(email: string, code: string, motDe
   let rattachees = 0;
   if (jeton && !chauffeur) rattachees = Number((await supabase.rpc('fusionner_compte', { p_jeton: jeton })).data ?? 0);
   return { uid: data.user.id, chauffeur, rattachees };
+}
+
+// ——— Double authentification (compte de Fabrice) ———
+// Code à 6 chiffres d'une application d'authentification (Google Authenticator, Microsoft
+// Authenticator…). Une fois activée, la base n'accorde les droits de chauffeur qu'aux sessions
+// validées par ce code (migration 23).
+
+/** Vrai si le compte connecté a la double authentification et que le code n'a pas encore été saisi. */
+export async function codeMfaRequis(): Promise<boolean> {
+  if (!supabase) return false;
+  const { data } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  return data?.nextLevel === 'aal2' && data.currentLevel !== 'aal2';
+}
+
+/** Valide le code ; si un nouveau mot de passe attendait (mot de passe oublié), il est enregistré ensuite. */
+export async function validerCodeMfa(code: string, nouveauMotDePasse?: string): Promise<{ chauffeur: boolean }> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const { data: f } = await supabase.auth.mfa.listFactors();
+  const facteur = f?.totp?.[0];
+  if (!facteur) throw new Error('Double authentification introuvable sur ce compte');
+  const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: facteur.id, code: code.trim() });
+  if (error) throw new Error(/invalid|expired/i.test(error.message) ? 'Code incorrect : utilisez le code affiché en ce moment dans votre application d’authentification.' : messageAuth(error.message));
+  if (nouveauMotDePasse) {
+    const r = await supabase.auth.updateUser({ password: nouveauMotDePasse });
+    if (r.error) throw new Error(messageAuth(r.error.message));
+    await supabase.auth.signOut({ scope: 'others' }).catch(() => {});
+  }
+  return { chauffeur: await estChauffeur() };
+}
+
+export type EtatDoubleAuth = { active: boolean; facteur?: string };
+export async function etatDoubleAuth(): Promise<EtatDoubleAuth> {
+  if (!supabase) return { active: false };
+  const { data } = await supabase.auth.mfa.listFactors();
+  const f = data?.totp?.[0];
+  return f ? { active: true, facteur: f.id } : { active: false };
+}
+
+/** Prépare l'activation : QR code (SVG), clé à recopier et lien vers l'application d'authentification. */
+export async function commencerDoubleAuth(): Promise<{ facteur: string; qrSvg: string; cle: string; lien: string }> {
+  if (!supabase) throw new Error('Serveur non configuré');
+  // Une activation commencée puis abandonnée bloquerait la suivante : on la retire.
+  const { data: l } = await supabase.auth.mfa.listFactors();
+  for (const f of l?.all ?? []) if (f.status !== 'verified') await supabase.auth.mfa.unenroll({ factorId: f.id });
+  const { data, error } = await supabase.auth.mfa.enroll({ factorType: 'totp', friendlyName: `Volant3ranches ${Date.now()}` });
+  if (error || !data) throw new Error(error?.message ?? 'Activation impossible');
+  // QR code fourni en « data:image/svg+xml;utf-8,<svg…> » (parfois encodé) : on garde le SVG lui-même.
+  const brut = data.totp.qr_code.replace(/^data:image\/svg\+xml;[^,]*,/, '');
+  let qrSvg = brut;
+  try { if (!brut.trimStart().startsWith('<')) qrSvg = decodeURIComponent(brut); } catch { /* déjà lisible */ }
+  return { facteur: data.id, qrSvg, cle: data.totp.secret, lien: data.totp.uri };
+}
+
+export async function confirmerDoubleAuth(facteur: string, code: string) {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const { error } = await supabase.auth.mfa.challengeAndVerify({ factorId: facteur, code: code.trim() });
+  if (error) throw new Error('Code incorrect : vérifiez l’heure du téléphone et saisissez le code affiché en ce moment.');
+  await supabase.auth.refreshSession();
+}
+
+export async function desactiverDoubleAuth(facteur: string) {
+  if (!supabase) throw new Error('Serveur non configuré');
+  const { error } = await supabase.auth.mfa.unenroll({ factorId: facteur });
+  if (error) throw new Error(error.message);
+  await supabase.auth.refreshSession();
 }

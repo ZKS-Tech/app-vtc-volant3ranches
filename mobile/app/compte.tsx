@@ -16,7 +16,7 @@ import { t, traduireErreur } from '../src/i18n';
 export default function Compte() {
   const { c, type } = useTheme();
   const params = useLocalSearchParams<{ mode?: string }>();
-  const { brouillon, creerCompte, connecterClient, reinitialiserMotDePasse, serveur } = useStore();
+  const { brouillon, creerCompte, connecterClient, reinitialiserMotDePasse, validerMfa, serveur } = useStore();
   const [mode, setMode] = useState<'creer' | 'connexion'>(params.mode === 'connexion' ? 'connexion' : 'creer');
   // Mot de passe oublié : null, puis « code » (email envoyé), le formulaire passe à code + nouveau mot de passe.
   const [oubli, setOubli] = useState<'email' | 'code' | null>(null);
@@ -25,6 +25,9 @@ export default function Compte() {
   const [envoi, setEnvoi] = useState(false);
   const [erreur, setErreur] = useState('');
   const [fait, setFait] = useState<string | null>(null);
+  // Double authentification (compte de Fabrice) : code à 6 chiffres demandé après le mot de passe.
+  const [mfa, setMfa] = useState<'connexion' | 'reinit' | null>(null);
+  const [codeMfa, setCodeMfa] = useState('');
   const maj = (p: Partial<typeof f>) => setF((x) => ({ ...x, ...p }));
   const emailOk = emailValide(f.email);
   const telOk = telephoneValide(f.telephone);
@@ -39,6 +42,7 @@ export default function Compte() {
         router.back();
       } else {
         const n = await connecterClient(f.email, f.motDePasse);
+        if (n === 'mfa') { setMfa('connexion'); return; }
         if (n > 0) setFait(n > 1 ? t('Connecté. {n} courses réservées sur ce téléphone ont été ajoutées à votre compte.', { n }) : t('Connecté. 1 course réservée sur ce téléphone a été ajoutée à votre compte.'));
         else router.back();
       }
@@ -57,6 +61,35 @@ export default function Compte() {
     );
   }
 
+  if (mfa) {
+    const validerCode = async () => {
+      setEnvoi(true); setErreur('');
+      try {
+        await validerMfa(codeMfa);
+        if (mfa === 'reinit') setFait(t('Mot de passe changé, vous êtes connecté.'));
+        else router.back();
+      } catch (e) { setErreur(traduireErreur(e instanceof Error ? e.message : String(e))); } finally { setEnvoi(false); }
+    };
+    return (
+      <EcranAvecClavier style={{ backgroundColor: c.sol }}>
+        <ScrollView contentContainerStyle={{ padding: space.l, paddingBottom: space.xxl }} keyboardShouldPersistTaps="handled">
+          <Text style={[type.h2, { marginBottom: space.s }]}>Code de sécurité</Text>
+          <Text style={[type.small, { marginBottom: space.l }]}>
+            Ce compte est protégé par la double authentification. Ouvrez votre application d’authentification
+            (Google Authenticator, Microsoft Authenticator…) et saisissez le code à 6 chiffres de « Volant3ranches ».
+          </Text>
+          <Champ libelle="Code à 6 chiffres" value={codeMfa} onChangeText={(v) => setCodeMfa(v.replace(/\D/g, '').slice(0, 6))}
+            keyboardType="number-pad" autoComplete="one-time-code" textContentType="oneTimeCode" placeholder="123456" autoFocus />
+          {erreur ? <View style={{ marginBottom: space.l }}><Note ton="erreur">{erreur}</Note></View> : null}
+          <Bouton titre="Valider" desactive={codeMfa.length !== 6} chargement={envoi} onPress={validerCode} />
+          <Text style={[type.small, { marginTop: space.l }]}>
+            Téléphone perdu ? La double authentification se retire depuis le tableau de bord Supabase (voir le guide).
+          </Text>
+        </ScrollView>
+      </EcranAvecClavier>
+    );
+  }
+
   if (oubli) {
     const envoyerCode = async () => {
       setEnvoi(true); setErreur('');
@@ -66,6 +99,7 @@ export default function Compte() {
       setEnvoi(true); setErreur('');
       try {
         const n = await reinitialiserMotDePasse(f.email, code, f.motDePasse);
+        if (n === 'mfa') { setMfa('reinit'); return; }
         setFait(`${t('Mot de passe changé, vous êtes connecté.')}${n > 0 ? ` ${t('{n} course(s) de ce téléphone ajoutée(s) à votre compte.', { n })}` : ''}`);
       } catch (e) { setErreur(traduireErreur(e instanceof Error ? e.message : String(e))); } finally { setEnvoi(false); }
     };
