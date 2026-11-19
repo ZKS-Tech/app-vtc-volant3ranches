@@ -114,6 +114,12 @@ if (process.argv[4]) {
     await db.exec(`update public.parametres set demandes_plafond_heure = 200`); } // les tests enchaînent beaucoup de demandes
   if (process.argv[23]) { await db.exec(readFileSync(process.argv[23], 'utf8')); ok(true, 'migration 21 (paiements sûrs) appliquée sans erreur'); }
   if (process.argv[24]) { await db.exec(readFileSync(process.argv[24], 'utf8')); ok(true, 'migration 22 (appareils) appliquée sans erreur'); }
+  if (process.argv[25]) {
+    // Facteurs de double authentification de Supabase (auth.mfa_factors), simulés.
+    await db.exec(`create table if not exists auth.mfa_factors (id uuid primary key default gen_random_uuid(), user_id uuid, factor_type text default 'totp', status text)`);
+    await db.exec(readFileSync(process.argv[25], 'utf8'));
+    ok(true, 'migration 23 (double authentification) appliquée sans erreur');
+  }
 }
 
 
@@ -1149,12 +1155,44 @@ if (process.argv[24]) {
   await echoue(() => q(`select public.confirmer_appareil('${jeton}', 'x')`), 'sans connexion : refusé');
 }
 
-// Remise à zéro avant lancement (supabase/scripts/remise-a-zero-lancement.sql), en dernier.
 if (process.argv[25]) {
+  console.log('--- double authentification de Fabrice');
+  const srv = async (sql) => { await db.exec('reset role'); return (await db.query(sql)).rows; };
+  const session = async (uid, aal) => {
+    await en(uid);
+    await db.exec(`select set_config('request.jwt.claims', '${JSON.stringify({ sub: uid, aal, is_anonymous: false })}', false)`);
+  };
+  const autres = async () => Number((await q(`select count(*)::int n from public.courses where client_id is distinct from '${fabrice}'`))[0].n);
+  await session(fabrice, 'aal1');
+  r = await q(`select public.est_chauffeur() c`);
+  ok(r[0].c === true && (await autres()) > 0, 'sans code activé : rien ne change, Fabrice voit les courses');
+  await srv(`insert into auth.mfa_factors (user_id, status) values ('${fabrice}', 'verified')`);
+  await session(fabrice, 'aal1');
+  r = await q(`select public.est_chauffeur() c`);
+  ok(r[0].c === false, 'code activé, mot de passe seul : plus aucun droit de chauffeur');
+  ok((await autres()) === 0, 'mot de passe seul : aucune course des clients visible');
+  r = await q(`select count(*)::int n from public.fiches_clients`);
+  ok(r[0].n === 0, 'mot de passe seul : carnet de clients invisible');
+  const enAttente = (await srv(`select id from public.courses where statut = 'envoyee' limit 1`))[0];
+  if (enAttente) await echoue(() => q(`select public.repondre_demande('${enAttente.id}', true)`), 'mot de passe seul : impossible de répondre à une demande');
+  await echoue(() => q(`select public.supprimer_mes_donnees()`), 'mot de passe seul : impossible de supprimer le compte de Fabrice');
+  await session(fabrice, 'aal2');
+  r = await q(`select public.est_chauffeur() c`);
+  ok(r[0].c === true && (await autres()) > 0, 'avec le code (aal2) : accès complet');
+  await srv(`insert into auth.mfa_factors (user_id, status) values ('${client}', 'unverified')`);
+  await session(client, 'aal2');
+  r = await q(`select public.est_chauffeur() c`);
+  ok(r[0].c === false, 'un client avec un code reste un client');
+  await srv(`delete from auth.mfa_factors`);
+  await db.exec(`reset role; select set_config('request.jwt.claims', '{}', false)`);
+}
+
+// Remise à zéro avant lancement (supabase/scripts/remise-a-zero-lancement.sql), en dernier.
+if (process.argv[26]) {
   console.log('--- remise à zéro avant lancement');
   await db.exec('reset role');
   const reelles = Number((await db.query(`select count(*)::int n from public.documents where not test`)).rows[0].n);
-  await db.exec(readFileSync(process.argv[25], 'utf8').replace(/^select \(select count[\s\S]*$/m, ''));
+  await db.exec(readFileSync(process.argv[26], 'utf8').replace(/^select \(select count[\s\S]*$/m, ''));
   const n = (await db.query(`select (select count(*)::int from public.courses) c, (select count(*)::int from public.documents) d,
     (select count(*)::int from public.fiches_clients) f, (select count(*)::int from public.compteurs_documents) k,
     (select count(*)::int from auth.users) u, (select count(*)::int from public.offres) o`)).rows[0];
@@ -1172,7 +1210,7 @@ if (process.argv[25]) {
   await db.exec(`alter table public.documents disable trigger documents_figes`);
   for (let i = 0; i < 101; i++) await db.exec(`insert into public.documents (type, numero, course_id, total_ht, tva, total_ttc, contenu) values ('commande', 'X-${i}', '${c.id}', 1, 0, 1, '{}')`);
   await db.exec(`alter table public.documents enable trigger documents_figes`);
-  try { await db.exec(readFileSync(process.argv[25], 'utf8')); } catch (e) { refus = /Arrêt/.test(e.message); await db.exec('rollback').catch(() => {}); }
+  try { await db.exec(readFileSync(process.argv[26], 'utf8')); } catch (e) { refus = /Arrêt/.test(e.message); await db.exec('rollback').catch(() => {}); }
   ok(refus, 'le script refuse de tourner une fois l\'appli en service');
 }
 
