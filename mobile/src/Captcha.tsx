@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ComponentType, RefObject } from 'react';
-import { Platform, StyleSheet, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { WebView as WebViewBrut, WebViewMessageEvent } from 'react-native-webview';
 
 // Types de la WebView incompatibles avec ceux de React 19 : on la décrit nous-mêmes.
@@ -34,7 +34,7 @@ export async function jetonCaptcha(): Promise<string | undefined> {
 
 const page = (cle: string) => `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1">
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=pret" async defer></script>
-<style>body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:transparent}</style></head>
+<style>html,body{margin:0;height:100%;background:#fff}body{display:flex;align-items:center;justify-content:center}</style></head>
 <body><div id="w"></div><script>
 var id = null;
 function envoyer(o) { window.ReactNativeWebView.postMessage(JSON.stringify(o)); }
@@ -81,14 +81,27 @@ export function CaptchaInvisible() {
     else if (m.type === 'jeton' && m.t) { setVisible(false); courante.current?.resoudre(m.t); courante.current = null; }
     else if (m.type === 'erreur' || m.type === 'expire') { setVisible(false); courante.current?.rejeter(new Error('Vérification anti-robot échouée : réessayez')); courante.current = null; }
   };
+  // Toujours une sortie : la demande en cours échoue proprement et l'écran se libère.
+  const annuler = () => {
+    setVisible(false);
+    courante.current?.rejeter(new Error('Vérification anti-robot annulée'));
+    courante.current = null;
+  };
   // Superposition simple (pas de fenêtre modale, qui bloquerait les appuis sur toute l'appli) :
   // invisible et inerte tant que Cloudflare ne demande rien.
   return (
     <View pointerEvents={visible ? 'auto' : 'none'} style={[StyleSheet.absoluteFill, s.fond, !visible && s.cache]}>
       <View style={s.carte}>
         <Text style={s.titre}>Vérification rapide</Text>
-        <WebView ref={vue} originWhitelist={['*']} source={{ html: page(CLE_SITE), baseUrl: DOMAINE }} onMessage={message}
-          javaScriptEnabled style={s.vue} />
+        <Text style={s.aide}>Touchez la case ci-dessous pour continuer.</Text>
+        {/* Zone de taille fixe : la WebView remplit son conteneur (flex: 1) et serait sinon de hauteur nulle. */}
+        <View style={s.zone}>
+          <WebView ref={vue} originWhitelist={['*']} source={{ html: page(CLE_SITE), baseUrl: DOMAINE }} onMessage={message}
+            javaScriptEnabled style={s.vue} />
+        </View>
+        <Pressable onPress={annuler} style={s.annuler} accessibilityRole="button">
+          <Text style={s.annulerTexte}>Annuler</Text>
+        </Pressable>
       </View>
     </View>
   );
@@ -99,5 +112,9 @@ const s = StyleSheet.create({
   cache: { opacity: 0, zIndex: -1 },
   carte: { width: 330, backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, gap: 8 },
   titre: { fontSize: 16, fontWeight: '700', color: '#101B45', textAlign: 'center' },
-  vue: { height: 80, backgroundColor: 'transparent' },
+  aide: { fontSize: 13, color: '#5B6273', textAlign: 'center' },
+  zone: { height: 80, width: '100%', overflow: 'hidden' },
+  vue: { flex: 1, backgroundColor: '#FFFFFF' },
+  annuler: { alignSelf: 'center', paddingVertical: 8, paddingHorizontal: 16, minHeight: 44, justifyContent: 'center' },
+  annulerTexte: { fontSize: 15, fontWeight: '600', color: '#1E3277' },
 });

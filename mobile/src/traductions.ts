@@ -446,4 +446,5 @@ export const EN: Record<string, string> = {
   "Vérification anti-robot indisponible": "Anti-bot check unavailable",
   "Vérification anti-robot trop longue : réessayez": "Anti-bot check took too long: try again",
   "Vérification anti-robot échouée : réessayez": "Anti-bot check failed: try again",
+  "Vérification anti-robot annulée": "Anti-bot check cancelled",
 };
