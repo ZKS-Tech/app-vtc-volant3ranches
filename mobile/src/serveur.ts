@@ -1,6 +1,7 @@
 import 'react-native-url-polyfill/auto';
 import { createClient, RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
+import { jetonCaptcha } from './Captcha';
 import { stockageSession } from './stockageSession';
 import { TarifsServeur, enregistrerLieu, lieu, lieux } from './data';
 import type { Brouillon, Course, Statut } from './store';
@@ -35,7 +36,7 @@ export async function connexionInvite(): Promise<string> {
     if (!e || !('status' in e) || ![401, 403, 404].includes(Number(e.status))) return data.session.user.id;
     await supabase.auth.signOut({ scope: 'local' }).catch(() => {});
   }
-  const { data: d, error } = await supabase.auth.signInAnonymously();
+  const { data: d, error } = await supabase.auth.signInAnonymously({ options: { captchaToken: await jetonCaptcha() } });
   if (error || !d.user) throw new Error(error?.message ?? 'Connexion impossible');
   return d.user.id;
 }
@@ -512,7 +513,7 @@ export async function connecterClient(email: string, motDePasse: string): Promis
   const avant = await sessionActuelle();
   let jeton: string | null = null;
   if (avant?.anonyme) jeton = ((await supabase.rpc('preparer_fusion')).data as string | null) ?? null;
-  const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: motDePasse });
+  const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim().toLowerCase(), password: motDePasse, options: { captchaToken: await jetonCaptcha() } });
   if (error || !data.user) throw new Error(messageAuth(error?.message));
   // Double authentification activée (compte de Fabrice) : le code est demandé avant tout le reste.
   if (await codeMfaRequis()) return { uid: data.user.id, chauffeur: false, rattachees: 0, mfa: true };
@@ -560,7 +561,7 @@ export const renvoyerEmail = (id: string) => rpc<null>('renvoyer_email', { p_ema
 // ——— Mot de passe oublié : code à 6 chiffres reçu par email ———
 export async function envoyerCodeConnexion(email: string) {
   if (!supabase) throw new Error('Serveur non configuré');
-  const { error } = await supabase.auth.signInWithOtp({ email: email.trim().toLowerCase(), options: { shouldCreateUser: false } });
+  const { error } = await supabase.auth.signInWithOtp({ email: email.trim().toLowerCase(), options: { shouldCreateUser: false, captchaToken: await jetonCaptcha() } });
   // Même réponse que le compte existe ou non : l'écran ne doit pas révéler quels emails ont un compte.
   if (error && !/signups? not allowed|not found|user/i.test(error.message)) throw new Error(messageAuth(error.message));
 }
@@ -570,7 +571,7 @@ export async function reinitialiserMotDePasse(email: string, code: string, motDe
   const avant = await sessionActuelle();
   let jeton: string | null = null;
   if (avant?.anonyme) jeton = ((await supabase.rpc('preparer_fusion')).data as string | null) ?? null;
-  const { data, error } = await supabase.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code.trim(), type: 'email' });
+  const { data, error } = await supabase.auth.verifyOtp({ email: email.trim().toLowerCase(), token: code.trim(), type: 'email', options: { captchaToken: await jetonCaptcha() } });
   if (error || !data.user) throw new Error(/expired|invalid/i.test(error?.message ?? '') ? 'Code incorrect ou expiré.' : messageAuth(error?.message));
   // Double authentification : le nouveau mot de passe n'est enregistré qu'après le code (voir validerCodeMfa).
   if (await codeMfaRequis()) return { uid: data.user.id, chauffeur: false, rattachees: 0, mfa: true };

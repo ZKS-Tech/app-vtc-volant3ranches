@@ -6,6 +6,7 @@ import { StatusBar } from 'expo-status-bar';
 import { LogBox, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AnnoncesProvider } from '../src/annonces';
+import { CaptchaInvisible } from '../src/Captcha';
 import { ChauffeurProvider } from '../src/chauffeur';
 import { MessagerieProvider } from '../src/messagerie';
 import { useNotifications } from '../src/notifications';
@@ -42,6 +43,7 @@ export default function Racine() {
       <StoreProvider>
         <Navigation />
       </StoreProvider>
+      <CaptchaInvisible />
     </SafeAreaProvider>
   );
 }

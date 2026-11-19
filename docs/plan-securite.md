@@ -38,13 +38,13 @@ fermées au changement de mot de passe, clé Firebase restreinte.
 | 13 | ✅ Code | **Rattrapage** toutes les 15 min : relire chez SumUp les paiements en attente, relancer les remboursements dus | Webhook perdu = même conséquence | moyen |
 | 14 | ✅ Code | **Remboursements sans doublon** : réservation en base avant l'appel SumUp + référence unique | Deux appels simultanés = remboursement compté deux fois | petit |
 
-## Priorité 2 — renforcement (nouvelle version de l'appli, rebuild EAS)
+## Priorité 2 — renforcement (nouvelle version de l'appli, rebuild EAS) — ✅ code fait le 19/11 (migration 23)
 
 | # | Qui | Quoi | Pourquoi | Effort |
 |---|---|---|---|---|
-| 15 | Code | **Double authentification** (TOTP, gratuite chez Supabase) pour le compte de Fabrice | Son compte donne accès à toutes les données clients | moyen |
-| 16 | Code | **Session chiffrée** sur le téléphone (expo-secure-store) | Session stockée en clair aujourd'hui | petit |
-| 17 | Code + Toi | **CAPTCHA** (Cloudflare Turnstile, gratuit) à la création des invités, puis activation dans Supabase | Bloque les robots ; **ne pas activer côté Supabase avant la nouvelle version** | moyen |
+| 15 | ✅ Code | **Double authentification** (TOTP, gratuite chez Supabase) pour le compte de Fabrice | Son compte donne accès à toutes les données clients | moyen |
+| 16 | ✅ Code | **Session chiffrée** sur le téléphone (expo-secure-store) | Session stockée en clair aujourd'hui | petit |
+| 17 | ✅ Code + Toi | **CAPTCHA** (Cloudflare Turnstile, gratuit) à la création des invités, puis activation dans Supabase | Bloque les robots ; **ne pas activer côté Supabase avant la nouvelle version** | moyen |
 | 18 | ✅ Code | Jeton de notification non transférable : un téléphone rattaché à un autre compte ne change de compte qu'avec un code reçu par notification sur ce téléphone (migration 22 + appli) | Détournement des notifications (suppose un jeton volé) | fait le 19/11 |
 
 ## Priorité 3 — optionnel

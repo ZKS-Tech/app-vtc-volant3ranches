@@ -443,4 +443,7 @@ export const EN: Record<string, string> = {
   "Type de lieu inconnu": "Unknown place type",
   "Date trop lointaine (un an au plus)": "Date too far ahead (one year max)",
   "Nom trop long (100 caractères au plus)": "Name too long (100 characters max)",
+  "Vérification anti-robot indisponible": "Anti-bot check unavailable",
+  "Vérification anti-robot trop longue : réessayez": "Anti-bot check took too long: try again",
+  "Vérification anti-robot échouée : réessayez": "Anti-bot check failed: try again",
 };

@@ -436,6 +436,33 @@ téléphone, la connexion suivante l'enregistre directement. Tant que l'ancienne
 est installée, seul le cas « réinstallation sans déconnexion » garde l'ancien compte (rare) ;
 tout le reste fonctionne comme avant.
 
+## Sécurité de l'appli : double authentification, session chiffrée, CAPTCHA (migration 23)
+
+Ces trois protections arrivent avec la **nouvelle version de l'appli** (build EAS). L'ordre compte.
+
+1. SQL Editor : exécuter [`20261126000000_double_authentification.sql`](migrations/20261126000000_double_authentification.sql).
+   Rien ne change tant que Fabrice n'a pas activé la double authentification.
+2. Supabase › Authentication › **Multi-Factor** : vérifier que **TOTP** est activé (c'est le cas par défaut).
+3. Cloudflare (compte gratuit) › **Turnstile** › Add widget : nom « Volant3ranches », hostname
+   `volant3ranches-vtc.fr`, mode **Managed**. Deux clés sont affichées :
+   - la **Site Key** (publique) : la mettre dans `mobile/.env` › `EXPO_PUBLIC_TURNSTILE_SITE_KEY=` ;
+   - la **Secret Key** : ne la donner à personne, la coller seulement à l'étape 6.
+4. Faire le build EAS et l'installer sur les téléphones (Fabrice et essais).
+5. Vérifier que l'appli fonctionne (ouverture, connexion, mot de passe oublié) : la vérification
+   anti-robot est invisible.
+6. **Seulement ensuite** : Supabase › Authentication › Attack Protection › **Enable CAPTCHA
+   protection**, fournisseur **Turnstile**, coller la Secret Key. (Avant la nouvelle version, toute
+   ancienne appli ne pourrait plus se connecter.)
+7. Fabrice : Gestion › **Sécurité du compte** › Activer ; scanner le QR code avec Google
+   Authenticator ou Microsoft Authenticator, saisir le code.
+
+La session est désormais gardée dans le coffre chiffré du téléphone ; les sessions existantes y sont
+déplacées sans déconnexion.
+
+**Téléphone de Fabrice perdu** (plus d'accès au code) : SQL Editor,
+`delete from auth.mfa_factors where user_id = (select id from public.profils where role = 'chauffeur');`
+puis se reconnecter avec le mot de passe et réactiver la double authentification.
+
 ## Avant l'ouverture aux clients : remise à zéro (une seule fois)
 
 Les essais ont consommé de vrais numéros (BC-…, F-…, AV-…) : les factures réelles doivent
