@@ -274,6 +274,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         return r;
       },
       reinitialiserMotDePasse: async (email, code, motDePasse) => {
+        await oublierTelephone().catch(() => {});
         const r = await reinitialiserServeur(email, code, motDePasse);
         if (r.chauffeur) { canal.current?.unsubscribe(); setCourses([]); setRole('chauffeur'); activerNotifications(); return 0; }
         setBrouillon((b) => ({ ...b, nom: '', telephone: '', email: '' }));

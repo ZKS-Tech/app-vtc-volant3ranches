@@ -45,7 +45,7 @@ fermées au changement de mot de passe, clé Firebase restreinte.
 | 15 | Code | **Double authentification** (TOTP, gratuite chez Supabase) pour le compte de Fabrice | Son compte donne accès à toutes les données clients | moyen |
 | 16 | Code | **Session chiffrée** sur le téléphone (expo-secure-store) | Session stockée en clair aujourd'hui | petit |
 | 17 | Code + Toi | **CAPTCHA** (Cloudflare Turnstile, gratuit) à la création des invités, puis activation dans Supabase | Bloque les robots ; **ne pas activer côté Supabase avant la nouvelle version** | moyen |
-| 18 | Code | Jeton de notification non transférable d'un compte à un autre | Détournement des notifications (suppose un jeton volé) | petit |
+| 18 | ✅ Code | Jeton de notification non transférable : un téléphone rattaché à un autre compte ne change de compte qu'avec un code reçu par notification sur ce téléphone (migration 22 + appli) | Détournement des notifications (suppose un jeton volé) | fait le 19/11 |
 
 ## Priorité 3 — optionnel
 

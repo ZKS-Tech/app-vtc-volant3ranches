@@ -113,6 +113,7 @@ if (process.argv[4]) {
   if (process.argv[22]) { await db.exec(readFileSync(process.argv[22], 'utf8')); ok(true, 'migration 20 (limites) appliquée sans erreur');
     await db.exec(`update public.parametres set demandes_plafond_heure = 200`); } // les tests enchaînent beaucoup de demandes
   if (process.argv[23]) { await db.exec(readFileSync(process.argv[23], 'utf8')); ok(true, 'migration 21 (paiements sûrs) appliquée sans erreur'); }
+  if (process.argv[24]) { await db.exec(readFileSync(process.argv[24], 'utf8')); ok(true, 'migration 22 (appareils) appliquée sans erreur'); }
 }
 
 
@@ -1089,12 +1090,71 @@ if (process.argv[23]) {
   }
 }
 
-// Remise à zéro avant lancement (supabase/scripts/remise-a-zero-lancement.sql), en dernier.
 if (process.argv[24]) {
+  console.log('--- téléphone non transférable sans preuve');
+  const srv = async (sql) => { await db.exec('reset role'); return (await db.query(sql)).rows; };
+  const victime = 'dededede-0000-0000-0000-000000000001', intrus = 'dededede-0000-0000-0000-000000000002', nouveau = 'dededede-0000-0000-0000-000000000003';
+  await srv(`insert into auth.users (id) values ('${victime}'), ('${intrus}'), ('${nouveau}') on conflict do nothing`);
+  const jeton = 'ExponentPushToken[tel-victime]';
+  await en(victime);
+  r = await q(`select public.enregistrer_appareil('${jeton}', 'android') r`);
+  ok(r[0].r === 'enregistre', 'premier enregistrement direct');
+  r = await q(`select public.enregistrer_appareil('${jeton}', 'android') r`);
+  ok(r[0].r === 'enregistre', 'réenregistrement par le même compte : direct');
+  await srv(`delete from net.envois`);
+  await en(intrus);
+  r = await q(`select public.enregistrer_appareil('${jeton}', 'ios') r`);
+  const proprio = async () => (await srv(`select user_id from public.appareils where token = '${jeton}'`))[0].user_id;
+  ok(r[0].r === 'verification' && (await proprio()) === victime, 'jeton d\'un autre compte : pas de transfert, vérification demandée');
+  const envois = (await srv(`select body from net.envois`)).map((x) => x.body);
+  const push = envois.find((b) => b.to === jeton && b.data?.type === 'verification_appareil');
+  ok(push && !push.title && !push.body, 'le code part en notification silencieuse vers le téléphone, pas vers l\'intrus');
+  r = await q(`select public.confirmer_appareil('${jeton}', 'devine') r`);
+  ok(r[0].r === false && (await proprio()) === victime, 'mauvais code : le téléphone reste à son propriétaire');
+  await en(intrus);
+  r = await q(`select * from public.appareils_verifs`).catch(() => []);
+  ok(r.length === 0, 'les codes sont illisibles depuis l\'appli');
+  await srv(`delete from net.envois`);
+  await q(`select public.enregistrer_appareil('${jeton}', 'ios')`);
+  r = await srv(`select count(*)::int n from net.envois`);
+  ok(r[0].n === 0, 'pas de nouvelle notification avant une minute (pas de rafale vers la victime)');
+  // Cas légitime : le téléphone est bien en main (réinstallation, nouveau compte sur le même appareil).
+  await en(nouveau);
+  await srv(`delete from net.envois`);
+  await q(`select public.enregistrer_appareil('${jeton}', 'android')`);
+  const code = (await srv(`select body from net.envois`)).map((x) => x.body).find((b) => b.to === jeton).data.code;
+  await en(intrus);
+  r = await q(`select public.confirmer_appareil('${jeton}', '${code}') r`);
+  ok(r[0].r === false, 'le code ne sert qu\'au compte qui l\'a demandé');
+  await en(nouveau);
+  r = await q(`select public.confirmer_appareil('${jeton}', '${code}') r`);
+  ok(r[0].r === true && (await proprio()) === nouveau, 'avec le code reçu sur le téléphone : transfert accepté');
+  r = await q(`select public.confirmer_appareil('${jeton}', '${code}') r`);
+  ok(r[0].r === false, 'un code ne sert qu\'une fois');
+  // Code expiré.
+  await en(victime);
+  await srv(`delete from net.envois`);
+  await q(`select public.enregistrer_appareil('${jeton}', 'android')`);
+  const code2 = (await srv(`select body from net.envois`)).map((x) => x.body).find((b) => b.to === jeton).data.code;
+  await srv(`update public.appareils_verifs set cree_le = now() - interval '11 minutes' where token = '${jeton}'`);
+  r = await q(`select public.confirmer_appareil('${jeton}', '${code2}') r`);
+  ok(r[0].r === false && (await proprio()) === nouveau, 'code de plus de 10 minutes refusé');
+  // Déconnexion propre : le téléphone libéré passe directement au compte suivant.
+  await en(nouveau);
+  await q(`select public.oublier_appareil('${jeton}')`);
+  await en(victime);
+  r = await q(`select public.enregistrer_appareil('${jeton}', 'android') r`);
+  ok(r[0].r === 'enregistre' && (await proprio()) === victime, 'après déconnexion (téléphone libéré) : enregistrement direct');
+  await en(null);
+  await echoue(() => q(`select public.confirmer_appareil('${jeton}', 'x')`), 'sans connexion : refusé');
+}
+
+// Remise à zéro avant lancement (supabase/scripts/remise-a-zero-lancement.sql), en dernier.
+if (process.argv[25]) {
   console.log('--- remise à zéro avant lancement');
   await db.exec('reset role');
   const reelles = Number((await db.query(`select count(*)::int n from public.documents where not test`)).rows[0].n);
-  await db.exec(readFileSync(process.argv[24], 'utf8').replace(/^select \(select count[\s\S]*$/m, ''));
+  await db.exec(readFileSync(process.argv[25], 'utf8').replace(/^select \(select count[\s\S]*$/m, ''));
   const n = (await db.query(`select (select count(*)::int from public.courses) c, (select count(*)::int from public.documents) d,
     (select count(*)::int from public.fiches_clients) f, (select count(*)::int from public.compteurs_documents) k,
     (select count(*)::int from auth.users) u, (select count(*)::int from public.offres) o`)).rows[0];
@@ -1112,7 +1172,7 @@ if (process.argv[24]) {
   await db.exec(`alter table public.documents disable trigger documents_figes`);
   for (let i = 0; i < 101; i++) await db.exec(`insert into public.documents (type, numero, course_id, total_ht, tva, total_ttc, contenu) values ('commande', 'X-${i}', '${c.id}', 1, 0, 1, '{}')`);
   await db.exec(`alter table public.documents enable trigger documents_figes`);
-  try { await db.exec(readFileSync(process.argv[24], 'utf8')); } catch (e) { refus = /Arrêt/.test(e.message); await db.exec('rollback').catch(() => {}); }
+  try { await db.exec(readFileSync(process.argv[25], 'utf8')); } catch (e) { refus = /Arrêt/.test(e.message); await db.exec('rollback').catch(() => {}); }
   ok(refus, 'le script refuse de tourner une fois l\'appli en service');
 }
 
@@ -1128,7 +1188,7 @@ if (process.argv[20]) {
     anon: ['calculer_prix', 'est_chauffeur', 'est_anonyme', 'normaliser_telephone', 'indisponibilite_le_public', 'quand_fr', 'quand_en', 'lieu_en', 'euros_en'],
     authenticated: ['calculer_prix', 'est_chauffeur', 'est_anonyme', 'normaliser_telephone', 'quand_fr', 'quand_en', 'lieu_en', 'euros_en',
       'creer_demande', 'annuler_course', 'enregistrer_profil', 'preparer_fusion', 'fusionner_compte', 'envoyer_message', 'marquer_lus',
-      'enregistrer_appareil', 'oublier_appareil', 'acompte_a_payer', 'supprimer_mes_donnees', 'definir_langue',
+      'enregistrer_appareil', 'confirmer_appareil', 'oublier_appareil', 'acompte_a_payer', 'supprimer_mes_donnees', 'definir_langue',
       // réservées à Fabrice (vérifié à l'intérieur)
       'repondre_demande', 'annuler_course_chauffeur', 'creer_course_manuelle', 'modifier_course', 'terminer_course', 'noter_course',
       'participe_a', // utilisée par les règles d'accès aux messages

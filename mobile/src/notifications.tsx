@@ -34,11 +34,24 @@ export type EtatNotifications = 'actives' | 'refusees' | 'a-demander' | 'indispo
 if (Platform.OS !== 'web') {
   // Une notification reçue appli ouverte s'affiche quand même en bannière.
   Notifications.setNotificationHandler({
-    handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }),
+    handleNotification: async (n) => {
+      // Code de vérification du téléphone : traité en silence, jamais affiché.
+      const discret = n.request.content.data?.type === 'verification_appareil';
+      return { shouldShowBanner: !discret, shouldShowList: !discret, shouldPlaySound: !discret, shouldSetBadge: false };
+    },
   });
 }
 
 let jetonEnregistre: string | null = null;
+// Téléphone encore rattaché à un autre compte : la base envoie un code par notification à ce
+// téléphone ; l'appli le renvoie (confirmer_appareil) pour prouver qu'elle tourne bien dessus.
+let jetonAVerifier: string | null = null;
+
+async function confirmerAppareil(code: unknown) {
+  if (!jetonAVerifier || typeof code !== 'string' || !supabase) return;
+  const { data } = await supabase.rpc('confirmer_appareil', { p_token: jetonAVerifier, p_code: code });
+  if (data === true) { jetonEnregistre = jetonAVerifier; jetonAVerifier = null; }
+}
 
 async function enregistrer(): Promise<void> {
   if (Platform.OS === 'android') {
@@ -50,8 +63,9 @@ async function enregistrer(): Promise<void> {
     });
   }
   const { data: jeton } = await Notifications.getExpoPushTokenAsync({ projectId });
-  const { error } = await supabase!.rpc('enregistrer_appareil', { p_token: jeton, p_plateforme: Platform.OS });
+  const { data, error } = await supabase!.rpc('enregistrer_appareil', { p_token: jeton, p_plateforme: Platform.OS });
   if (error) throw new Error(error.message);
+  if (data === 'verification') { jetonAVerifier = jeton; return; } // le code arrive par notification
   jetonEnregistre = jeton;
 }
 
@@ -105,7 +119,11 @@ export function useNotifications(compte: string | null) {
     // Appli lancée en touchant une notification.
     Notifications.getLastNotificationResponseAsync().then(ouvrir).catch(() => {});
     const abo = Notifications.addNotificationResponseReceivedListener(ouvrir);
-    return () => abo.remove();
+    const verif = Notifications.addNotificationReceivedListener((n) => {
+      const d = n.request.content.data;
+      if (d?.type === 'verification_appareil') confirmerAppareil(d.code).catch(() => {});
+    });
+    return () => { abo.remove(); verif.remove(); };
   }, []);
 }
 

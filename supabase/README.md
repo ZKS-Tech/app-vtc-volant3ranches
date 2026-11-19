@@ -424,6 +424,18 @@ Non disponibles en offre gratuite (Pro) : protection contre les mots de passe di
    - redéployer **`sumup-webhook`** (erreur 503 quand la base ou SumUp est indisponible, pour que
      SumUp renvoie l'avis) et **`acompte-rembourser`**.
 
+## Téléphone non transférable sans preuve (migration 22)
+
+1. SQL Editor : exécuter [`20261125000000_appareils.sql`](migrations/20261125000000_appareils.sql).
+2. Rien à redéployer côté fonctions. L'appli doit être mise à jour (prochaine version EAS) : elle
+   reçoit le code de vérification par notification silencieuse et le renvoie.
+
+Comportement : un téléphone déjà rattaché à un compte ne passe à un autre compte qu'après un code
+envoyé par notification à CE téléphone (preuve qu'il est bien en main). La déconnexion libère le
+téléphone, la connexion suivante l'enregistre directement. Tant que l'ancienne version de l'appli
+est installée, seul le cas « réinstallation sans déconnexion » garde l'ancien compte (rare) ;
+tout le reste fonctionne comme avant.
+
 ## Avant l'ouverture aux clients : remise à zéro (une seule fois)
 
 Les essais ont consommé de vrais numéros (BC-…, F-…, AV-…) : les factures réelles doivent
