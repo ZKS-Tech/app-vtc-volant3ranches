@@ -1,7 +1,7 @@
 import 'react-native-url-polyfill/auto';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient, RealtimeChannel, SupabaseClient } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
+import { stockageSession } from './stockageSession';
 import { TarifsServeur, enregistrerLieu, lieu, lieux } from './data';
 import type { Brouillon, Course, Statut } from './store';
 
@@ -15,7 +15,8 @@ export const supabase: SupabaseClient | null =
   URL_PROJET && CLE_PUBLIQUE
     ? createClient(URL_PROJET, CLE_PUBLIQUE, {
         auth: {
-          storage: Platform.OS === 'web' && typeof window === 'undefined' ? undefined : AsyncStorage,
+          // Session dans le coffre chiffré du téléphone (voir stockageSession.ts).
+          storage: Platform.OS === 'web' && typeof window === 'undefined' ? undefined : stockageSession,
           autoRefreshToken: true,
           persistSession: true,
           detectSessionInUrl: false,
